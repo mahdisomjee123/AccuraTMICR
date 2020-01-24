@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">AccuraModule</string>
+
+    <!-- Dialog "OK" button. Dismisses dialog. -->
+    <string name="dialog_ok">OK</string>
+
+    <!-- message for the dialog showing the error of camera hardware -->
+    <string name="cannot_connect_camera">Can\'t connect to the camera.</string>
+
+    <!-- message for the dialog showing the camera is disabled because of security policies. Camera cannot be used. -->
+    <string name="camera_disabled">Camera has been disabled because of security policies.</string>
+
+    <string name="scantitle">Scan Front Side of the Document</string>
+
+    <string name="ok">Ok</string>
+
+    <string name="text_female">Female</string>
+    <string name="text_male">Male</string>
+    <string name="failed">Failed</string>
+
+    <string name="mrz">MRZ</string>
+    <string name="correct_mrz">Correct Mrz</string>
+    <string name="incorrect_mrz">Incorrect Mrz</string>
+
+</resources>

@@ -1,0 +1,2 @@
+include ':app', ':accura_ocr_mrz'
+rootProject.name='AccuraOcrMrz'
