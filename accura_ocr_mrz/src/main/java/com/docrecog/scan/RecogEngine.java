@@ -1,7 +1,6 @@
 package com.docrecog.scan;
 
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -12,7 +11,14 @@ import android.graphics.Bitmap.Config;
 import android.graphics.Rect;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.ml.vision.FirebaseVision;
+import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
+import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 import com.google.gson.Gson;
 
 import org.json.JSONException;
@@ -30,14 +36,30 @@ public class RecogEngine {
     static {
         try { // for Ocr
             System.loadLibrary("accurasdk");
-            Log.e(RecogEngine.class.getSimpleName(), "static initializer: accurasdk" );
+            Log.e(RecogEngine.class.getSimpleName(), "static initializer: accurasdk");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    public interface ScanCallBack {
+
+        /**
+         * This is called after scanned success.
+         *
+         * @param data
+         * @param isMRZRequired
+         */
+        void onScannedSuccess(boolean data, boolean isMRZRequired);
+
+        /**
+         * This is called on scanned failed.
+         */
+        void onScannedFailed(String s);
+
+    }
+
     public static RecogResult g_recogResult = new RecogResult();
-    public static int facepick = 1;//0:disable-facepick,1:able-facepick
 
     private static final String TAG = "PassportRecog";
     public byte[] pDic = null;
@@ -45,6 +67,22 @@ public class RecogEngine {
     public byte[] pDic1 = null;
     public int pDicLen1 = 0;
     public static String[] assetNames = {"mMQDF_f_Passport_bottom_Gray.dic", "mMQDF_f_Passport_bottom.dic"};
+    private FirebaseVisionTextRecognizer detector;
+    private ScanCallBack callBack;
+
+    public static float[] fConf = new float[1]; //face detection confidence
+    public static int[] faced = new int[1]; //value for detected face or not
+
+    public static int[] intData = new int[3000];
+
+    public static int NOR_W = 400;//1200;//1006;
+    public static int NOR_H = 400;//750;//1451;
+
+    public Context con;
+
+    public RecogEngine() {
+
+    }
 
     //This is SDK app calling JNI method
     public native int loadDictionary(Context activity, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
@@ -56,17 +94,15 @@ public class RecogEngine {
 
     public native int doFaceDetect(Bitmap bitmap, Bitmap faceBitmap, float[] fConf);
 
-    public native static String getCameraHeight(int cardid, int widthPixels);
+    public native String getCameraHeight(int cardid, int widthPixels);
 
-    public native static ImageOpencv checkCardInFrames(long matInput, long matOut, Context context, AssetManager assetManager);
+    public native ImageOpencv checkCardInFrames(long matInput, long matOut, Context context, AssetManager assetManager);
 
-    public native static String MapData(long src, int[][] boxBoundsLTRB, String[] textElements);
-
-    public native static void getPathFolder(ContextWrapper context);
+    public native String MapData(long src, int[][] boxBoundsLTRB, String[] textElements);
 
     // for failed -> responseCode = 0,
     // for success -> responseCode = 1 && data
-    public static InitModel initOcr(int cardid, int widthPixels) {
+    public InitModel initOcr(int cardid, int widthPixels) {
         String s = getCameraHeight(cardid, widthPixels);
         try {
             if (s != null && !s.equals("")) {
@@ -81,7 +117,7 @@ public class RecogEngine {
 
     // for failed -> responseCode = 0,
     // for success -> responseCode = 1 && data has cardSide is front or back and ocrdata.
-    public static OcrData.MapData MapDataFunction(long src, FirebaseVisionText firebaseVisionText) {
+    private OcrData.MapData MapDataFunction(long src, FirebaseVisionText firebaseVisionText) {
         int[][] boxBoundsLTRB;
         String[] textElements;
 
@@ -123,8 +159,9 @@ public class RecogEngine {
 
     }
 
+
     // if success then outMat has image data
-    public static ImageOpencv nativeCheckCardIsInFrame(Context context, Bitmap bmp) {
+    public ImageOpencv nativeCheckCardIsInFrame(Context context, Bitmap bmp) {
         Mat clone = new Mat();
         Utils.bitmapToMat(bmp, clone);
 
@@ -150,21 +187,16 @@ public class RecogEngine {
         return null;
     }
 
-    public static float[] fConf = new float[1]; //face detection confidence
-    public static int[] faced = new int[1]; //value for detected face or not
-
-    public static int[] intData = new int[3000];
-
-    public static int NOR_W = 400;//1200;//1006;
-    public static int NOR_H = 400;//750;//1451;
-
-    public Context con;
-
-    public RecogEngine() {
-
-    }
-
     public void initEngine(Context context) {
+
+        //call Sdk  method InitEngine
+        // parameter to pass : FaceCallback callback, int fmin, int fmax, float resizeRate, String modelpath, String weightpath, AssetManager assets
+        // this method will return the integer value
+        //  the return value by initEngine used the identify the particular error
+        // -1 - No key found
+        // -2 - Invalid Key
+        // -3 - Invalid Platform
+        // -4 - Invalid License
 
         con = context;
         getAssetFile(assetNames[0], assetNames[1]);
@@ -196,6 +228,11 @@ public class RecogEngine {
             AlertDialog alert11 = builder1.create();
             alert11.show();
         }
+
+        if (detector == null) {
+            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+        }
+
     }
 
     public int getAssetFile(String fileName, String fileName1) {
@@ -303,4 +340,86 @@ public class RecogEngine {
         return ret;
     }
 
+
+    public void closeEngine() {
+        try {
+            if (detector != null) {
+                detector.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     *
+     * @param scanCallBack to get status of data
+     * @param mat pass met to retrieve ocr data.
+     * @param ocrData to fill data to this object
+     */
+    public void Loaddata(ScanCallBack scanCallBack, Mat mat, OcrData ocrData) {
+        RecogEngine.this.callBack = scanCallBack;
+
+        Bitmap image = RecogEngine.bitmapFromMat(mat);
+        System.out.println("Loaddata++");
+
+        if (detector != null) {
+            detector.processImage(FirebaseVisionImage.fromBitmap(image))
+                    .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                        @Override
+                        public void onSuccess(FirebaseVisionText firebaseVisionText) {
+
+                            OcrData.MapData mapData = MapDataFunction(mat.getNativeObjAddr(), firebaseVisionText);
+                            List<OcrData.MapData.ScannedData> result = null;
+                            if (mapData != null) {
+                                result = mapData.getOcr_data();
+                            }
+                            //check data is not null and empty
+                            boolean isdone = result != null && result.size() != 0;
+                            System.out.println("done++" + isdone);
+                            if (isdone) {
+                                if (mapData.getCardSide().toLowerCase().contains("front")) {
+                                    if (ocrData.getFrontData() != null) {
+                                        isdone = false;
+                                    }
+                                    ocrData.setFrontData(mapData);
+                                    ocrData.setFrontimage(image);
+                                } else {
+                                    if (ocrData.getBackData() != null)
+                                        isdone = false;
+                                    ocrData.setBackData(mapData);
+                                    ocrData.setBackimage(image);
+                                }
+                                System.out.println("MappingDone");
+                            }
+                            if (callBack != null) {
+                                callBack.onScannedSuccess(isdone, CheckMRZisRequired(mapData));
+                            }
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            if (callBack != null) {
+                                callBack.onScannedFailed(e.getMessage());
+                            }
+                        }
+                    });
+        }
+    }
+
+    //    return true if mrz is Required
+    private boolean CheckMRZisRequired(OcrData.MapData mapData) {
+        if (mapData != null) {
+            for (OcrData.MapData.ScannedData data : mapData.getOcr_data()) {
+                if (data != null) {
+                    String key = data.getKey();
+                    if (key.equalsIgnoreCase("mrz")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 }

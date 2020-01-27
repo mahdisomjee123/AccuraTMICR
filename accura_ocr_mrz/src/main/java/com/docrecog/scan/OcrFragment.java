@@ -10,11 +10,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.graphics.Point;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.media.CameraProfile;
@@ -30,7 +25,6 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -46,18 +40,9 @@ import com.accurascan.ocr.mrz.R;
 import com.accurascan.ocr.mrz.ui.OcrResultActivity;
 import com.docrecog.scan.textrecognition.GraphicOverlay;
 import com.docrecog.scan.textrecognition.Utils;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.ml.vision.FirebaseVision;
-import com.google.firebase.ml.vision.common.FirebaseVisionImage;
-import com.google.firebase.ml.vision.text.FirebaseVisionText;
-import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 
 import org.opencv.core.Mat;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
@@ -68,8 +53,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * Activities that contain this fragment must implement the
  * create an instance of this fragment.
  */
-public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Camera.PreviewCallback, Camera.ShutterCallback,
-        Camera.PictureCallback, FocusManager.Listener, View.OnTouchListener {
+public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Camera.PreviewCallback,
+        FocusManager.Listener, View.OnTouchListener, RecogEngine.ScanCallBack {
 
     private static final String TAG = "OcrFragment";
 
@@ -96,7 +81,6 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
     private static boolean LOGV = true;
     private static RecogEngine mCardScanner;
     private static int mRecCnt = 0; //counter for mrz detecting
-    private TextView mScanTitle = null;
     private ImageView mFlipImage = null;
     private final Lock _mutex = new ReentrantLock(true);
     OcrData ocrData;
@@ -137,19 +121,15 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
     private boolean mOnResumePending;
     private boolean mPausing;
     private boolean mFirstTimeInitialized;
-    // When setCameraParametersWhenIdle() is called, we accumulate the subsets
-    // needed to be updated in mUpdateSet.
-    private int mUpdateSet;
+
     private View mPreviewFrame;
     RelativeLayout rel_main;// Preview frame area for SurfaceView.
     private boolean mbVibrate;
-    private Dialog dialog;
     // The display rotation in degrees. This is only valid when mCameraState is
     // not PREVIEW_STOPPED.
     private int mDisplayRotation;
     // The value for android.hardware.Camera.setDisplayOrientation.
     private int mDisplayOrientation;
-    private boolean mIsAutoFocusCallback = false;
     Thread mCameraPreviewThread = new Thread(new Runnable() {
         public void run() {
             initializeCapabilities();
@@ -159,13 +139,10 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
 
     //new
     private String cardType = "";
-    private FirebaseVisionTextRecognizer detector;
     private int cardid;
     private String countryname;
     private TextView tv_side_msg, tv_scan_msg;
     private boolean isbothavailable = false;
-    private boolean isfront = false;
-    private boolean isback = false;
     private int checkmrz = 0; //0 ideal 1 not require 2 require
     private int rectW, rectH;
     DisplayMetrics dm;
@@ -217,7 +194,6 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
         if (cameraActivity == null) {
             cameraActivity = (Activity) getActivity();
         }
-        RecogEngine.getPathFolder(cameraActivity);
         ocrData = new OcrData().getInstance(cameraActivity);
         mCameraId = CameraHolder.instance().getBackCameraId();
         //String str = Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE;
@@ -250,7 +226,10 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
         tv_scan_msg = (TextView) ocrView.findViewById(R.id.tv_scan_msg);
         mFlipImage = (ImageView) ocrView.findViewById(R.id.ivFlipImage);
         mFlipImage.setVisibility(View.INVISIBLE);
-
+        // create scan engine.
+        if (mCardScanner == null) {
+            mCardScanner = new RecogEngine();
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Utils.isPermissionsGranted(cameraActivity)) {
             requestCameraPermission();
         } else {
@@ -264,17 +243,15 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
          * We make sure the preview is started at the end of onCreate.
          */
 //        mCameraOpenThread.start();
-        if (SetTempleteImage()) {
-            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
 
-            // create and initialize the scan engine.
-            if (mCardScanner == null) {
-                mCardScanner = new RecogEngine();
-                mCardScanner.initEngine(cameraActivity);
-            }
+        if (SetTempleteImage()) {
+
+            // initialize the scan engine.
+            mCardScanner.initEngine(cameraActivity);
 
             //initialize the result value
             mRecCnt = 0;
+            RecogEngine.g_recogResult = new RecogResult();
             RecogEngine.g_recogResult.recType = RecType.INIT;
             RecogEngine.g_recogResult.bRecDone = false;
             RecogEngine.g_recogResult.bFaceReplaced = false;
@@ -568,11 +545,6 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
     }
 
     @Override
-    public void onPictureTaken(byte[] data, Camera camera) {
-
-    }
-
-    @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
         if (mPausing) {
             return;
@@ -591,38 +563,6 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
 
                 System.out.println("Start Run Thread++");
 
-//                YuvImage temp = new YuvImage(data, format, width, height, null);
-//                ByteArrayOutputStream os = new ByteArrayOutputStream();
-//                temp.compressToJpeg(new Rect(0, 0, temp.getWidth(), temp.getHeight()), 100, os);
-//
-//                //getting original bitmap of scan result
-//                Bitmap bmp_org = BitmapFactory.decodeByteArray(os.toByteArray(), 0, os.toByteArray().length);
-//                Matrix matrix = new Matrix();
-//                matrix.postRotate(mDisplayOrientation);
-//                Bitmap bmp1 = Bitmap.createBitmap(bmp_org, 0, 0, bmp_org.getWidth(), bmp_org.getHeight(), matrix, true);
-////                Bitmap bmp1 =bmp_org.copy(Bitmap.Config.ARGB_8888, true);
-//
-//
-//                Point centerOfCanvas = new Point(dm.widthPixels / 2, dm.heightPixels / 2);
-////                System.out.println("centerOfCanvas ++" + centerOfCanvas.x + "," + centerOfCanvas.y);
-//                int left = centerOfCanvas.x - (rectW / 2);
-//                int top = centerOfCanvas.y - (rectH / 2);
-//                int right = centerOfCanvas.x + (rectW / 2);
-//                int bottom = centerOfCanvas.y + (rectH / 2);
-//                Rect frameRect = new Rect(left, top, right, bottom);
-//
-//                float widthScaleFactor = (float) dm.widthPixels / (float) height;
-//                float heightScaleFactor = (float) (dm.heightPixels) / (float) width;
-//                frameRect.left = (int) (frameRect.left / widthScaleFactor);
-//                frameRect.top = (int) (frameRect.top / heightScaleFactor);
-//                frameRect.right = (int) (frameRect.right / widthScaleFactor);
-//                frameRect.bottom = (int) (frameRect.bottom / heightScaleFactor);
-//                Rect finalrect = new Rect((int) (frameRect.left), (int) (frameRect.top), (int) (frameRect.right), (int) (frameRect.bottom));
-////                Rect frameRect = new Rect();
-////                 rel_main.getGlobalVisibleRect (frameRect);
-//                bmCard = Bitmap.createBitmap(bmp1, finalrect.left, finalrect.top, finalrect.width(), finalrect.height());
-//                bmp_org.recycle();
-//                bmp1.recycle();
                 bmCard = BitmapUtil.getBitmapFromData(data, camera, mDisplayOrientation, rectH, rectW);
 
                 _mutex.lock();
@@ -636,11 +576,6 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
             }
         });
         recogThread.start();
-    }
-
-    @Override
-    public void onShutter() {
-
     }
 
     private void checkCard(Bitmap bmp) {
@@ -659,40 +594,27 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
         }
         mRecCnt++;
 
-        ImageOpencv imageOpencv = RecogEngine.nativeCheckCardIsInFrame(cameraActivity, bmp);
+        ImageOpencv imageOpencv = mCardScanner.nativeCheckCardIsInFrame(cameraActivity, bmp);
         if (imageOpencv != null) {
 
             showToast(imageOpencv.message);
 
-            if (imageOpencv.isSucess) {
-                Mat card = null;
-                try {
-                    card = imageOpencv.mat;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            if (imageOpencv.isSucess && imageOpencv.mat != null) {
+                Mat card = imageOpencv.mat;
                 /*if mat isn't null then passing it  for text detection*/
-                if (card != null) {
-                    System.out.println("Check card In frames success++ Load data");
+                System.out.println("Check card In frames success");
 
-                    // call when successs
-                    if (getCheckmrz() == 0) {
+                // call when successs
+                if (getCheckmrz() == 0) {
 //                        activityStarted = true;
-                        Loaddata(card);
-                    } else {
-                        if (ret == 1 || ret == 2) {
-                            GotMRZData();
-                        } else {
-                            refreshPreview();
-                            bmp.recycle();
-
-                        }
-                    }
+                    mCardScanner.Loaddata(OcrFragment.this, card, ocrData);
                 } else {
-                    System.out.println("Check card In frames success++ cropped failed");
-
-                    refreshPreview();
-                    bmp.recycle();
+                    if (ret == 1 || ret == 2) {
+                        GotMRZData();
+                    } else {
+                        refreshPreview();
+                        bmp.recycle();
+                    }
                 }
             } else {
                 refreshPreview();
@@ -1070,7 +992,7 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
 
     private boolean SetTempleteImage() {
 
-        InitModel i1 = RecogEngine.initOcr(cardid, dm.widthPixels);
+        InitModel i1 = mCardScanner.initOcr(cardid, dm.widthPixels);
         if (i1 == null) {
             return false;
         }
@@ -1089,139 +1011,11 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
 
     }
 
-    //    return true if mrz is Required
-    private boolean CheckMRZisRequired(OcrData.MapData mapData) {
-        for (OcrData.MapData.ScannedData data : mapData.getOcr_data()) {
-            if (data != null) {
-                String key = data.getKey();
-                if (key.equalsIgnoreCase("mrz")) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
+    private void AfterMapping(boolean result, boolean isMRZRequired) {
 
-    public void Loaddata(Mat mat) {
-        Bitmap image = RecogEngine.bitmapFromMat(mat);
-        System.out.println("Loaddata++");
-
-        detector.processImage(FirebaseVisionImage.fromBitmap(image))
-                .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
-                    @Override
-                    public void onSuccess(FirebaseVisionText firebaseVisionText) {
-
-                        OcrData.MapData mapData = RecogEngine.MapDataFunction(mat.getNativeObjAddr(), firebaseVisionText);
-                        List<OcrData.MapData.ScannedData> result = null;
-                        if (mapData != null) {
-                            result = mapData.getOcr_data();
-                        }
-                        //check data is not null and empty
-                        boolean isdone = result != null && result.size() != 0;
-                        System.out.println("done++" + isdone);
-
-                        if (isdone) {
-                            if (mapData.getCardSide().toLowerCase().contains("front")) {
-                                isfront = true;
-                                isback = false;
-                            } else {
-                                isfront = false;
-                                isback = true;
-                            }
-                            AfterMapping(mapData, image);
-                            System.out.println("MappingDone");
-                        } else {
-                            refreshPreview();
-                        }
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        e.printStackTrace();
-                    }
-                });
-
-
-    }
-
-    private void AfterMapping(OcrData.MapData result, Bitmap image) {
-//// check if bith side of card is avilable or not
-//        if (isbothavailable) {
-//            // check data is of which side
-//            // templete set in Opencv is of front side
-//            if (isfront) {
-//                if (ocrData.getFrontData() == null) {
-//                    ocrData.setFrontData(result);
-//                    ocrData.setFrontimage(image);
-//                    if (CheckMRZisRequired(result)) {
-//                        if (RecogEngine.g_recogResult.lines.equalsIgnoreCase("")) {
-//                            // only get data of mrz
-//                            checkmrz = 2;
-//
-//
-//                        } else {
-//                            tv_side_msg.setText("Now Scan Back Side of " + ocrData.getCardname());
-//
-//                            //if front side is scanned completely than scanned back side
-//                            if (ocrData.getBackData() == null) {
-//                                flipImage();
-//                            }
-//                        }
-//                    } else {
-//                        //put animation like accura and sound
-//                        tv_side_msg.setText("Now Scan Back Side of " + ocrData.getCardname());
-//
-//                        //if front side is scanned completely than scanned back side
-//                        if (ocrData.getBackData() == null) {
-//                            flipImage();
-//                        }
-//                    }
-//
-//                }
-//
-//            } else if (isback) {
-//                if (ocrData.getBackData() == null) {
-//                    ocrData.setBackData(result);
-//                    ocrData.setBackimage(image);
-//                    if (CheckMRZisRequired(result)) {
-//                        // if mrz is required
-//                        if (RecogEngine.g_recogResult.lines.equalsIgnoreCase("")) {
-//                            // only get data of mrz
-//                            checkmrz = 2;
-//
-//                        } else {
-//                            tv_side_msg.setText("Now Scan Front Side of " + ocrData.getCardname());
-//                            //if back side is scanned completely than scanned front side
-//
-//                            if (ocrData.getFrontData() == null) {
-//                                flipImage();
-//                            }
-//                        }
-//                    } else {
-//                        tv_side_msg.setText("Now Scan Front Side of " + ocrData.getCardname());
-//                        // if back side is scanned completely than scanned front side
-//
-//                        if (ocrData.getFrontData() == null) {
-//                            flipImage();
-//                        }
-//                    }
-//
-//                }
-//            }
-//// if both side data is avilable then stop scanning
-//            if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
-//                sendInformation();
-//            } else {
-//                refreshPreview();
-//            }
-//        } else {
-//            //if one side is availble
-        if (isfront) {
-            ocrData.setFrontData(result);
-            ocrData.setFrontimage(image);
-            if (CheckMRZisRequired(result) && RecogEngine.g_recogResult.lines.equalsIgnoreCase("")) {
+        if (result) {
+            if (isMRZRequired && RecogEngine.g_recogResult.lines.equalsIgnoreCase("")) {
                 // only get data of mrz
                 checkmrz = 2;
                 refreshPreview();
@@ -1230,10 +1024,12 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
                     if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
                         sendInformation();
                     } else {
-                        tv_side_msg.setText("Now Scan Back Side of " + ocrData.getCardname());
-
-                        //if front side is scanned completely than scanned back side
-                        if (ocrData.getBackData() == null) {
+                        if (ocrData.getFrontData() != null && ocrData.getBackData() == null) {
+                            tv_side_msg.setText("Now Scan Back Side of " + ocrData.getCardname());
+                        } else if (ocrData.getBackData() != null && ocrData.getFrontData() == null) {
+                            tv_side_msg.setText("Now Scan Front Side of " + ocrData.getCardname());
+                        }
+                        if (ocrData.getBackData() == null || ocrData.getFrontData() == null) {
                             flipImage();
                         }
                         refreshPreview();
@@ -1242,56 +1038,9 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
                     sendInformation();
                 }
             }
-//                if (CheckMRZisRequired(result)) {
-//                    if (RecogEngine.g_recogResult.lines.equalsIgnoreCase("")) {
-//                        // only get data of mrz
-//                        checkmrz = 2;
-//                        refreshPreview();
-//                    } else {
-//                        sendInformation();
-//                    }
-//                } else {
-//                    sendInformation();
-//                }
-        } else if (isback) {
-            ocrData.setBackData(result);
-            ocrData.setBackimage(image);
-
-            if (CheckMRZisRequired(result) && RecogEngine.g_recogResult.lines.equalsIgnoreCase("")) {
-                // only get data of mrz
-                checkmrz = 2;
-                refreshPreview();
-            } else {
-                if (isbothavailable) {
-                    if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
-                        sendInformation();
-                    } else {
-                        tv_side_msg.setText("Now Scan Front Side of " + ocrData.getCardname());
-                        //if back side is scanned completely than scanned front side
-
-                        if (ocrData.getFrontData() == null) {
-                            flipImage();
-                        }
-                        refreshPreview();
-                    }
-                } else {
-                    sendInformation();
-                }
-            }
-//                if (CheckMRZisRequired(result)) {
-//                    if (RecogEngine.g_recogResult.lines.equalsIgnoreCase("")) {
-//                        // only get data of mrz
-//                        checkmrz = 2;
-//                        refreshPreview();
-//
-//                    } else {
-//                        sendInformation();
-//                    }
-//                } else {
-//                    sendInformation();
-//                }
+        } else {
+            refreshPreview();
         }
-//        }
     }
 
 
@@ -1303,11 +1052,7 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
         } catch (Exception e) {
             e.printStackTrace();
         }
-        try {
-            detector.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        mCardScanner.closeEngine();
         if (mCallback != null) {
             mCallback.onScannedSuccess(ocrData, RecogEngine.g_recogResult);
         } else {
@@ -1361,34 +1106,32 @@ public class OcrFragment extends Fragment implements SurfaceHolder.Callback, Cam
     }
 
     public void GotMRZData() {
+        checkmrz = 0;
         if (isbothavailable) {
-            if (isfront) {
-                checkmrz = 0;
-                tv_side_msg.setText("Now Scan Back Side of " + ocrData.getCardname());
-                //if front side is scanned completely than set templete of back side
-                if (ocrData.getBackData() == null) {
-                    flipImage();
-                } else {
-                    sendInformation();
+            if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
+                sendInformation();
+            } else {
+                if (ocrData.getFrontData() != null && ocrData.getBackData() == null) {
+                    tv_side_msg.setText("Now Scan Back Side of " + ocrData.getCardname());
+                } else if (ocrData.getBackData() != null && ocrData.getFrontData() == null) {
+                    tv_side_msg.setText("Now Scan Front Side of " + ocrData.getCardname());
                 }
-            }
-            if (isback) {
-                checkmrz = 0;
-                cameraActivity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        tv_side_msg.setText("Now Scan Front Side of " + ocrData.getCardname());
-                        if (ocrData.getFrontData() == null) {
-                            flipImage();
-                        } else {
-                            sendInformation();
-                        }
-                    }
-                });
+                if (ocrData.getBackData() == null || ocrData.getFrontData() == null) {
+                    flipImage();
+                }
             }
         } else {
             sendInformation();
         }
+    }
+
+    @Override
+    public void onScannedSuccess(boolean data, boolean isMRZRequired) {
+        AfterMapping(data, isMRZRequired);
+    }
+
+    @Override
+    public void onScannedFailed(String s) {
 
     }
 
