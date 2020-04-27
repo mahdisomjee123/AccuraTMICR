@@ -13,5 +13,6 @@
     <color name="blackShade">#282828</color>
     <color name="grey">#858585</color>
 
+    <color name="trans_black">#80000000</color>
 
 </resources>

@@ -9,110 +9,67 @@
     android:padding="25dp"
     tools:context=".MainActivity">
 
-    <TextView
-        android:id="@+id/button_ocr"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="5dp"
-        android:padding="10dp"
-        android:text="Accura Ocr"
-        android:textColor="@color/black"
-        android:textSize="20dp"
-        android:textStyle="bold" />
+        android:layout_height="match_parent">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <LinearLayout
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:scrollbars="none">
 
-            <TextView
-                android:id="@+id/button_ocr_UAE"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:id="@+id/lout_country"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:background="@drawable/btn_bg_red"
-                android:gravity="center"
-                android:onClick="AccuraOcr"
-                android:padding="10dp"
-                android:text="UAE"
-                android:textColor="@color/white"
-                android:textSize="17dp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/button_ocr_PAN"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:background="@drawable/btn_bg_red"
-                android:gravity="center"
-                android:onClick="AccuraOcr"
-                android:padding="10dp"
-                android:text="Pan Card"
-                android:textColor="@color/white"
-                android:textSize="17dp"
-                android:textStyle="bold" />
-        </LinearLayout>
+                <com.accurascan.ocr.mrz.customview.CustomTextView
+                    android:id="@+id/lout_mrz"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/_5dp"
+                    android:background="@drawable/btn_bg_gray"
+                    android:padding="@dimen/_15dp"
+                    android:text="@string/passport_id_mrz"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    app:typeface="ALLER_STD_REG"
+                    android:visibility="gone"/>
 
-        <LinearLayout
+                <com.accurascan.ocr.mrz.customview.CustomTextView
+                    android:id="@+id/lout_pdf417"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/_5dp"
+                    android:background="@drawable/btn_bg_gray"
+                    android:padding="@dimen/_15dp"
+                    android:text="PDF417"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    app:typeface="ALLER_STD_REG"
+                    android:visibility="gone"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_country"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:nestedScrollingEnabled="false"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="2"
+                    tools:listitem="@layout/item_layout" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/button_ocr_Aadhar"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:background="@drawable/btn_bg_red"
-                android:gravity="center"
-                android:onClick="AccuraOcr"
-                android:padding="10dp"
-                android:text="Aadhar"
-                android:textColor="@color/white"
-                android:textSize="17dp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/button_ocr_Malaysia_id"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:background="@drawable/btn_bg_red"
-                android:gravity="center"
-                android:onClick="AccuraOcr"
-                android:padding="10dp"
-                android:text="Malaysia"
-                android:textColor="@color/white"
-                android:textSize="17dp"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </LinearLayout>
-
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="@dimen/_10dp"
-        android:onClick="AccuraOcrCustom"
-        android:padding="20dp"
-        android:text="Accura Ocr Fragment"
-        android:textColor="@color/red"
-        android:textSize="17dp"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+            android:layout_height="match_parent"
+            android:visibility="invisible"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:itemCount="2"
+            tools:listitem="@layout/item_layout" />
+    </RelativeLayout>
 
 </LinearLayout>

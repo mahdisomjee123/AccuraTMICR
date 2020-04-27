@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">AccuraOcrMrz</string>
+    <string name="app_name">Accura SDK</string>
+    <string name="passport_id_mrz"><![CDATA[Passport & ID MRZ]]></string>
 </resources>
