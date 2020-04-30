@@ -134,8 +134,10 @@ public class CameraView {
             throw new NullPointerException(context.getClass().getName() + " must have to implement " + OcrCallback.class.getName());
         }
         if (this.countryCode < 0) {
-            if (type != RecogType.MRZ) {
+            if (type == RecogType.OCR) {
                 throw new IllegalArgumentException("Country Code must have to > 0");
+            } else if (type == RecogType.PDF417) {
+                countryCode = 0;
             }
         }
         if (this.cardCode < 0) {

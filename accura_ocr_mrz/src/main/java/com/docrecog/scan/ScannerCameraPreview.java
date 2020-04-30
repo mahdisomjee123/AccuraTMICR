@@ -45,7 +45,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     private Context mContext;
     private PDF417Data pdf417Data;
     private boolean isDone = false;
-    public int countryCode;
+    public int countryCode = 0;
     protected Preview preview;
     protected ViewGroup cameraContainer;
     private SurfaceHolder mSurfaceHolder;
