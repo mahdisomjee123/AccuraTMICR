@@ -41,12 +41,12 @@ public class MainActivity extends AppCompatActivity {
                 progressBar.dismiss();
             }
             Log.e(TAG, "handleMessage: " + msg.what);
-            if (msg.what == 1 || msg.what == 3) {
-                btnMrz.setVisibility(View.VISIBLE);
-            }
-            btnPDF417.setVisibility(View.VISIBLE);
-            if ((msg.what == 2 || msg.what == 3) && modelList != null) {
-                setCountryLayout();
+            if (msg.what == 1) {
+                if (sdkModel.isMRZEnable) btnMrz.setVisibility(View.VISIBLE);
+                if (sdkModel.isPDF417Enable) btnPDF417.setVisibility(View.VISIBLE);
+                if (sdkModel.isOCREnable && modelList != null) {
+                    setCountryLayout();
+                }
             }
         }
     };
@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private List<ContryModel> modelList;
     private int selectedPosition = -1;
     private View btnMrz, btnPDF417, lout_country;
+    private RecogEngine.SDKModel sdkModel;
 
     private void setCountryLayout() {
 //        contryList = new ArrayList<>();
@@ -159,11 +160,17 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     // doWorkNative();
                     RecogEngine recogEngine = new RecogEngine();
-                    int i = recogEngine.initEngine(MainActivity.this);
-                    if (i > 0) {
-                        if (i > 1)
-                            modelList = recogEngine.getCardList(MainActivity.this);
-                        handler.sendEmptyMessage(i);
+                    sdkModel = recogEngine.initEngine(MainActivity.this);
+                    recogEngine.setBlurPercentage(MainActivity.this, 50);
+                    recogEngine.setFaceBlurPercentage(MainActivity.this, 45);
+                    recogEngine.setGlarePercentage(MainActivity.this, 6,98);
+                    recogEngine.isCheckPhotoCopy(MainActivity.this, false);
+                    recogEngine.SetHologramDetection(MainActivity.this, true);
+
+                    if (sdkModel.i > 0) {
+                        // if OCR enable then get card list
+                        if (sdkModel.isOCREnable) modelList = recogEngine.getCardList(MainActivity.this);
+                        handler.sendEmptyMessage(1);
                     } else
                         handler.sendEmptyMessage(0);
 

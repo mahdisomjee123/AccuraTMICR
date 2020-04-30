@@ -39,8 +39,8 @@ public class OcrActivity extends AppCompatActivity implements OcrCallback {
         init();
 
         recogType = RecogType.detachFrom(getIntent());
-        cardCode = getIntent().getIntExtra("card_code", -1);
-        countryCode = getIntent().getIntExtra("country_code", -1);
+        cardCode = getIntent().getIntExtra("card_code", 0);
+        countryCode = getIntent().getIntExtra("country_code", 0);
 
         Rect rectangle = new Rect();
         Window window = getWindow();
@@ -128,6 +128,7 @@ public class OcrActivity extends AppCompatActivity implements OcrCallback {
      *
      * @param data    is scanned card data if set {@link com.docrecog.scan.RecogType#OCR} else it is null
      * @param mrzData an mrz card data if set {@link com.docrecog.scan.RecogType#MRZ} else it is null
+     * @param pdf417Data an barcode PDF417 data if set {@link com.docrecog.scan.RecogType#PDF417} else it is null
      */
     @Override
     public void onScannedComplete(OcrData data, RecogResult mrzData, PDF417Data pdf417Data) {
@@ -175,7 +176,7 @@ public class OcrActivity extends AppCompatActivity implements OcrCallback {
     public void onError(String errorMessage) {
         // stop ocr if failed
         tvScanMessage.setText(errorMessage);
-        Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
     }
 
 }

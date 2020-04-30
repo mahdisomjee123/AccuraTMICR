@@ -24,7 +24,7 @@ public class PDF417Data implements Parcelable {
     public Bitmap docBackBitmap = null;
     public Bitmap docFrontBitmap = null;
 
-    public PDF417Data(){
+    public PDF417Data() {
 
     }
 

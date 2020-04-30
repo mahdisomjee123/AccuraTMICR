@@ -127,7 +127,11 @@ public class CameraHolder {
                 Log.e(TAG, "reconnect failed.");
                 throw new Exception(e);
             }
-            mCameraDevice.setParameters(mParameters);
+//            try {
+//                mCameraDevice.setParameters(mParameters);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
         }
         ++mUsers;
         mHandler.removeMessages(RELEASE_CAMERA);

@@ -40,6 +40,8 @@ import static com.accurascan.ocr.mrz.camerautil.FocusManager.isSupported;
 
 abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.Listener, RecogEngine.ScanListener {
 
+    private boolean isPreviewStarted = false;
+
     abstract void onProcessUpdate(String s, String s1, boolean b);
 
     abstract void onError(String s);
@@ -83,6 +85,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
     private boolean mOnResumePending;
     private boolean mPausing;
     private boolean mFirstTimeInitialized;
+    private boolean mFirstInitialized = false;
 
     // The display rotation in degrees. This is only valid when mCameraState is
     // not PREVIEW_STOPPED.
@@ -129,7 +132,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
     private int mRecCnt = 0; //counter for mrz detecting
     private int bRet = 0; //counter for mrz detecting
 
-    private ProgressBar progressBar;
+//    private ProgressBar progressBar;
 
     private Handler handler = new Handler() {
         @Override
@@ -216,47 +219,50 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
      */
     void start() {
         if (this.recogType == null) {
-            throw new IllegalStateException("must have to set recogType");
+            throw new NullPointerException("Must have to set recogType");
         }
         if (this.cameraContainer == null) {
-            throw new IllegalStateException("OcrCameraPreview must have to setView");
+            throw new NullPointerException("Must have to setView");
         }
         if (recogEngine == null) {
             recogEngine = new RecogEngine();
         }
         isValidate = true;
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(mActivity)) {
-//            throw new IllegalStateException("must have to granted Camera permission to access your hardware camera");
-//        } else {
-//            mCameraOpenThread.start();
-//
-////            // Make sure camera device is opened.
-////            try {
-////                mCameraOpenThread.join();
-////                mCameraOpenThread = null;
-////                if (mOpenCameraFail) {
-////                    Util.showErrorAndFinish(mActivity, R.string.cannot_connect_camera);
-////                    return;
-////                } else if (mCameraDisabled) {
-////                    Util.showErrorAndFinish(mActivity, R.string.camera_disabled);
-////                    return;
-////                }
-////            } catch (InterruptedException ex) {
-////                // ignore
-////            }
-//
-//        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(mActivity)) {
+            throw new RuntimeException(mActivity.getPackageName() + " must have to granted Camera permission to access your hardware camera");
+        } else {
+            mCameraOpenThread.start();
+
+//            // Make sure camera device is opened.
+//            try {
+//                mCameraOpenThread.join();
+//                mCameraOpenThread = null;
+//                if (mOpenCameraFail) {
+//                    Util.showErrorAndFinish(mActivity, R.string.cannot_connect_camera);
+//                    return;
+//                } else if (mCameraDisabled) {
+//                    Util.showErrorAndFinish(mActivity, R.string.camera_disabled);
+//                    return;
+//                }
+//            } catch (InterruptedException ex) {
+//                // ignore
+//            }
+
+        }
         String[] defaultFocusModes = {"continuous-video", "auto", "continuous-picture"};
         mFocusManager = new FocusManager(defaultFocusModes);
         mCameraId = CameraHolder.instance().getBackCameraId();
         dm = mActivity.getResources().getDisplayMetrics();
         Preview preview = new Preview(mActivity);
-        progressBar = new ProgressBar(mActivity, null, android.R.attr.progressBarStyleLarge);
-        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(100, 100);
-        lp.addRule(RelativeLayout.CENTER_IN_PARENT);
+//        progressBar = new ProgressBar(mActivity, null, android.R.attr.progressBarStyleLarge);
+//        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(100, 100);
+//        lp.addRule(RelativeLayout.CENTER_IN_PARENT);
         if (recogType == RecogType.OCR) {
-            if (this.conutryCode <= 0 || this.cardCode <= 0) {
-                throw new IllegalStateException("OcrCameraPreview must have to setCardData");
+            if (this.conutryCode < 0) {
+                throw new IllegalArgumentException("Country Code must have to > 0");
+            }
+            if (this.cardCode < 0) {
+                throw new IllegalArgumentException("Card Code must have to > 0");
             }
             RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             int widthMargin = -(dm.widthPixels / 5);
@@ -302,7 +308,8 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
             ex.printStackTrace();
         }
         mCameraPreviewThread = null;
-        progressBar.setVisibility(View.GONE);
+        isPreviewStarted = true;
+//        progressBar.setVisibility(View.GONE);
 //        if (progressBar != null && progressBar.isShowing()) {
 //            progressBar.dismiss();
 //        }
@@ -366,9 +373,9 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
 //        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(mActivity)) {
-            throw new IllegalStateException("must have to granted Camera permission to access your hardware camera");
+            throw new RuntimeException(mActivity.getPackageName() + " must have to granted Camera permission to access your hardware camera");
         } else {
-            mCameraOpenThread.start();
+//            mCameraOpenThread.start();
 
             // Make sure camera device is opened.
             try {
@@ -501,6 +508,11 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
 
         if (mCameraState != IDLE) {
             mCameraDevice.setOneShotPreviewCallback(OcrCameraPreview.this);
+            return;
+        }
+
+        if (!isPreviewStarted) {
+//            refreshPreview();
             return;
         }
 
@@ -726,7 +738,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
                 // We are not sure about the current state of the app (in preview or
                 // snapshot or recording). Closing the app is better than creating a
                 // new Camera object.
-                throw new RuntimeException("Media server died.");
+//                throw new RuntimeException("Media server died.");
             }
         }
     }
@@ -777,7 +789,10 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
             // and camera app is opened. Rotation animation takes some time and
             // display rotation in onCreate may not be what we want.
             if (mCameraState == PREVIEW_STOPPED) {
-                startPreview();
+                if (mFirstInitialized) {
+//                    initializeCapabilities();
+                    startPreview();
+                }
             } else {
                 if (Util.getDisplayRotation(mActivity) != mDisplayRotation) {
                     setDisplayOrientation();
@@ -896,7 +911,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
             }
         } catch (Throwable ex) {
             closeCamera();
-            throw new RuntimeException("setPreviewDisplay failed", ex);
+//            throw new RuntimeException("setPreviewDisplay failed", ex);
         }
     }
 
@@ -912,6 +927,8 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
     }
 
     private void initializeCapabilities() {
+
+        mFirstInitialized = true;
 
         if (mCameraDevice != null)
             mParameters = mCameraDevice.getParameters();

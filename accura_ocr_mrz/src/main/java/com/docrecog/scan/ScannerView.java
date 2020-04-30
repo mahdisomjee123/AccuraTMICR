@@ -58,7 +58,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
      */
     public void init() {
         if (this.cameraContainer == null) {
-            throw new IllegalStateException(context.getClass().getName() + " must have to setView");
+            throw new IllegalStateException("Must have to setView");
         }
         if (this.scanCallBack == null) {
             throw new NullPointerException(context.getClass().getName() + " must have to implement " + OcrCallback.class.getName());

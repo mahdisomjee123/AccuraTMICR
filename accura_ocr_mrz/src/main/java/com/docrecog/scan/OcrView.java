@@ -103,19 +103,19 @@ public abstract class OcrView extends OcrCameraPreview {
      */
     public void init() {
         if (this.recogType == null) {
-            throw new IllegalStateException(context.getClass().getName() + " must have to set recogType");
+            throw new NullPointerException("Must have to set recogType");
         }
         if (this.cameraContainer == null) {
-            throw new IllegalStateException(context.getClass().getName() + " must have to setView");
+            throw new NullPointerException("Must have to setView");
         }
         if (this.ocrCallBack == null) {
             throw new NullPointerException(context.getClass().getName() + " must have to implement " + OcrCallback.class.getName());
         }
         if (recogType == RecogType.OCR) {
-            if (this.countryCode <= 0) {
-                throw new IllegalStateException(context.getClass().getName() + " Country Code must have to > 0");
-            } else if (this.cardCode <= 0) {
-                throw new IllegalStateException(context.getClass().getName() + " Card Code must have to > 0");
+            if (this.countryCode < 0) {
+                throw new IllegalArgumentException("Country Code must have to > 0");
+            } else if (this.cardCode < 0) {
+                throw new IllegalArgumentException("Card Code must have to > 0");
             }
         }
         setData(countryCode, cardCode);

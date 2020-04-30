@@ -125,22 +125,22 @@ public class CameraView {
      */
     public void init() {
         if (this.type == null) {
-            throw new IllegalStateException(CameraView.class.getName() + " must have to set recogType");
+            throw new NullPointerException(CameraView.class.getName() + " must have to set recogType");
         }
         if (this.cameraContainer == null) {
-            throw new IllegalStateException(CameraView.class.getName() + " must have to setView");
+            throw new NullPointerException(CameraView.class.getName() + " must have to setView");
         }
         if (this.callback == null) {
             throw new NullPointerException(context.getClass().getName() + " must have to implement " + OcrCallback.class.getName());
         }
         if (this.countryCode < 0) {
             if (type != RecogType.MRZ) {
-                throw new IllegalStateException(CameraView.class.getName() + " Country Code must have to > 0");
+                throw new IllegalArgumentException("Country Code must have to > 0");
             }
         }
         if (this.cardCode < 0) {
             if (type == RecogType.OCR)
-                throw new IllegalStateException(CameraView.class.getName() + " Card Code must have to > 0");
+                throw new IllegalArgumentException("Card Code must have to > 0");
         }
 
         // initialize media to play sound after scanned.

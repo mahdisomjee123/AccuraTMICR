@@ -133,6 +133,7 @@ public class Util {
         DevicePolicyManager dpm = (DevicePolicyManager) activity.getSystemService(
                 Context.DEVICE_POLICY_SERVICE);
         if (dpm.getCameraDisabled(null)==true) {
+            Util.logw(TAG, "cameraDisable" );
             throw new Exception();
         }
         for (int i = 0; i < OPEN_RETRY_COUNT; i++) {
@@ -511,6 +512,11 @@ public class Util {
     public static void logd(String tag, String s) {
         if (DEBUG) {
             Log.d(tag, s);
+        }
+    }
+    public static void logw(String tag, String s) {
+        if (DEBUG) {
+            Log.w(tag, s);
         }
     }
 }

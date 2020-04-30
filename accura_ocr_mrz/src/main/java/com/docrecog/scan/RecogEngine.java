@@ -118,21 +118,22 @@ public class RecogEngine {
     }
 
     //This is SDK app calling JNI method
-    native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
+    private native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
 
     //return value: 0:fail,1:success,correct document, 2:success,incorrect document
-    native int doRecogYuv420p(byte[] yuvdata, int width, int height, int facepick, int rot, int[] intData, Bitmap faceBitmap, boolean unknownVal);
+    private native int doRecogYuv420p(byte[] yuvdata, int width, int height, int facepick, int rot, int[] intData, Bitmap faceBitmap, boolean unknownVal);
 
-    native int doRecogBitmap(Bitmap bitmap, int facepick, int[] intData, Bitmap faceBitmap, int[] faced, boolean unknownVal);
+    private native int doRecogBitmap(Bitmap bitmap, int facepick, int[] intData, Bitmap faceBitmap, int[] faced, boolean unknownVal);
 
-    native int doFaceDetect(Bitmap bitmap, Bitmap faceBitmap, float[] fConf);
+    private native int doFaceDetect(Bitmap bitmap, Bitmap faceBitmap, float[] fConf);
 
-    native String loadData(Context context, int[] i);
+    private native String loadData(Context context, int[] i);
 
 
     /**
      * Set Blur Percentage to allow blur on document
-     * @param context Activity context
+     *
+     * @param context        Activity context
      * @param blurPercentage is 0 to 100, 0 - clean document and 100 - Blurry document
      * @return 1 if success else 0
      */
@@ -140,23 +141,24 @@ public class RecogEngine {
 
     /**
      * Set Blur Percentage to allow blur on detected Face
-     * @param context Activity context
+     *
+     * @param context            Activity context
      * @param faceBlurPercentage is 0 to 100, 0 - clean face and 100 - Blurry face
      * @return 1 if success else 0
      */
     public native int setFaceBlurPercentage(Context context, int faceBlurPercentage);
 
     /**
-     *
      * @param context
      * @param minPercentage
      * @param maxPercentage
      * @return 1 if success else 0
      */
-    public native int setGlarePercentage(Context context, int minPercentage , int maxPercentage);
+    public native int setGlarePercentage(Context context, int minPercentage, int maxPercentage);
 
     /**
      * Set CheckPhotoCopy to allow photocopy document or not
+     *
      * @param context
      * @param isCheckPhotoCopy if true then reject photo copy document else vice versa
      * @return 1 if success else 0
@@ -165,21 +167,22 @@ public class RecogEngine {
 
     /**
      * set Hologram detection to allow hologram on face or not
+     *
      * @param context
      * @param isDetectHologram if true then reject hologram is on face else it is allow .
      * @return 1 if success else 0
      */
     public native int SetHologramDetection(Context context, boolean isDetectHologram);
 
-    native String loadOCR(Context context, AssetManager assetManager, int countryid, int cardid, int widthPixels);
+    private native String loadOCR(Context context, AssetManager assetManager, int countryid, int cardid, int widthPixels);
 
-    native ImageOpencv checkDocument(long matInput, long matOut);
+    private native ImageOpencv checkDocument(long matInput, long matOut);
 
-    native String recognizeData(long src, int[][] boxBoundsLTRB, String[] textElements);
+    private native String recognizeData(long src, int[][] boxBoundsLTRB, String[] textElements);
 
-    native String loadScanner(Context context, AssetManager assetManager, int countryid);
+    private native String loadScanner(Context context, AssetManager assetManager, int countryid);
 
-    native int doBlurCheck(long srcMat);
+    private native int doBlurCheck(long srcMat);
 
     /**
      * Initialized ocr
@@ -192,7 +195,7 @@ public class RecogEngine {
      */
     // for failed -> responseCode = 0,
     // for success -> responseCode = 1
-    InitModel initOcr(ScanListener scanListener, Context context, int countryId, int cardId) {
+    protected InitModel initOcr(ScanListener scanListener, Context context, int countryId, int cardId) {
         if (scanListener != null) {
             this.callBack = scanListener;
         } else {
@@ -210,7 +213,7 @@ public class RecogEngine {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
                 InitModel initModel = new Gson().fromJson(jsonObject.toString(), InitModel.class);
-                isMrzEnable = initModel.getInitData().getMRZEnable();
+                isMrzEnable = initModel.getInitData() != null ? initModel.getInitData().getMRZEnable() : false;
                 return initModel;
             }
         } catch (JSONException e) {
@@ -222,8 +225,8 @@ public class RecogEngine {
     /**
      * Initialized ocr
      *
-     * @param context      is activity context
-     * @param countryId    is country code
+     * @param context   is activity context
+     * @param countryId is country code
      * @return {@link InitModel}
      */
     // for failed -> responseCode = 0,
@@ -243,18 +246,18 @@ public class RecogEngine {
         return null;
     }
 
-    boolean checkValid(Bitmap bitmap){
+    boolean checkValid(Bitmap bitmap) {
         Mat src = new Mat();
         Utils.bitmapToMat(bitmap, src);
-        int i =  doBlurCheck(src.getNativeObjAddr());
+        int i = doBlurCheck(src.getNativeObjAddr());
         return i == 0;
     }
 
     /**
      * To get scanned data from document
      *
-     * @param src   is an Mat::getNativeObjAddr()
-     * @param text  is data
+     * @param src  is an Mat::getNativeObjAddr()
+     * @param text is data
      * @return for failed -> responseCode = 0,
      * for success -> responseCode = 1 && data has cardSide is front or back and ocrdata.
      */
@@ -373,12 +376,20 @@ public class RecogEngine {
         return null;
     }
 
+    public class SDKModel {
+        public int i;
+        public boolean isMRZEnable = false;
+        public boolean isOCREnable = false;
+        public boolean isPDF417Enable = false;
+    }
+
     /**
      * Must have to call initEngine on app open
+     *
      * @param context
      * @return
      */
-    public int initEngine(Context context) {
+    public SDKModel initEngine(Context context) {
 
         //call Sdk  method InitEngine
         // this method will return the integer value
@@ -392,11 +403,30 @@ public class RecogEngine {
         // 1 - for MRZ only
         // 2 - for Ocr only
         // 3 - for ocr + mrz both
+
+        /*
+           initialized sdk by InitEngine from thread
+          The return value by initEngine used the identify
+          Return i < 0 if license not valid
+          -1 - No key found
+          -2 - Invalid Key
+          -3 - Invalid Platform
+          -4 - Invalid License
+
+          Return i > 0 if license is valid
+          1 - for MRZ only
+          2 - for Ocr only
+          3 - for PDF417 only
+          4 - for Ocr + MRZ both
+          5 - for Ocr + PDF417 both
+          6 - for PDF417 + MRZ both
+          7 - for Ocr + MRZ + PDF417 both
+         */
         this.con = context;
 
         getAssetFile(assetNames[0], assetNames[1]);
         File file = loadClassifierData(context);
-        int ret = loadDictionary(context, file != null ? file.getAbsolutePath() : "",  pDic, pDicLen, pDic1, pDicLen1, context.getAssets());
+        int ret = loadDictionary(context, file != null ? file.getAbsolutePath() : "", pDic, pDicLen, pDic1, pDicLen1, context.getAssets());
         Log.i("recogPassport", "loadDictionary: " + ret);
         if (ret < 0) {
             String message = "";
@@ -425,7 +455,12 @@ public class RecogEngine {
                 alert11.show();
             }
         }
-        return ret;
+        SDKModel sdkModel = new SDKModel();
+        sdkModel.isMRZEnable = ret == 1 || ret == 4 || ret == 6 || ret == 7;
+        sdkModel.isOCREnable = ret == 2 || ret == 4 || ret == 5 || ret == 7;
+        sdkModel.isPDF417Enable = ret == 3 || ret == 5 || ret == 6 || ret == 7;
+        sdkModel.i = ret;
+        return sdkModel;
     }
 
     private int getAssetFile(String fileName, String fileName1) {
@@ -519,7 +554,8 @@ public class RecogEngine {
                 } else {
                     if (faceBmp != null) {
                         result.faceBitmap = faceBmp.copy(Config.ARGB_8888, false);
-                        if (faced[1] < 400 || faced[2] < 400) result.faceBitmap = Bitmap.createBitmap(result.faceBitmap, 0, 0, faced[1], faced[2]);
+                        if (faced[1] < 400 || faced[2] < 400)
+                            result.faceBitmap = Bitmap.createBitmap(result.faceBitmap, 0, 0, faced[1], faced[2]);
                         result.recType = RecType.BOTH;
                         result.bRecDone = true;
                     }
@@ -549,7 +585,8 @@ public class RecogEngine {
 
         //ret > 0 => detect face ok
         if (ret <= 0) result.faceBitmap = null;
-        else if (fConf[1] < 400 || fConf[2] < 400) result.faceBitmap = Bitmap.createBitmap(result.faceBitmap, 0, 0, (int) fConf[1], (int) fConf[2]);
+        else if (fConf[1] < 400 || fConf[2] < 400)
+            result.faceBitmap = Bitmap.createBitmap(result.faceBitmap, 0, 0, (int) fConf[1], (int) fConf[2]);
 
         if (ret > 0 && result.recType == RecType.MRZ)
             result.bRecDone = true;
@@ -636,7 +673,7 @@ public class RecogEngine {
         }
     }
 
-    public enum RecType{
+    public enum RecType {
         INIT, BOTH, FACE, MRZ
     }
 }
