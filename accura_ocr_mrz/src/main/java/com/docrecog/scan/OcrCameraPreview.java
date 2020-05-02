@@ -577,7 +577,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
                             if (mRecCnt > 2) {
                                 Bitmap docBmp = bmCard;
 
-                                if (mRecCnt % 5 == 1)
+                                if (mRecCnt % 2 == 1)
                                     ret = recogEngine.doRunFaceDetect(docBmp, g_recogResult);
                             }
                             mRecCnt++;
@@ -598,7 +598,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
 
                                 if ((g_recogResult.recType == RecogEngine.RecType.MRZ && !g_recogResult.bRecDone) ||
                                         (g_recogResult.recType == RecogEngine.RecType.FACE && g_recogResult.bRecDone)) {
-                                    if (!g_recogResult.bRecDone || bRet > 2 || bRet == -1) {
+                                    if (/*!g_recogResult.bRecDone || */bRet > 5 || bRet == -1) {
                                         g_recogResult.docBackBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
                                     } else {
                                         g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
@@ -614,7 +614,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
                                 if (g_recogResult.bRecDone) {
                                     sendInformation();
                                 } else {
-                                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, true);
+//                                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, true);
                                     refreshPreview();
                                     mHandler.sendMessageDelayed(
                                             mHandler.obtainMessage(TRIGER_RESTART_RECOG),
