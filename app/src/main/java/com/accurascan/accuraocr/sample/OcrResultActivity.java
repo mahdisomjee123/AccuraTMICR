@@ -430,6 +430,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        setResult(RESULT_OK);
         finish();
     }
 

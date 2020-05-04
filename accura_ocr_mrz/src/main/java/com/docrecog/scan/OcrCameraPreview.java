@@ -2,6 +2,7 @@ package com.docrecog.scan;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.media.CameraProfile;
@@ -16,7 +17,6 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 
 import com.accurascan.ocr.mrz.R;
@@ -1123,7 +1123,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
             updateMessage = "Now Scan Front Side of " + ocrData.getCardname();
         }
         if (ocrData.getBackData() == null || ocrData.getFrontData() == null && updateMessage != null) {
-            onProcessUpdate(updateMessage, null, true);
+            onProcessUpdate(updateMessage, "", true);
         }
     }
 
@@ -1135,11 +1135,30 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
 //            e.printStackTrace();
 //        }
         recogEngine.closeEngine();
-        ocrData.setMrzData(g_recogResult);
+        mRecCnt = 0;
+        bRet = 0;
         if (recogType == RecogType.OCR) {
+            ocrData.setMrzData(g_recogResult);
+            g_recogResult = new RecogResult();
+            g_recogResult.recType = RecogEngine.RecType.INIT;
+            g_recogResult.bRecDone = false;
             onScannedComplete(ocrData);
+            try {
+                onProcessUpdate(null, "", false);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } else if (recogType == RecogType.MRZ) {
-            onScannedComplete(g_recogResult);
+            RecogResult recogResult = g_recogResult;
+            g_recogResult = new RecogResult();
+            g_recogResult.recType = RecogEngine.RecType.INIT;
+            g_recogResult.bRecDone = false;
+            onScannedComplete(recogResult);
+            try {
+                onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, false);
+            } catch (Resources.NotFoundException e) {
+                e.printStackTrace();
+            }
         }
     }
 

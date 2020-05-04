@@ -504,7 +504,7 @@ public class RecogEngine {
 
 //            faceClassifierFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
             faceClassifierFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
-            System.out.println("cascade path  = " + faceClassifierFile.getAbsolutePath());
+//            System.out.println("cascade path  = " + faceClassifierFile.getAbsolutePath());
 
             if (!faceClassifierFile.exists()) {
                 os = new FileOutputStream(faceClassifierFile);

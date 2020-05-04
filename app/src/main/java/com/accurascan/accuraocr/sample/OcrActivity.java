@@ -11,6 +11,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.accurascan.ocr.mrz.CameraView;
@@ -136,18 +137,15 @@ public class OcrActivity extends AppCompatActivity implements OcrCallback {
         if (data != null) {
             OcrData.setOcrResult(data);
             RecogType.OCR.attachTo(intent);
-            startActivity(intent);
-            finish();
+            startActivityForResult(intent, 101);
         } else if (mrzData != null) {
             RecogResult.setRecogResult(mrzData);
             RecogType.MRZ.attachTo(intent);
-            startActivity(intent);
-            finish();
+            startActivityForResult(intent, 101);
         } else if (pdf417Data != null) {
             PDF417Data.setPDF417Result(pdf417Data);
             RecogType.PDF417.attachTo(intent);
-            startActivity(intent);
-            finish();
+            startActivityForResult(intent, 101);
         } else Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
     }
 
@@ -177,6 +175,16 @@ public class OcrActivity extends AppCompatActivity implements OcrCallback {
         // stop ocr if failed
         tvScanMessage.setText(errorMessage);
         Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            if (requestCode == 101) {
+                if (cameraView != null) cameraView.init();
+            }
+        }
     }
 
 }
