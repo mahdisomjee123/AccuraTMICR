@@ -21,7 +21,9 @@
         android:resizeableActivity="false"
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true">
-
+<!--        <meta-data-->
+<!--            android:name="com.google.firebase.ml.vision.DEPENDENCIES"-->
+<!--            android:value="face,ocr" />-->
     </application>
 </manifest>
 

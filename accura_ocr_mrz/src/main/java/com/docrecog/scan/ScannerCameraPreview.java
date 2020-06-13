@@ -41,11 +41,12 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     private CameraSource cameraSource;
     private DisplayMetrics displayMetrics;
     public Camera camera;
-    private int barcodeFormate = Barcode.PDF417;
+    private int barcodeFormate = Barcode.ALL_FORMATS;
     private Context mContext;
     private PDF417Data pdf417Data;
     private boolean isDone = false;
     public int countryCode = 0;
+    public RecogType barcodeType = null;
     protected Preview preview;
     protected ViewGroup cameraContainer;
     private SurfaceHolder mSurfaceHolder;
@@ -57,7 +58,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
     protected abstract void onError(String s);
 
-    protected abstract void onUpdate(String s);
+    protected abstract void onUpdate(String s, boolean isFlip);
 
     protected ScannerCameraPreview(Context context) {
         this.mContext = context;
@@ -77,8 +78,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                 InitModel initModel = recogEngine.initScanner(context, countryCode);
                 if (initModel != null ) {
                     if (initModel.getResponseCode() == 1) {
-                        initFrontCamera();
-                        onUpdate(mContext.getResources().getString(R.string.scan_front));
+                        startScan();
                     } else {
                         onError(initModel.getResponseMessage());
                     }
@@ -91,9 +91,21 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         },100);
     }
 
-    private void initFrontCamera() {
+    private void startScan() {
         pdf417Data = new PDF417Data();
         displayMetrics = this.mContext.getResources().getDisplayMetrics();
+        if (barcodeType == RecogType.BARCODE) {
+            addScanner(this.mContext);
+            onUpdate("", false);
+        } else if (barcodeType == RecogType.PDF417) {
+            barcodeFormate = Barcode.PDF417;
+            initFrontCamera();
+            onUpdate(mContext.getResources().getString(R.string.scan_front), false);
+        }
+    }
+
+    private void initFrontCamera() {
+
         FaceDetector detector = new FaceDetector.Builder(mContext)
                 .setTrackingEnabled(false)
                 .build();
@@ -142,7 +154,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                     @Override
                                     public void run() {
                                         cameraSource.stop();
-                                        onScannedSuccess(mContext.getResources().getString(R.string.scan_back));
+                                        onUpdate(mContext.getResources().getString(R.string.scan_back), true);
 
                                         Runnable runnable = new Runnable() {
                                             public void run() {
@@ -193,13 +205,22 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                         @Override
                         public void run() {
                             cameraSource.stop();
-                            pdf417Data.docBackBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
+                            if (barcodeType == RecogType.BARCODE) {
+                                pdf417Data.docFrontBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
+                            } else if (barcodeType == RecogType.PDF417) {
+                                pdf417Data.docBackBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
+                            }
 
                             String output = qrcode.valueAt(0).rawValue;
                             if (BarcodeHelper.extractScanResult(output, pdf417Data)) {
                                 if (!isDone) {
                                     isDone = true;
                                     onScannedPDF417(pdf417Data);
+                                }
+                            } else {
+                                if (!isDone) {
+                                    isDone = true;
+                                    onScannedSuccess(output);
                                 }
                             }
                         }

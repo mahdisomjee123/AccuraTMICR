@@ -1,5 +1,8 @@
 package com.accurascan.accuraocr.sample;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -7,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -127,8 +131,8 @@ public class OcrActivity extends AppCompatActivity implements OcrCallback {
     /**
      * call this method after retrieve data from card
      *
-     * @param data    is scanned card data if set {@link com.docrecog.scan.RecogType#OCR} else it is null
-     * @param mrzData an mrz card data if set {@link com.docrecog.scan.RecogType#MRZ} else it is null
+     * @param data       is scanned card data if set {@link com.docrecog.scan.RecogType#OCR} else it is null
+     * @param mrzData    an mrz card data if set {@link com.docrecog.scan.RecogType#MRZ} else it is null
      * @param pdf417Data an barcode PDF417 data if set {@link com.docrecog.scan.RecogType#PDF417} else it is null
      */
     @Override
@@ -146,6 +150,29 @@ public class OcrActivity extends AppCompatActivity implements OcrCallback {
             PDF417Data.setPDF417Result(pdf417Data);
             RecogType.PDF417.attachTo(intent);
             startActivityForResult(intent, 101);
+        } else Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onScannedComplete(Object result) {
+        Intent intent = new Intent(this, OcrResultActivity.class);
+        if (result != null) {
+            if (result instanceof OcrData) {
+                OcrData.setOcrResult((OcrData) result);
+                RecogType.OCR.attachTo(intent);
+                startActivityForResult(intent, 101);
+            } else if (result instanceof RecogResult) {
+                RecogResult.setRecogResult((RecogResult) result);
+                RecogType.MRZ.attachTo(intent);
+                startActivityForResult(intent, 101);
+            } else if (result instanceof PDF417Data) {
+                PDF417Data.setPDF417Result((PDF417Data) result);
+                RecogType.PDF417.attachTo(intent);
+                startActivityForResult(intent, 101);
+            } else if (result instanceof String) {
+                setResultDialog((String) result);
+//                Toast.makeText(this, (String) result, Toast.LENGTH_SHORT).show();
+            }
         } else Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
     }
 
@@ -185,6 +212,26 @@ public class OcrActivity extends AppCompatActivity implements OcrCallback {
                 if (cameraView != null) cameraView.init();
             }
         }
+    }
+
+    private void setResultDialog(String output) {
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+        dialog.setTitle("Barcode Result");
+        dialog.setMessage(output);
+        dialog.setCancelable(false);
+        dialog.setNegativeButton("Retry", (dialog1, which) -> {
+            if (cameraView != null) cameraView.init();
+        });
+        dialog.setPositiveButton("Ok", (dialog1, which) -> {
+            onBackPressed();
+        });
+        try {
+            dialog.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
     }
 
 }

@@ -16,6 +16,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
     public boolean isflashOn;
     private OcrCallback scanCallBack;
     private Context context;
+    private boolean isPreviewAdded = false;
 
     public ScannerView(@NonNull Context context) {
         super(context);
@@ -34,6 +35,18 @@ public abstract class ScannerView extends ScannerCameraPreview {
         this.cameraContainer = view;
         return this;
     }
+
+    /**
+     * Set Camera type to scan Mrz or Ocr+Mrz
+     *
+     * @param recogType
+     * @return
+     */
+    public ScannerView setBarcodeType(RecogType recogType) {
+        this.barcodeType = recogType;
+        return this;
+    }
+
     /**
      * add call back to get retrieve data
      * @param callBack
@@ -79,6 +92,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
         if (this.scanCallBack != null) {
             this.scanCallBack.onUpdateLayout(W, H);
         }
+        isPreviewAdded = true;
     }
 
     public void startScan() {
@@ -189,8 +203,9 @@ public abstract class ScannerView extends ScannerCameraPreview {
 
     @Override
     protected void onScannedSuccess(String rawResult) {
+        onPlaySound();
         if (scanCallBack != null) {
-            scanCallBack.onProcessUpdate(rawResult, "", true);
+            scanCallBack.onScannedComplete(rawResult);
         }
     }
 
@@ -198,7 +213,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
     protected void onScannedPDF417(PDF417Data result) {
         onPlaySound();
         if (scanCallBack != null) {
-            scanCallBack.onScannedComplete(null, null, result);
+            scanCallBack.onScannedComplete(result);
         }
     }
 
@@ -210,10 +225,12 @@ public abstract class ScannerView extends ScannerCameraPreview {
     }
 
     @Override
-    protected void onUpdate(String s) {
+    protected void onUpdate(String s, boolean isFlip) {
         if (scanCallBack != null) {
-            addCameraPreview(context);
-            this.scanCallBack.onProcessUpdate(s, null, false);
+            if (!isPreviewAdded) {
+                addCameraPreview(context);
+            }
+            this.scanCallBack.onProcessUpdate(s, null, isFlip);
         }
     }
 

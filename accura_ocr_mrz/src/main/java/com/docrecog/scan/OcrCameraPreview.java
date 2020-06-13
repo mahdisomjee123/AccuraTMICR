@@ -2,8 +2,8 @@ package com.docrecog.scan;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.media.CameraProfile;
 import android.os.Build;
@@ -38,7 +38,7 @@ import static com.accurascan.ocr.mrz.camerautil.CameraSource.IDLE;
 import static com.accurascan.ocr.mrz.camerautil.CameraSource.PREVIEW_STOPPED;
 import static com.accurascan.ocr.mrz.camerautil.FocusManager.isSupported;
 
-abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.Listener, RecogEngine.ScanListener {
+abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Camera.PreviewCallback, FocusManager.Listener {
 
     private boolean isPreviewStarted = false;
 
@@ -225,7 +225,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
             throw new NullPointerException("Must have to setView");
         }
         if (recogEngine == null) {
-            recogEngine = new RecogEngine();
+            recogEngine = new RecogEngine(mActivity);
         }
         isValidate = true;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(mActivity)) {
@@ -309,6 +309,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
         }
         mCameraPreviewThread = null;
         isPreviewStarted = true;
+        recogEngine.setCallBack(this);
 //        progressBar.setVisibility(View.GONE);
 //        if (progressBar != null && progressBar.isShowing()) {
 //            progressBar.dismiss();
@@ -334,7 +335,11 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
                             rectW = i1.getInitData().getCameraWidth();
                             ocrData.setCardname(i1.getInitData().getCardName());
                             isbothavailable = i1.getInitData().getIsbothavailable();
-                            onProcessUpdate(String.format("Scan %s of %s", i1.getInitData().getCardside(), ocrData.getCardname()), null, false);
+                            if (isbothavailable) {
+                                onProcessUpdate(String.format("Scan %s of %s", i1.getInitData().getCardside(), ocrData.getCardname()), null, false);
+                            } else {
+                                onProcessUpdate(String.format("Scan %s", ocrData.getCardname()), null, false);
+                            }
                             handler.sendEmptyMessage(1);
                         } else {
                             onError(i1.getResponseMessage());
@@ -541,7 +546,17 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
                                     ret = recogEngine.doRunData(bmCard, 0, g_recogResult);
                                 }
                                 if (checkmrz == 0) {
-                                    recogEngine.doRecognition(OcrCameraPreview.this, card, imageOpencv.mat, ocrData);
+//                                    if (ocrData.getFaceImage() == null) {
+//                                        recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation, ocrData, null, new RecogEngine.ScanListener() {
+//                                            @Override
+//                                            public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+//                                                recogEngine.doRecognition(OcrCameraPreview.this, card, imageOpencv.mat, ocrData);
+//                                            }
+//                                        });
+//                                        mRecCnt++;
+//                                    } else {
+                                        recogEngine.doRecognition(OcrCameraPreview.this, card, imageOpencv.mat, ocrData);
+//                                    }
                                 } else {
                                     if (ret == 1 || ret == 2) {
                                         GotMRZData();
@@ -560,27 +575,55 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
                         }
                     } else if (recogType == RecogType.MRZ) {
                         if (g_recogResult.recType == RecogEngine.RecType.INIT) {
-                            ret = recogEngine.doRunData(bmCard, 1, g_recogResult);
-                            if (ret <= 0 && mRecCnt > 2) {
-                                // Bitmap docBmp = null;
+//                            ret = recogEngine.doRunData(bmCard, 1, g_recogResult);
+//                            if (ret <= 0 && mRecCnt > 2) {
+                            // Bitmap docBmp = null;
 
-                                if (mRecCnt % 4 == 1)
-                                    faceret = recogEngine.doRunFaceDetect(bmCard, g_recogResult);
+//                                if (mRecCnt % 4 == 1)
+//                            faceret = recogEngine.doRunFaceDetect(bmCard, g_recogResult);
+                            if (/*recogEngine.checkValid(bmCard) && */g_recogResult.faceBitmap == null) {
+                                recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation,  null, g_recogResult, new RecogEngine.ScanListener() {
+
+                                    @Override
+                                    void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                                        if (recogType == RecogType.MRZ) {
+                                            if (g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.lines.equalsIgnoreCase(""))
+                                                sendInformation();
+                                            else {
+                                                g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                g_recogResult.recType = RecogEngine.RecType.FACE;
+                                                refreshPreview();
+                                            }
+                                        }
+                                    }
+                                });
                             }
+//                            }
+
                             mRecCnt++; //counter increases
                         } else if (g_recogResult.recType == RecogEngine.RecType.FACE) { //have to do mrz
-                            ret = recogEngine.doRunData(bmCard, 1, g_recogResult);
+                            ret = recogEngine.doRunData(bmCard, 0, g_recogResult);
                             if (bRet > -1) {
                                 bRet++;
                             }
                         } else if (g_recogResult.recType == RecogEngine.RecType.MRZ) { //have to do face
-                            if (mRecCnt > 2) {
-                                Bitmap docBmp = bmCard;
+                            if (/*recogEngine.checkValid(bmCard) && */g_recogResult.faceBitmap == null) {
+                                recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation,  null, g_recogResult, new RecogEngine.ScanListener() {
 
-                                if (mRecCnt % 2 == 1)
-                                    ret = recogEngine.doRunFaceDetect(docBmp, g_recogResult);
+                                    @Override
+                                    void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                                        if (recogType == RecogType.MRZ) {
+                                            if (g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.lines.equalsIgnoreCase(""))
+                                                sendInformation();
+                                            else {
+                                                g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                g_recogResult.recType = RecogEngine.RecType.FACE;
+                                                refreshPreview();
+                                            }
+                                        }
+                                    }
+                                });
                             }
-                            mRecCnt++;
                         }
 
                     }
@@ -598,18 +641,22 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
 
                                 if ((g_recogResult.recType == RecogEngine.RecType.MRZ && !g_recogResult.bRecDone) ||
                                         (g_recogResult.recType == RecogEngine.RecType.FACE && g_recogResult.bRecDone)) {
-                                    if (/*!g_recogResult.bRecDone || */bRet > 5 || bRet == -1) {
+                                    if (bRet > 5 || bRet == -1) {
                                         g_recogResult.docBackBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
                                     } else {
                                         g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
                                     }
                                 }
 
+                                if (g_recogResult.recType == RecogEngine.RecType.MRZ) {
+                                    g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+                                }
+
                                 if (g_recogResult.recType == RecogEngine.RecType.BOTH ||
                                         g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.bRecDone)
                                     g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
 
-                                docBmp.recycle();
+//                                docBmp.recycle();
 
                                 if (g_recogResult.bRecDone) {
                                     sendInformation();
@@ -622,7 +669,7 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
                                 }
                             } else {
                                 Log.d(TAG, "failed");
-                                if (mRecCnt > 3 && faceret > 0) //detected only face, so need to detect mrz
+                                /*if (mRecCnt > 3 && faceret > 0) //detected only face, so need to detect mrz
                                 {
                                     mRecCnt = 0; //counter sets 0
                                     faceret = 0;
@@ -630,17 +677,20 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
 
                                     Bitmap docBmp = bmCard;
                                     g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-                                    docBmp.recycle();
-                                } else if (bRet == 2) {
+//                                    docBmp.recycle();
+                                } else*/
+                                if (bRet == 5) {
                                     bRet = -1;
                                     onProcessUpdate(mActivity.getResources().getString(R.string.scan_back), null, true);
                                 }
 
-                                refreshPreview();
+                                if (g_recogResult.recType == RecogEngine.RecType.FACE || g_recogResult.faceBitmap != null) {
+                                    refreshPreview();
 
-                                mHandler.sendMessageDelayed(
-                                        mHandler.obtainMessage(TRIGER_RESTART_RECOG),
-                                        TRIGER_RESTART_RECOG_DELAY);
+                                    mHandler.sendMessageDelayed(
+                                            mHandler.obtainMessage(TRIGER_RESTART_RECOG),
+                                            TRIGER_RESTART_RECOG_DELAY);
+                                }
                             }
                         }
 
@@ -1019,6 +1069,8 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
                 mParameters = mCameraDevice.getParameters();
             }
         }
+
+//        mParameters.setPreviewFormat(ImageFormat.NV21);
         // Set JPEG quality.
         int jpegQuality = CameraProfile.getJpegEncodingQualityParameter(
                 mCameraId, CameraProfile.QUALITY_HIGH);
@@ -1065,33 +1117,62 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
 
     }
 
+    private String newMessage = "";
+
     @Override
     public void onUpdateProcess(String s) {
-        onProcessUpdate(null, s, false);
+        if (!s.isEmpty()) {
+            newMessage = s;
+            onProcessUpdate(null, s, false);
+//            if (!s.contains("Process")) {
+            final Runnable runnable = () -> {
+                try {
+                    if (newMessage.equals(s) || !s.contains("Process")) {
+                        onProcessUpdate(null, "", false);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            };
+            Runnable runnable1 = () -> new Handler().postDelayed(runnable, 1000);
+            if (mActivity != null) {
+                mActivity.runOnUiThread(runnable1);
+            }
+//            }
+        }
+
     }
 
     @Override
     public void onScannedSuccess(boolean b, boolean isMRZRequired) {
         if (b) {
-            if (isMRZRequired && g_recogResult.lines.equalsIgnoreCase("")) {
-                // only get data of mrz
-                checkmrz = 2;
-                refreshPreview();
-            }/* else {*/
-            if (isbothavailable) {
-                if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
-                    sendInformation();
-                } else {
-                    updateData();
-
+            if (recogType == RecogType.OCR) {
+                if (isMRZRequired && g_recogResult.lines.equalsIgnoreCase("")) {
+                    // only get data of mrz
+                    checkmrz = 2;
                     refreshPreview();
                 }
-            } else {
-                if (checkmrz == 0) {
+                if (isbothavailable) {
+                    if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
+                        sendInformation();
+                    } else {
+                        updateData();
+
+                        refreshPreview();
+                    }
+                } else {
+                    if (checkmrz == 0) {
+                        sendInformation();
+                    }
+                }
+            } else if (recogType == RecogType.MRZ) {
+                if (g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.lines.equalsIgnoreCase(""))
                     sendInformation();
+                else {
+                    g_recogResult.recType = RecogEngine.RecType.FACE;
+                    refreshPreview();
                 }
             }
-            /*}*/
         } else {
             refreshPreview();
         }
@@ -1154,11 +1235,6 @@ abstract class OcrCameraPreview implements Camera.PreviewCallback, FocusManager.
             g_recogResult.recType = RecogEngine.RecType.INIT;
             g_recogResult.bRecDone = false;
             onScannedComplete(recogResult);
-            try {
-                onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, false);
-            } catch (Resources.NotFoundException e) {
-                e.printStackTrace();
-            }
         }
     }
 

@@ -10,7 +10,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:977093574035:android:122d8fe71eaca9fba63c66",
         "android_client_info": {
-          "package_name": "com.accurascan.accuraocr.sampleapp"
+          "package_name": "com.accurascan.accuraocr.sample"
         }
       },
       "oauth_client": [

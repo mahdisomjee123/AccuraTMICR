@@ -134,9 +134,9 @@ public class CameraView {
             throw new NullPointerException(context.getClass().getName() + " must have to implement " + OcrCallback.class.getName());
         }
         if (this.countryCode < 0) {
-            if (type == RecogType.OCR) {
+            if (type == RecogType.OCR || type == RecogType.PDF417) {
                 throw new IllegalArgumentException("Country Code must have to > 0");
-            } else if (type == RecogType.PDF417) {
+            } else if (type == RecogType.BARCODE) {
                 countryCode = 0;
             }
         }
@@ -168,14 +168,15 @@ public class CameraView {
 //                    .setCustomMediaPlayer(this.mediaPlayer)
 //                    .setMediaPlayer(isSetPlayer)
                     .init();
-        } else if (type == RecogType.PDF417) {
+        } else if (type == RecogType.PDF417 || type == RecogType.BARCODE) {
             scannerView = new ScannerView(context) {
                 @Override
                 public void onPlaySound() {
                     playEffect();
                 }
             };
-            scannerView.setOcrCallBack(this.callback)
+            scannerView.setBarcodeType(this.type)
+                    .setOcrCallBack(this.callback)
                     .setView(this.cameraContainer)
                     .setCountryCode(countryCode)
                     .init();
@@ -277,7 +278,7 @@ public class CameraView {
     private void playEffect() {
         if (isSetPlayer && mediaPlayer != null) {
             if (audioManager != null)
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC), 0);
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, audioManager.getStreamVolume(AudioManager.STREAM_MUSIC), 0);
             mediaPlayer.start();
         }
     }

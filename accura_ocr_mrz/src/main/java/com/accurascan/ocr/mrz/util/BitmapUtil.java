@@ -15,20 +15,24 @@
  */
 package com.accurascan.ocr.mrz.util;
 
-import android.content.res.Configuration;
+import android.app.Activity;
+import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Surface;
+import android.view.WindowManager;
 
-import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
+import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
 
 import java.io.ByteArrayOutputStream;
 
@@ -177,11 +181,12 @@ public class BitmapUtil {
     /**
      * Decode an image into a Bitmap, and also center cropped according to croppedHeight, croppedWidth
      * {@link Camera.PreviewCallback#onPreviewFrame(byte[] data, Camera camera)}
-     * @param data an encoded image
+     *
+     * @param data                an encoded image
      * @param camera
      * @param mDisplayOrientation camera orientation
-     * @param croppedHeight center cropped image according to height which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData} cameraHeight
-     * @param croppedWidth center cropped image according to width which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData} cameraWidth
+     * @param croppedHeight       center cropped image according to height which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData} cameraHeight
+     * @param croppedWidth        center cropped image according to width which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData} cameraWidth
      * @param recogType
      * @return a decoded bitmap with cropped image
      */
@@ -199,6 +204,7 @@ public class BitmapUtil {
         try {
             Bitmap bmCard = null;
             Bitmap bmp_org = BitmapFactory.decodeByteArray(os.toByteArray(), 0, os.toByteArray().length);
+            os.close();
             Matrix matrix = new Matrix();
             matrix.postRotate(mDisplayOrientation);
             Bitmap bmp1 = Bitmap.createBitmap(bmp_org, 0, 0, bmp_org.getWidth(), bmp_org.getHeight(), matrix, true);
@@ -221,7 +227,7 @@ public class BitmapUtil {
                 Rect finalrect = new Rect((int) (frameRect.left), (int) (frameRect.top), (int) (frameRect.right), (int) (frameRect.bottom));
 
                 bmCard = Bitmap.createBitmap(bmp1, finalrect.left, finalrect.top, finalrect.width(), finalrect.height());
-            } else if (RecogType.MRZ == recogType || RecogType.PDF417 == recogType){
+            } else if (RecogType.MRZ == recogType || RecogType.PDF417 == recogType) {
                 bmCard = BitmapUtil.centerCrop(bmp1, bmp1.getWidth(), bmp1.getHeight() / 3);
             }
 
@@ -234,5 +240,169 @@ public class BitmapUtil {
         }
 
 
+    }
+
+//    @Nullable
+//    public static Bitmap getBitmap(byte[] imageInBuffer, FrameMetadata metadata) {
+////        data.rewind();
+////        byte[] imageInBuffer = new byte[data.limit()];
+////        data.get(imageInBuffer, 0, imageInBuffer.length);
+//        try {
+//            YuvImage image =
+//                    new YuvImage(
+//                            imageInBuffer, ImageFormat.NV21, metadata.getWidth(), metadata.getHeight(), null);
+//            if (image != null) {
+//                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//                image.compressToJpeg(new Rect(0, 0, metadata.getWidth(), metadata.getHeight()), 80, stream);
+//
+//                Bitmap bmp = BitmapFactory.decodeByteArray(stream.toByteArray(), 0, stream.size());
+//
+//                stream.close();
+//                return rotateBitmap(bmp, metadata.getRotation(), metadata.getCameraFacing());
+//            }
+//        } catch (Exception e) {
+//            Log.e("VisionProcessorBase", "Error: " + e.getMessage());
+//        }
+//        return null;
+//    }
+
+    // Rotates a bitmap if it is converted from a bytebuffer.
+    private static Bitmap rotateBitmap(Bitmap bitmap, int rotation, int facing) {
+        Matrix matrix = new Matrix();
+        int rotationDegree = 0;
+        switch (rotation) {
+            case FirebaseVisionImageMetadata.ROTATION_90:
+                rotationDegree = 90;
+                break;
+            case FirebaseVisionImageMetadata.ROTATION_180:
+                rotationDegree = 180;
+                break;
+            case FirebaseVisionImageMetadata.ROTATION_270:
+                rotationDegree = 270;
+                break;
+            default:
+                break;
+        }
+
+        // Rotate the image back to straight.}
+        matrix.postRotate(rotationDegree);
+        if (facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+            return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        } else {
+            // Mirror the image along X axis for front-facing camera image.
+            matrix.postScale(-1.0f, 1.0f);
+            return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        }
+    }
+
+    public static int getRotation(Activity activity, int mDisplayOrientation) {
+        WindowManager windowManager = (WindowManager) activity.getSystemService(Context.WINDOW_SERVICE);
+        int degrees = 0;
+        int rotation = windowManager.getDefaultDisplay().getRotation();
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+            default:
+                Log.e("TAG", "Bad rotation value: " + rotation);
+        }
+
+
+        int angle;
+        int displayAngle;
+        int facing = Camera.CameraInfo.CAMERA_FACING_BACK;
+        if (facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            angle = (mDisplayOrientation + degrees) % 360;
+            displayAngle = (360 - angle) % 360; // compensate for it being mirrored
+        } else { // back-facing
+            angle = (mDisplayOrientation - degrees + 360) % 360;
+            displayAngle = angle;
+        }
+
+
+        return (angle / 90);
+    }
+
+    public static Bitmap rotateBitmap(Bitmap source, float angle) {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+    }
+
+    public static Bitmap rotatedCropBitmap(Bitmap bitmap, Rect rect, float degreesRotated) {
+
+        // crop and rotate the cropped image in one  operation
+        Matrix matrix1 = new Matrix();
+        matrix1.postRotate(degreesRotated);
+//        if (degreesRotated < -45 && degreesRotated >= -135) {
+//            degreesRotated = -90;
+//            matrix.postRotate(degreesRotated);
+//        } else if (degreesRotated > 45 && degreesRotated < 135) {
+//            degreesRotated = 90;
+//            matrix.postRotate(degreesRotated);
+//        } else if (degreesRotated < 45 && degreesRotated > -45) {
+//            degreesRotated = 0.5f;
+//            matrix.postRotate(degreesRotated);
+//        }
+
+        Log.e("TAG", "rotatedCropBitmap: " + rect.toString());
+//        final RectF rectF = new RectF(rect);
+//        final Matrix matrix = new Matrix();
+//        matrix.setRotate(degreesRotated, rect.centerX(), rect.centerY());
+//        matrix.mapRect(rectF);
+//        rect.set((int) rectF.left, (int) rectF.top, (int) rectF.right, (int) rectF.bottom);
+//        Log.e("TAG", "rotatedCropBitmap 1: " + rectF.toString() + rect.toString());
+        Bitmap result = Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height(), matrix1, true);
+
+        return result /*Bitmap.createBitmap(result, 0, 0, result.getWidth(), result.getHeight(), matrix1, false)*/;
+    }
+
+    public static Bitmap rotateRectForOrientation(final int orientation, final Rect fullRect,
+                                                final Rect partialRect, Bitmap bitmap) {
+        final Matrix matrix = new Matrix();
+        // Exif orientation specifies how the camera is rotated relative to the actual subject.
+        // First rotate in the opposite direction.
+        matrix.setRotate(-orientation);
+        final RectF fullRectF = new RectF(fullRect);
+        final RectF partialRectF = new RectF(partialRect);
+        matrix.mapRect(fullRectF);
+        matrix.mapRect(partialRectF);
+        // Then translate so that the upper left corner of the rotated full rect is at (0,0).
+        matrix.reset();
+        matrix.setTranslate(-fullRectF.left, -fullRectF.top);
+        matrix.mapRect(fullRectF);
+        matrix.mapRect(partialRectF);
+        // Orientation transformation is complete.
+        fullRect.set((int) fullRectF.left, (int) fullRectF.top, (int) fullRectF.right,
+                (int) fullRectF.bottom);
+        partialRect.set((int) partialRectF.left, (int) partialRectF.top, (int) partialRectF.right,
+                (int) partialRectF.bottom);
+        Bitmap result = Bitmap.createBitmap(bitmap, fullRect.left, fullRect.top, fullRect.width(), fullRect.height()/*, matrix, true*/);
+         return Bitmap.createBitmap(result, partialRect.left, partialRect.top, partialRect.width(), partialRect.height()/*, matrix, true*/);
+
+    }
+
+    public static float getRotation(float v) {
+        Log.e("TAG", "old 0: " + v);
+        if (v < -75 && v >= -105) {
+            v = -90;
+        } else if (v > 75 && v < 105) {
+            v = 90;
+        } else if (v > -15 && v < 15) {
+            v = 0;
+        } /*else if (v > 110 && v < -110) {
+            v = 0;
+        }*/
+        Log.e("TAG", "new 1: " + v);
+        return v;
     }
 }

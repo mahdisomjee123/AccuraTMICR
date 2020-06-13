@@ -48,9 +48,10 @@ dependencies {
     implementation 'androidx.annotation:annotation:1.1.0'
 
     //OCR SCAN
-    implementation 'com.google.firebase:firebase-core:17.2.2'
-    implementation 'com.google.firebase:firebase-ml-vision:24.0.1'
-    implementation 'com.google.android.gms:play-services-vision:19.0.0'
+    implementation 'com.google.firebase:firebase-core:17.4.1'
+    implementation 'com.google.firebase:firebase-ml-vision:24.0.3'
+//    implementation 'com.google.firebase:firebase-ml-vision-face-model:20.0.1'
+    implementation 'com.google.android.gms:play-services-vision:20.0.0'
     implementation 'com.quickbirdstudios:opencv:4.1.0'
 
     api 'com.google.code.gson:gson:2.8.5'

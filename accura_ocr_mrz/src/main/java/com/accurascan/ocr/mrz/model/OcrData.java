@@ -9,6 +9,7 @@ import java.util.List;
 public class OcrData {
 
     private String cardname;
+    private Bitmap faceImage;
     private Bitmap Backimage;
     private MapData BackData;
     private Bitmap Frontimage;
@@ -21,6 +22,14 @@ public class OcrData {
 
     public void setCardname(String cardname) {
         this.cardname = cardname;
+    }
+
+    public Bitmap getFaceImage() {
+        return faceImage;
+    }
+
+    public void setFaceImage(Bitmap faceImage) {
+        this.faceImage = faceImage;
     }
 
     public Bitmap getBackimage() {
@@ -66,6 +75,7 @@ public class OcrData {
     public class MapData {
 
         public String card_side;
+        public int is_face;
         public List<ScannedData> ocr_data;
 
         public String getCardSide() {
@@ -74,6 +84,14 @@ public class OcrData {
 
         public void setCardSide(String card_side) {
             this.card_side = card_side;
+        }
+
+        public boolean getFace() {
+            return is_face == 1;
+        }
+
+        public void setIsFace(int isFace) {
+            this.is_face = isFace;
         }
 
         public List<ScannedData> getOcr_data() {

@@ -3,7 +3,7 @@ package com.docrecog.scan;
 import android.content.Intent;
 
 public enum RecogType {
-        OCR, MRZ, PDF417;
+        OCR, MRZ, BARCODE, PDF417;
 
         private static final String recogType = RecogType.class.getName();
 

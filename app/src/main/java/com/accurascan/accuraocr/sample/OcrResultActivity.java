@@ -33,6 +33,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setTheme(R.style.AppThemeNoActionBar);
         setContentView(R.layout.activity_ocr_result);
 
         initUI();
@@ -118,6 +119,10 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         Frontdata = ocrData.getFrontData();
         Backdata = ocrData.getBackData();
 
+        if (face1 == null && ocrData.getFaceImage() != null && !ocrData.getFaceImage().isRecycled()) {
+            face1 = ocrData.getFaceImage();
+        }
+
         if (Frontdata != null) {
             ly_front_container.setVisibility(View.VISIBLE);
             for (int i = 0; i < Frontdata.getOcr_data().size(); i++) {
@@ -145,9 +150,9 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                         if (!value.equalsIgnoreCase("") && !value.equalsIgnoreCase(" ")) {
                             try {
                                 if (key.toLowerCase().contains("face")) {
-                                    if (face1 == null) {
-                                        face1 = array.getImage();
-                                    }
+//                                    if (face1 == null) {
+//                                        face1 = array.getImage();
+//                                    }
                                 } else {
                                     tv_key.setText(key + ":");
                                     Bitmap myBitmap = array.getImage();

@@ -25,6 +25,17 @@ public interface OcrCallback {
     void onScannedComplete(OcrData data, RecogResult mrzData, PDF417Data pdf417Data);
 
     /**
+     * call this method after scan complete
+     * @param result is scanned card data
+     *  result instance of {@link OcrData} if recog type is {@link com.docrecog.scan.RecogType#OCR}
+     *  result instance of {@link RecogResult} if recog type is {@link com.docrecog.scan.RecogType#MRZ}
+     *  result instance of {@link PDF417Data} if recog type is {@link com.docrecog.scan.RecogType#PDF417}
+     *  result instance of {@link String} if recog type is {@link com.docrecog.scan.RecogType#BARCODE}
+     *
+     */
+    void onScannedComplete(Object result);
+
+    /**
      * To get update message for user interaction which is called continuously
      * @param title to display scan card message(is front/ back card of the @cardname)
      *              is null if data is not available.

@@ -7,15 +7,16 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.idea
+/.idea
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 *.apk
-app/build
-app/release
+/app/build
+/app/release
 accura_ocr_mrz/build
 *.zip
+*.license
 Document
 

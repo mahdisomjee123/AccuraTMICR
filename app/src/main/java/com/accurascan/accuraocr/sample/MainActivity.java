@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "handleMessage: " + msg.what);
             if (msg.what == 1) {
                 if (sdkModel.isMRZEnable) btnMrz.setVisibility(View.VISIBLE);
-                if (sdkModel.isPDF417Enable) btnPDF417.setVisibility(View.VISIBLE);
+                if (sdkModel.isAllBarcodeEnable) btnPDF417.setVisibility(View.VISIBLE);
                 if (sdkModel.isOCREnable && modelList != null) {
                     setCountryLayout();
                 }
@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
-                RecogType.PDF417.attachTo(intent);
+                RecogType.BARCODE.attachTo(intent);
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }
@@ -162,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
                     RecogEngine recogEngine = new RecogEngine();
                     sdkModel = recogEngine.initEngine(MainActivity.this);
                     recogEngine.setBlurPercentage(MainActivity.this, 50);
-                    recogEngine.setFaceBlurPercentage(MainActivity.this, 45);
+                    recogEngine.setFaceBlurPercentage(MainActivity.this, 50/*35*/);
                     recogEngine.setGlarePercentage(MainActivity.this, 6,98);
                     recogEngine.isCheckPhotoCopy(MainActivity.this, false);
                     recogEngine.SetHologramDetection(MainActivity.this, true);
