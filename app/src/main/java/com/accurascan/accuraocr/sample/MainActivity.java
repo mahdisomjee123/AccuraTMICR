@@ -166,6 +166,8 @@ public class MainActivity extends AppCompatActivity {
                     recogEngine.setGlarePercentage(MainActivity.this, 6,98);
                     recogEngine.isCheckPhotoCopy(MainActivity.this, false);
                     recogEngine.SetHologramDetection(MainActivity.this, true);
+                    recogEngine.setLowLightTolerance(MainActivity.this, 40);
+                    recogEngine.setMotionData(MainActivity.this, 30,"Keep Document Steady");
 
                     if (sdkModel.i > 0) {
                         // if OCR enable then get card list

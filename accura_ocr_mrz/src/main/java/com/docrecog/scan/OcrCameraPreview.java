@@ -3,7 +3,6 @@ package com.docrecog.scan;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.media.CameraProfile;
 import android.os.Build;
@@ -25,6 +24,7 @@ import com.accurascan.ocr.mrz.camerautil.FocusManager;
 import com.accurascan.ocr.mrz.model.InitModel;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.RecogResult;
+import com.accurascan.ocr.mrz.motiondetection.data.GlobalData;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
 
@@ -131,13 +131,14 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private RecogType recogType = null;
     private int mRecCnt = 0; //counter for mrz detecting
     private int bRet = 0; //counter for mrz detecting
+    private int fCount = 0;
 
 //    private ProgressBar progressBar;
 
     private Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            Log.e(TAG, "handleMessage: " + msg.what);
+            Util.logd(TAG, "handleMessage: " + msg.what);
             if (msg.what == 1) {
                 init();
             }
@@ -363,7 +364,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     }
 
     private void init() {
-        Log.d(TAG, "init: ");
+        Util.logd(TAG, "init: ");
         //initialize the result value
         g_recogResult = new RecogResult();
         g_recogResult.recType = RecogEngine.RecType.INIT;
@@ -521,184 +522,207 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             return;
         }
 
-        Thread recogThread = new Thread(new Runnable() {
-            Bitmap bmCard;
-            int ret;
-            int faceret = 0;
+        if (!GlobalData.isPhoneInMotion()) {
+            Thread recogThread = new Thread(new Runnable() {
+                Bitmap bmCard;
+                int ret;
+                int faceret = 0;
 
-            @Override
-            public void run() {
+                @Override
+                public void run() {
 
-                System.out.println("Start Run Thread++");
+                    final int width = camera.getParameters().getPreviewSize().width;
+                    final int height = camera.getParameters().getPreviewSize().height;
 
-                bmCard = BitmapUtil.getBitmapFromData(data, camera, mDisplayOrientation, rectH, rectW, recogType);
+                    if (recogEngine.doCheckFrame(data, width, height) != 1) {
+                        if (newMessage.contains(recogEngine.nM)) onProcessUpdate(null, "", false);
+                        bmCard = BitmapUtil.getBitmapFromData(data, camera, mDisplayOrientation, rectH, rectW, recogType);
 
-                _mutex.lock();
+                        _mutex.lock();
 
-                if (bmCard != null) {
-                    if (recogType == RecogType.OCR) {
-                        ImageOpencv imageOpencv = recogEngine.checkCard(bmCard);
-                        if (imageOpencv != null) {
-                            if (imageOpencv.isSucess && imageOpencv.mat != null) {
-                                Bitmap card = imageOpencv.getBitmap(bmCard);
-                                int ret = 0;
-                                if (recogEngine.isMrzEnable) {
-                                    ret = recogEngine.doRunData(bmCard, 0, g_recogResult);
-                                }
-                                if (checkmrz == 0) {
-//                                    if (ocrData.getFaceImage() == null) {
-//                                        recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation, ocrData, null, new RecogEngine.ScanListener() {
-//                                            @Override
-//                                            public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-//                                                recogEngine.doRecognition(OcrCameraPreview.this, card, imageOpencv.mat, ocrData);
-//                                            }
-//                                        });
-//                                        mRecCnt++;
-//                                    } else {
-                                        recogEngine.doRecognition(OcrCameraPreview.this, card, imageOpencv.mat, ocrData);
-//                                    }
-                                } else {
-                                    if (ret == 1 || ret == 2) {
-                                        GotMRZData();
+                        if (bmCard != null) {
+                            if (recogType == RecogType.OCR) {
+                                ImageOpencv imageOpencv = recogEngine.checkCard(bmCard);
+                                if (imageOpencv != null) {
+                                    if (imageOpencv.isSucess && imageOpencv.mat != null) {
+                                        Bitmap card = imageOpencv.getBitmap(bmCard);
+                                        int ret = 0;
+                                        if (recogEngine.isMrzEnable) {
+                                            ret = recogEngine.doRunData(bmCard, 0, g_recogResult);
+                                        }
+                                        if (checkmrz == 0) {
+                                            //                                    if (ocrData.getFaceImage() == null) {
+                                            //                                        recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation, ocrData, null, new RecogEngine.ScanListener() {
+                                            //                                            @Override
+                                            //                                            public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                                            //                                                recogEngine.doRecognition(OcrCameraPreview.this, card, imageOpencv.mat, ocrData);
+                                            //                                            }
+                                            //                                        });
+                                            //                                        mRecCnt++;
+                                            //                                    } else {
+                                            recogEngine.doRecognition(OcrCameraPreview.this, card, imageOpencv.mat, ocrData);
+                                            //                                    }
+                                        } else {
+                                            if (ret == 1 || ret == 2) {
+                                                GotMRZData();
+                                            } else {
+                                                refreshPreview();
+                                                bmCard.recycle();
+                                            }
+                                        }
                                     } else {
                                         refreshPreview();
                                         bmCard.recycle();
                                     }
-                                }
-                            } else {
-                                refreshPreview();
-                                bmCard.recycle();
-                            }
-                        } else {
-                            refreshPreview();
-                            bmCard.recycle();
-                        }
-                    } else if (recogType == RecogType.MRZ) {
-                        if (g_recogResult.recType == RecogEngine.RecType.INIT) {
-//                            ret = recogEngine.doRunData(bmCard, 1, g_recogResult);
-//                            if (ret <= 0 && mRecCnt > 2) {
-                            // Bitmap docBmp = null;
-
-//                                if (mRecCnt % 4 == 1)
-//                            faceret = recogEngine.doRunFaceDetect(bmCard, g_recogResult);
-                            if (/*recogEngine.checkValid(bmCard) && */g_recogResult.faceBitmap == null) {
-                                recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation,  null, g_recogResult, new RecogEngine.ScanListener() {
-
-                                    @Override
-                                    void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-                                        if (recogType == RecogType.MRZ) {
-                                            if (g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.lines.equalsIgnoreCase(""))
-                                                sendInformation();
-                                            else {
-                                                g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
-                                                g_recogResult.recType = RecogEngine.RecType.FACE;
-                                                refreshPreview();
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-//                            }
-
-                            mRecCnt++; //counter increases
-                        } else if (g_recogResult.recType == RecogEngine.RecType.FACE) { //have to do mrz
-                            ret = recogEngine.doRunData(bmCard, 0, g_recogResult);
-                            if (bRet > -1) {
-                                bRet++;
-                            }
-                        } else if (g_recogResult.recType == RecogEngine.RecType.MRZ) { //have to do face
-                            if (/*recogEngine.checkValid(bmCard) && */g_recogResult.faceBitmap == null) {
-                                recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation,  null, g_recogResult, new RecogEngine.ScanListener() {
-
-                                    @Override
-                                    void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-                                        if (recogType == RecogType.MRZ) {
-                                            if (g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.lines.equalsIgnoreCase(""))
-                                                sendInformation();
-                                            else {
-                                                g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
-                                                g_recogResult.recType = RecogEngine.RecType.FACE;
-                                                refreshPreview();
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                        }
-
-                    }
-                }
-
-                _mutex.unlock();
-
-                if (recogType == RecogType.MRZ) {
-                    OcrCameraPreview.this.mActivity.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (ret > 0) {
-                                mRecCnt = 0; //counter sets 0
-                                Bitmap docBmp = bmCard;
-
-                                if ((g_recogResult.recType == RecogEngine.RecType.MRZ && !g_recogResult.bRecDone) ||
-                                        (g_recogResult.recType == RecogEngine.RecType.FACE && g_recogResult.bRecDone)) {
-                                    if (bRet > 5 || bRet == -1) {
-                                        g_recogResult.docBackBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-                                    } else {
-                                        g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-                                    }
-                                }
-
-                                if (g_recogResult.recType == RecogEngine.RecType.MRZ) {
-                                    g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-                                }
-
-                                if (g_recogResult.recType == RecogEngine.RecType.BOTH ||
-                                        g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.bRecDone)
-                                    g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-
-//                                docBmp.recycle();
-
-                                if (g_recogResult.bRecDone) {
-                                    sendInformation();
                                 } else {
-//                                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, true);
                                     refreshPreview();
-                                    mHandler.sendMessageDelayed(
-                                            mHandler.obtainMessage(TRIGER_RESTART_RECOG),
-                                            TRIGER_RESTART_RECOG_DELAY);
+                                    bmCard.recycle();
                                 }
-                            } else {
-                                Log.d(TAG, "failed");
-                                /*if (mRecCnt > 3 && faceret > 0) //detected only face, so need to detect mrz
-                                {
-                                    mRecCnt = 0; //counter sets 0
-                                    faceret = 0;
-                                    g_recogResult.recType = RecogEngine.RecType.FACE;
+                            } else if (recogType == RecogType.MRZ) {
+                                if (g_recogResult.recType == RecogEngine.RecType.INIT) {
+                                    //                            ret = recogEngine.doRunData(bmCard, 1, g_recogResult);
+                                    //                            if (ret <= 0 && mRecCnt > 2) {
+                                    // Bitmap docBmp = null;
 
-                                    Bitmap docBmp = bmCard;
-                                    g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-//                                    docBmp.recycle();
-                                } else*/
-                                if (bRet == 5) {
-                                    bRet = -1;
-                                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_back), null, true);
+                                    //                                if (mRecCnt % 4 == 1)
+                                    //                            faceret = recogEngine.doRunFaceDetect(bmCard, g_recogResult);
+                                    if (/*recogEngine.checkValid(bmCard) && */g_recogResult.faceBitmap == null) {
+                                        recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation, null, g_recogResult, new RecogEngine.ScanListener() {
+
+                                            @Override
+                                            void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                                                if (recogType == RecogType.MRZ) {
+                                                    if (g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.lines.equalsIgnoreCase(""))
+                                                        sendInformation();
+                                                    else {
+                                                        g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                        g_recogResult.recType = RecogEngine.RecType.FACE;
+                                                        refreshPreview();
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
+                                    //                            }
+
+                                    mRecCnt++; //counter increases
+                                } else if (g_recogResult.recType == RecogEngine.RecType.FACE) { //have to do mrz
+                                    ret = recogEngine.doRunData(bmCard, 0, g_recogResult);
+                                    if (bRet > -1) {
+                                        bRet++;
+                                    }
+                                } else if (g_recogResult.recType == RecogEngine.RecType.MRZ) { //have to do face
+                                    if (/*recogEngine.checkValid(bmCard) && */g_recogResult.faceBitmap == null) {
+                                        recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation, null, g_recogResult, new RecogEngine.ScanListener() {
+
+                                            @Override
+                                            void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                                                if (recogType == RecogType.MRZ) {
+                                                    if (g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.lines.equalsIgnoreCase(""))
+                                                        sendInformation();
+                                                    else {
+                                                        g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                        g_recogResult.recType = RecogEngine.RecType.FACE;
+                                                        refreshPreview();
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
                                 }
 
-                                if (g_recogResult.recType == RecogEngine.RecType.FACE || g_recogResult.faceBitmap != null) {
-                                    refreshPreview();
-
-                                    mHandler.sendMessageDelayed(
-                                            mHandler.obtainMessage(TRIGER_RESTART_RECOG),
-                                            TRIGER_RESTART_RECOG_DELAY);
-                                }
                             }
                         }
 
-                    });
+                        _mutex.unlock();
+
+                        if (recogType == RecogType.MRZ) {
+                            OcrCameraPreview.this.mActivity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (ret > 0) {
+                                        mRecCnt = 0; //counter sets 0
+                                        Bitmap docBmp = bmCard;
+
+                                        if ((g_recogResult.recType == RecogEngine.RecType.MRZ && !g_recogResult.bRecDone) ||
+                                                (g_recogResult.recType == RecogEngine.RecType.FACE && g_recogResult.bRecDone)) {
+                                            if (bRet > 5 || bRet == -1) {
+                                                g_recogResult.docBackBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+                                            } else {
+                                                g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+                                            }
+                                        }
+
+                                        if (g_recogResult.recType == RecogEngine.RecType.MRZ) {
+                                            g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+                                        }
+
+                                        if (g_recogResult.recType == RecogEngine.RecType.BOTH ||
+                                                g_recogResult.recType == RecogEngine.RecType.MRZ && g_recogResult.bRecDone)
+                                            g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+
+                                        //                                docBmp.recycle();
+
+                                        if (g_recogResult.bRecDone) {
+                                            sendInformation();
+                                        } else {
+                                            //                                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, true);
+                                            refreshPreview();
+                                            mHandler.sendMessageDelayed(
+                                                    mHandler.obtainMessage(TRIGER_RESTART_RECOG),
+                                                    TRIGER_RESTART_RECOG_DELAY);
+                                        }
+                                    } else {
+                                        Util.logd(TAG, "failed");
+                                        /*if (mRecCnt > 3 && faceret > 0) //detected only face, so need to detect mrz
+                                        {
+                                            mRecCnt = 0; //counter sets 0
+                                            faceret = 0;
+                                            g_recogResult.recType = RecogEngine.RecType.FACE;
+
+                                            Bitmap docBmp = bmCard;
+                                            g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+        //                                    docBmp.recycle();
+                                        } else*/
+                                        if (bRet == 5) {
+                                            bRet = -1;
+                                            onProcessUpdate(mActivity.getResources().getString(R.string.scan_back), null, true);
+                                        }
+
+                                        if (g_recogResult.recType == RecogEngine.RecType.FACE || g_recogResult.faceBitmap != null) {
+                                            refreshPreview();
+
+                                            mHandler.sendMessageDelayed(
+                                                    mHandler.obtainMessage(TRIGER_RESTART_RECOG),
+                                                    TRIGER_RESTART_RECOG_DELAY);
+                                        }
+                                    }
+                                }
+
+                            });
+                        }
+                    } else {
+                        if (fCount % 2 == 0) {
+                            onUpdateProcess(recogEngine.nM);
+                        }
+                        refreshPreview();
+
+                        mHandler.sendMessageDelayed(
+                                mHandler.obtainMessage(TRIGER_RESTART_RECOG),
+                                TRIGER_RESTART_RECOG_DELAY);
+                    }
+                    fCount++;
                 }
-            }
-        });
-        recogThread.start();
+            });
+            recogThread.start();
+        } else {
+            refreshPreview();
+
+            mHandler.sendMessageDelayed(
+                    mHandler.obtainMessage(TRIGER_RESTART_RECOG),
+                    TRIGER_RESTART_RECOG_DELAY);
+            fCount++;
+        }
     }
 
     private void refreshPreview() {
@@ -917,7 +941,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             }
 
             try {
-                Log.v(TAG, "startPreview");
+                Util.logd(TAG, "startPreview");
                 mCameraDevice.startPreview();
 //                autoFocus();
             } catch (Throwable ex) {
@@ -1099,7 +1123,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 if (value >= min && value <= max) {
                     mParameters.setExposureCompensation(value);
                 } else {
-                    Log.w(TAG, "invalid exposure range: " + value);
+                    Util.logw(TAG, "invalid exposure range: " + value);
                 }
             }
         }
@@ -1112,7 +1136,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 mParameters.setFlashMode(flashMode);
             }
 
-            Log.e(TAG, "focusMode=" + mParameters.getFocusMode());
+            Util.logd(TAG, "focusMode=" + mParameters.getFocusMode());
         }
 
     }
@@ -1127,9 +1151,10 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //            if (!s.contains("Process")) {
             final Runnable runnable = () -> {
                 try {
-                    if (newMessage.equals(s) || !s.contains("Process")) {
-                        onProcessUpdate(null, "", false);
-                    }
+                    if (!s.contains("lighting"))
+                        if (newMessage.equals(s) || !s.contains("Process")) {
+                            onProcessUpdate(null, "", false);
+                        }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -1180,7 +1205,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
     @Override
     public void onScannedFailed(String s) {
-        Log.e(TAG, s);
+        Log.e("ocr_log", s);
     }
 
     private void GotMRZData() {
@@ -1218,6 +1243,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         recogEngine.closeEngine();
         mRecCnt = 0;
         bRet = 0;
+        fCount = 0;
         if (recogType == RecogType.OCR) {
             ocrData.setMrzData(g_recogResult);
             g_recogResult = new RecogResult();

@@ -31,6 +31,7 @@ import android.util.Log;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import com.accurascan.ocr.mrz.BuildConfig;
 import com.docrecog.scan.RecogType;
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
 
@@ -40,7 +41,7 @@ import java.io.ByteArrayOutputStream;
  * Provides static functions to decode bitmaps at the optimal size
  */
 public class BitmapUtil {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = BuildConfig.DEBUG;
 
     private BitmapUtil() {
     }
@@ -192,9 +193,16 @@ public class BitmapUtil {
      */
     public static Bitmap getBitmapFromData(byte[] data, Camera camera, int mDisplayOrientation, int croppedHeight, int croppedWidth, RecogType recogType) {
 
-        final int width = camera.getParameters().getPreviewSize().width;
-        final int height = camera.getParameters().getPreviewSize().height;
-        final int format = camera.getParameters().getPreviewFormat();
+        final int width;
+        final int height;
+        final int format;
+        if (camera != null) {
+            width = camera.getParameters().getPreviewSize().width;
+            height = camera.getParameters().getPreviewSize().height;
+            format = camera.getParameters().getPreviewFormat();
+        } else {
+            return null;
+        }
 
         YuvImage temp = new YuvImage(data, format, width, height, null);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -354,16 +362,15 @@ public class BitmapUtil {
 //            matrix.postRotate(degreesRotated);
 //        }
 
-        Log.e("TAG", "rotatedCropBitmap: " + rect.toString());
+//        Log.e("TAG", "rotatedCropBitmap: " + rect.toString());
 //        final RectF rectF = new RectF(rect);
 //        final Matrix matrix = new Matrix();
 //        matrix.setRotate(degreesRotated, rect.centerX(), rect.centerY());
 //        matrix.mapRect(rectF);
 //        rect.set((int) rectF.left, (int) rectF.top, (int) rectF.right, (int) rectF.bottom);
 //        Log.e("TAG", "rotatedCropBitmap 1: " + rectF.toString() + rect.toString());
-        Bitmap result = Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height(), matrix1, true);
 
-        return result /*Bitmap.createBitmap(result, 0, 0, result.getWidth(), result.getHeight(), matrix1, false)*/;
+        return Bitmap.createBitmap(bitmap, rect.left, rect.top, rect.width(), rect.height(), matrix1, true);
     }
 
     public static Bitmap rotateRectForOrientation(final int orientation, final Rect fullRect,
@@ -392,7 +399,7 @@ public class BitmapUtil {
     }
 
     public static float getRotation(float v) {
-        Log.e("TAG", "old 0: " + v);
+        Util.logd("TAG", "old 0: " + v);
         if (v < -75 && v >= -105) {
             v = -90;
         } else if (v > 75 && v < 105) {
@@ -402,7 +409,7 @@ public class BitmapUtil {
         } /*else if (v > 110 && v < -110) {
             v = 0;
         }*/
-        Log.e("TAG", "new 1: " + v);
+        Util.logd("TAG", "new 1: " + v);
         return v;
     }
 }

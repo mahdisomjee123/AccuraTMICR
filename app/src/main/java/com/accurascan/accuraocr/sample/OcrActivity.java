@@ -23,9 +23,10 @@ import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.model.RecogResult;
+import com.accurascan.ocr.mrz.motiondetection.SensorsActivity;
 import com.docrecog.scan.RecogType;
 
-public class OcrActivity extends AppCompatActivity implements OcrCallback {
+public class OcrActivity extends SensorsActivity implements OcrCallback {
 
     private CameraView cameraView;
     private View viewLeft, viewRight, borderFrame;

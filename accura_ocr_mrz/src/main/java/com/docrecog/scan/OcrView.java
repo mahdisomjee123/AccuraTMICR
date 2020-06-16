@@ -253,9 +253,11 @@ public abstract class OcrView extends OcrCameraPreview {
                 @Override
                 public void run() {
                     if (recogType == RecogType.OCR && result instanceof OcrData) {
-                        OcrView.this.ocrCallBack.onScannedComplete((OcrData) result, null, null);
+//                        OcrView.this.ocrCallBack.onScannedComplete((OcrData) result, null, null);
+                        OcrView.this.ocrCallBack.onScannedComplete(result);
                     } else if (recogType == RecogType.MRZ && result instanceof RecogResult) {
-                        OcrView.this.ocrCallBack.onScannedComplete(null, (RecogResult) result, null);
+//                        OcrView.this.ocrCallBack.onScannedComplete(null, (RecogResult) result, null);
+                        OcrView.this.ocrCallBack.onScannedComplete(result);
                     }
                 }
             });
