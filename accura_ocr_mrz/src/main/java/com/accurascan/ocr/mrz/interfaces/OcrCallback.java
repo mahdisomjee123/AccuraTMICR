@@ -18,16 +18,10 @@ public interface OcrCallback {
 
     /**
      * call this method after scan complete
-     * @param data is scanned card data if set {@link com.docrecog.scan.RecogType#OCR} else it is null
-     * @param mrzData an mrz card data if set {@link com.docrecog.scan.RecogType#MRZ} else it is null
-     * @param pdf417Data an barcode card data if set {@link com.docrecog.scan.RecogType#PDF417} else it is null
-     */
-    void onScannedComplete(OcrData data, RecogResult mrzData, PDF417Data pdf417Data);
-
-    /**
-     * call this method after scan complete
+     *
      * @param result is scanned card data
      *  result instance of {@link OcrData} if recog type is {@link com.docrecog.scan.RecogType#OCR}
+     *              or {@link com.docrecog.scan.RecogType#DL_PLATE}
      *  result instance of {@link RecogResult} if recog type is {@link com.docrecog.scan.RecogType#MRZ}
      *  result instance of {@link PDF417Data} if recog type is {@link com.docrecog.scan.RecogType#PDF417}
      *  result instance of {@link String} if recog type is {@link com.docrecog.scan.RecogType#BARCODE}

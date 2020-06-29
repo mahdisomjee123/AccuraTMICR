@@ -55,6 +55,25 @@ public class SensorsActivity extends Activity implements SensorEventListener {
      */
     @Override
     protected void onDestroy() {
+        try {
+            try {
+                if (sensorMgr != null) {
+                    sensorMgr.unregisterListener(this, sensorGrav);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            try {
+                if (sensorMgr != null) {
+                    sensorMgr.unregisterListener(this, sensorMag);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            sensorMgr = null;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
         super.onDestroy();
     }
 

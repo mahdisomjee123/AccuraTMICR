@@ -11,7 +11,6 @@ import android.graphics.Canvas;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.hardware.Camera;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -26,6 +25,8 @@ import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.face.FirebaseVisionFace;
@@ -61,34 +62,6 @@ public class RecogEngine {
         }
     }
 
-    Boolean isMrzEnable = true;
-
-    public List<ContryModel> getCardList(Context context) {
-        int[] i = new int[1];
-        String s = loadData(context, i);
-        try {
-            if (i[0] > 0) {
-                if (s != null && !s.equals("")) {
-                    JSONArray jsonObject = new JSONArray(s);
-                    Type listType = new TypeToken<List<ContryModel>>() {
-                    }.getType();
-                    return new Gson().fromJson(jsonObject.toString(), listType);
-                }
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    void setCallBack(ScanListener scanListener) {
-        this.callBack = scanListener;
-    }
-
-    public int setMotionData(Activity activity, int motionThreshold, @NonNull String message) {
-        return setMotionThreshold(activity, motionThreshold, message);
-    }
-
     abstract static class ScanListener {
         /**
          * This is called to get scanned processed message.
@@ -113,18 +86,28 @@ public class RecogEngine {
 
     }
 
+    public class SDKModel {
+        public int i;
+        public boolean isMRZEnable = false;
+        public boolean isOCREnable = false;
+        public boolean isAllBarcodeEnable = false;
+    }
+
     private static final String TAG = "PassportRecog";
     private byte[] pDic = null;
     private int pDicLen = 0;
     private byte[] pDic1 = null;
     private int pDicLen1 = 0;
     private static String[] assetNames = {"mMQDF_f_Passport_bottom_Gray.dic", "mMQDF_f_Passport_bottom.dic"};
-    public static FirebaseVisionTextRecognizer detector;
-    public static FirebaseVisionFaceDetector faceDetector;
+    private static FirebaseVisionTextRecognizer detector;
+    private static FirebaseVisionFaceDetector faceDetector;
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
-    public String nM = "";
+    static String nM = "Keep Document Steady";
+    static float mT;
+    Boolean isMrzEnable = true;
+    static float v = 0f;
 
     private static float[] fConf = new float[3]; //face detection confidence
     private static int[] faced = new int[3]; //value for detected face or not
@@ -145,11 +128,24 @@ public class RecogEngine {
         this.activity = activity;
     }
 
+    void setCallBack(ScanListener scanListener, RecogType recogType) {
+        this.callBack = scanListener;
+        isComplete = false;
+        if (recogType == RecogType.OCR) {
+            updateData("Back");
+        }
+    }
+
+    void removeCallBack(ScanListener scanListener) {
+        this.callBack = scanListener;
+    }
+
     //This is SDK app calling JNI method
     private native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
+//    public native int loadDictionary(Context activity, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
 
     //return value: 0:fail,1:success,correct document, 2:success,incorrect document
-    private native int doRecogYuv420p(byte[] yuvdata, int width, int height, int facepick, int rot, int[] intData, Bitmap faceBitmap, boolean unknownVal);
+    private native int doRecogYuv420p(byte[] yuvdata, int width, int height, int facepick, int rot, int[] intData, Bitmap faceBitmap);
 
     public native String doCheckData(byte[] yuvdata, int width, int height);
 
@@ -157,7 +153,7 @@ public class RecogEngine {
 
     private native int doFaceDetect(Bitmap bitmap, Bitmap faceBitmap, float[] fConf);
 
-    private native String doFaceCheck(long l);
+    private native String doFaceCheck(long l, float v);
 
     private native String loadData(Context context, int[] i);
 
@@ -221,11 +217,11 @@ public class RecogEngine {
      * @param motionThreshold
      * @return
      */
-    public native int setMotionThreshold(Context context, int motionThreshold, @NonNull String message);
+    private native int setMotionThreshold(Context context, int motionThreshold, @NonNull String message);
 
     private native String loadOCR(Context context, AssetManager assetManager, int countryid, int cardid, int widthPixels);
 
-    private native ImageOpencv checkDocument(long matInput, long matOut);
+    private native ImageOpencv checkDocument(long matInput, long matOut, float v);
 
     private native String recognizeData(long src, int[][] boxBoundsLTRB, String[] textElements);
 
@@ -233,15 +229,119 @@ public class RecogEngine {
 
     private native String loadScanner(Context context, AssetManager assetManager, int countryid);
 
+    private native String loadLicense(Context context, int countryid, int cardid);
+
     private native int doBlurCheck(long srcMat);
+
+    private native String doLightCheck(long srcMat);
+
+    private native int closeOCR(int i);
+
+    private native int doDetectNumberPlate(String s, int[] intData, int id, int card_id);
+
+    public int setMotionData(Activity activity, int motionThreshold, @NonNull String message) {
+        mT = motionThreshold;
+        nM = message;
+        return setMotionThreshold(activity, motionThreshold, message);
+    }
+
+    /**
+     * Must have to call initEngine on app open
+     *
+     * @param context
+     * @return
+     */
+    public SDKModel initEngine(Context context) {
+        /*
+           initialized sdk by InitEngine from thread
+          The return value by initEngine used the identify
+          Return ret < 0 if license not valid
+          -1 - No key found
+          -2 - Invalid Key
+          -3 - Invalid Platform
+          -4 - Invalid License
+
+          Return ret > 0 if license is valid
+          1 - for MRZ only
+          2 - for Ocr only
+          3 - for PDF417 only
+          4 - for Ocr + MRZ both
+          5 - for Ocr + PDF417 both
+          6 - for PDF417 + MRZ both
+          7 - for Ocr + MRZ + PDF417 both
+         */
+        this.con = context;
+
+        getAssetFile(assetNames[0], assetNames[1]);
+//        File file = loadClassifierData(context);
+        int ret = loadDictionary(context, /*file != null ? file.getAbsolutePath() : */"", pDic, pDicLen, pDic1, pDicLen1, context.getAssets());
+        Log.i("recogPassport", "loadDictionary: " + ret);
+        if (ret < 0) {
+            String message = "";
+            if (ret == -1) {
+                message = "No Key Found";
+            } else if (ret == -2) {
+                message = "Invalid Key";
+            } else if (ret == -3) {
+                message = "Invalid Platform";
+            } else if (ret == -4) {
+                message = "Invalid License";
+            }
+            if (!(context instanceof Activity)) {
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+            } else {
+                String finalMessage = message;
+                ((Activity) context).runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
+                        builder1.setMessage(finalMessage);
+
+                        builder1.setCancelable(true);
+
+                        builder1.setPositiveButton(
+                                "OK",
+                                (dialog, id) -> dialog.cancel());
+
+                        AlertDialog alert11 = builder1.create();
+                        alert11.show();
+                    }
+                });
+            }
+        }
+        SDKModel sdkModel = new SDKModel();
+        sdkModel.isMRZEnable = ret == 1 || ret == 4 || ret == 6 || ret == 7;
+        sdkModel.isOCREnable = ret == 2 || ret == 4 || ret == 5 || ret == 7;
+        sdkModel.isAllBarcodeEnable = ret == 3 || ret == 5 || ret == 6 || ret == 7;
+        sdkModel.i = ret;
+        return sdkModel;
+    }
+
+    public List<ContryModel> getCardList(Context context) {
+        int[] i = new int[1];
+        String s = loadData(context, i);
+        try {
+            if (i[0] > 0) {
+                if (s != null && !s.equals("")) {
+                    JSONArray jsonObject = new JSONArray(s);
+                    Type listType = new TypeToken<List<ContryModel>>() {
+                    }.getType();
+                    return new Gson().fromJson(jsonObject.toString(), listType);
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     /**
      * Initialized ocr
      *
      * @param scanListener to get ocr update
      * @param context      is activity context
-     * @param countryId    is country code
-     * @param cardId       is Card Code
+     * @param countryId    is country Id
+     * @param cardId       is Card Id
      * @return {@link InitModel}
      */
     // for failed -> responseCode = 0,
@@ -260,7 +360,7 @@ public class RecogEngine {
             detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
         }
         isComplete = false;
-        init();
+//        init();
         DisplayMetrics dm = context.getResources().getDisplayMetrics();
         String s = loadOCR(context, context.getAssets(), countryId, cardId, dm.widthPixels);
         try {
@@ -275,7 +375,6 @@ public class RecogEngine {
         }
         return null;
     }
-
 
     private void init() {
         // To initialise the detector
@@ -331,11 +430,76 @@ public class RecogEngine {
         return null;
     }
 
+    /**
+     * Initialized ocr
+     *
+     * @param context   is activity context
+     * @param countryId is country code
+     * @return {@link InitModel}
+     */
+    // for failed -> responseCode = 0,
+    // for success -> responseCode = 1
+    InitModel initLicense(Context context, int countryId, int cardId) {
+
+        String s = loadLicense(context, countryId, cardId);
+        try {
+            if (s != null && !s.equals("")) {
+                JSONObject jsonObject = new JSONObject(s);
+                InitModel initModel = new Gson().fromJson(jsonObject.toString(), InitModel.class);
+                return initModel;
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     boolean checkValid(Bitmap bitmap) {
         Mat src = new Mat();
         Utils.bitmapToMat(bitmap, src);
         int i = doBlurCheck(src.getNativeObjAddr());
+        src.release();
         return i == 0;
+    }
+
+    boolean checkLight(Bitmap bitmap) {
+        int ret = 0;
+        Mat src = new Mat();
+        Utils.bitmapToMat(bitmap, src);
+        String s = doLightCheck(src.getNativeObjAddr());
+        try {
+            if (s != null && !TextUtils.isEmpty(s)) {
+                JSONObject jsonObject = new JSONObject(s);
+                ret = jsonObject.getInt("responseCode");
+                if (ret > 0) {
+                    callBack.onUpdateProcess(jsonObject.getString("responseMessage"));
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        src.release();
+        return ret == 1;
+    }
+
+    int doCheckFrame(byte[] bytes, int w, int h) {
+        int ret = 0;
+        if (bytes != null && w > 0 && h > 0) {
+            try {
+                String s = doCheckData(bytes, w, h);
+                if (s != null && !TextUtils.isEmpty(s)) {
+                    JSONObject jsonObject = new JSONObject(s);
+                    ret = jsonObject.getInt("responseCode");
+                    if (ret >= 0) {
+                        nM = jsonObject.getString("responseMessage");
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                ret = 0;
+            }
+        }
+        return ret;
     }
 
     /**
@@ -394,26 +558,6 @@ public class RecogEngine {
 
     }
 
-    int doCheckFrame(byte[] bytes, int w, int h) {
-        int ret = 0;
-        if (bytes != null && w > 0 && h > 0) {
-            try {
-                String s = doCheckData(bytes, w, h);
-                if (s != null && !TextUtils.isEmpty(s)) {
-                    JSONObject jsonObject = new JSONObject(s);
-                    ret = jsonObject.getInt("responseCode");
-                    if (ret >= 0) {
-                        nM = jsonObject.getString("responseMessage");
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                ret = 0;
-            }
-        }
-        return ret;
-    }
-
     /**
      * call this method to check document
      *
@@ -426,7 +570,7 @@ public class RecogEngine {
         Utils.bitmapToMat(bmp, clone);
 
         Mat outMat = new Mat();
-        frames = checkDocument(clone.getNativeObjAddr(), outMat.getNativeObjAddr());
+        frames = checkDocument(clone.getNativeObjAddr(), outMat.getNativeObjAddr(), v);
         if (frames != null) {
             if (!frames.message.isEmpty() && this.callBack != null) {
                 this.callBack.onUpdateProcess(frames.message);
@@ -436,172 +580,13 @@ public class RecogEngine {
                 outMat.copyTo(frames.mat);
                 this.callBack.onUpdateProcess("Processing...");
             } else {
+                bmp.recycle();
                 frames.mat = null;
             }
             return frames;
         } else {
             return null;
         }
-    }
-
-    private Bitmap bitmapFromMat(Mat mat) {
-        if (mat != null) {
-            Bitmap bmp = Bitmap.createBitmap(mat.width(), mat.height(), Config.ARGB_8888);
-            Utils.matToBitmap(mat, bmp);
-            return bmp;
-        }
-        return null;
-    }
-
-    public class SDKModel {
-        public int i;
-        public boolean isMRZEnable = false;
-        public boolean isOCREnable = false;
-        public boolean isAllBarcodeEnable = false;
-    }
-
-    /**
-     * Must have to call initEngine on app open
-     *
-     * @param context
-     * @return
-     */
-    public SDKModel initEngine(Context context) {
-
-        //call Sdk  method InitEngine
-        // this method will return the integer value
-        //  the return value by initEngine used the identify the particular error
-        // -1 - No key found
-        // -2 - Invalid Key
-        // -3 - Invalid Platform
-        // -4 - Invalid License
-
-        // the return value by initEngine used the identify the license is valid for ocr, mrz or both
-        // 1 - for MRZ only
-        // 2 - for Ocr only
-        // 3 - for ocr + mrz both
-
-        /*
-           initialized sdk by InitEngine from thread
-          The return value by initEngine used the identify
-          Return i < 0 if license not valid
-          -1 - No key found
-          -2 - Invalid Key
-          -3 - Invalid Platform
-          -4 - Invalid License
-
-          Return i > 0 if license is valid
-          1 - for MRZ only
-          2 - for Ocr only
-          3 - for PDF417 only
-          4 - for Ocr + MRZ both
-          5 - for Ocr + PDF417 both
-          6 - for PDF417 + MRZ both
-          7 - for Ocr + MRZ + PDF417 both
-         */
-        this.con = context;
-
-        getAssetFile(assetNames[0], assetNames[1]);
-        File file = loadClassifierData(context);
-        int ret = loadDictionary(context, file != null ? file.getAbsolutePath() : "", pDic, pDicLen, pDic1, pDicLen1, context.getAssets());
-        Log.i("recogPassport", "loadDictionary: " + ret);
-        if (ret < 0) {
-            String message = "";
-            if (ret == -1) {
-                message = "No Key Found";
-            } else if (ret == -2) {
-                message = "Invalid Key";
-            } else if (ret == -3) {
-                message = "Invalid Platform";
-            } else if (ret == -4) {
-                message = "Invalid License";
-            }
-            if (!(context instanceof Activity)) {
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-            } else {
-                AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
-                builder1.setMessage(message);
-
-                builder1.setCancelable(true);
-
-                builder1.setPositiveButton(
-                        "OK",
-                        (dialog, id) -> dialog.cancel());
-
-                AlertDialog alert11 = builder1.create();
-                alert11.show();
-            }
-        }
-        SDKModel sdkModel = new SDKModel();
-        sdkModel.isMRZEnable = ret == 1 || ret == 4 || ret == 6 || ret == 7;
-        sdkModel.isOCREnable = ret == 2 || ret == 4 || ret == 5 || ret == 7;
-        sdkModel.isAllBarcodeEnable = ret == 3 || ret == 5 || ret == 6 || ret == 7;
-        sdkModel.i = ret;
-        return sdkModel;
-    }
-
-    private int getAssetFile(String fileName, String fileName1) {
-
-        int size = 0;
-        try {
-            InputStream is = this.con.getResources().getAssets().open(fileName);
-            size = is.available();
-            pDic = new byte[size];
-            pDicLen = size;
-            is.read(pDic);
-            is.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            InputStream is = this.con.getResources().getAssets().open(fileName1);
-            size = is.available();
-            pDic1 = new byte[size];
-            pDicLen1 = size;
-            is.read(pDic1);
-            is.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return size;
-    }
-
-    private File loadClassifierData(Context context) {
-
-        File faceClassifierFile;
-        InputStream is;
-        FileOutputStream os;
-
-
-        try {
-            is = context.getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
-            File cascadeDir = context.getDir("cascade", Context.MODE_PRIVATE);
-
-//            faceClassifierFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
-            faceClassifierFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
-//            System.out.println("cascade path  = " + faceClassifierFile.getAbsolutePath());
-
-            if (!faceClassifierFile.exists()) {
-                os = new FileOutputStream(faceClassifierFile);
-
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = is.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
-                }
-
-                is.close();
-                os.close();
-            }
-
-        } catch (IOException e) {
-            Util.logd("cascade", "Face cascade not found");
-            return null;
-        }
-
-        return faceClassifierFile;
     }
 
     /**
@@ -678,7 +663,7 @@ public class RecogEngine {
 
         }
         if (/*checkValid(bmImg) &&*/ result.faceBitmap == null) {
-            detectFace(bmImg, null, null, 0, null, result, new ScanListener() {
+            detectFace(bmImg, null, result, new ScanListener() {
 
                 @Override
                 public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
@@ -702,9 +687,17 @@ public class RecogEngine {
         return 0;
     }
 
-    void doFaceDetect(int i, Bitmap image, byte[] data, Camera camera, int mDisplayOrientation, OcrData ocrData, RecogResult result, ScanListener scanListener) {
+    /**
+     * To detect face from your camera frame
+     * @param i
+     * @param bitmap         document bitmap
+     * @param ocrData        to save face image
+     * @param result         to save face image
+     * @param scanListener   call back required to getting success or failed response
+     */
+    void doFaceDetect(int i, Bitmap bitmap, OcrData ocrData, RecogResult result, ScanListener scanListener) {
 
-        detectFace(image, data, camera, mDisplayOrientation, ocrData, result, new ScanListener() {
+        detectFace(bitmap, ocrData, result, new ScanListener() {
             @Override
             public void onUpdateProcess(String s) {
 
@@ -718,7 +711,7 @@ public class RecogEngine {
             @Override
             public void onScannedFailed(String s) {
                 if (s.equals("1") && result != null && i % 2 == 0) {
-                    doFaceDetect(1, BitmapUtil.rotateBitmap(image, 180), data, camera, mDisplayOrientation, ocrData, result, scanListener);
+                    doFaceDetect(1, BitmapUtil.rotateBitmap(bitmap, 180), ocrData, result, scanListener);
                 } else {
                     callBack.onScannedSuccess(false, false);
                 }
@@ -727,15 +720,83 @@ public class RecogEngine {
     }
 
     /**
+     * To detect and recognize Driving License Plate
+     * @param bmCard       camera frame
+     * @param countryId    is country Id
+     * @param cardId       is Card Id
+     * @param result       to save data in object
+     */
+    public void doRecognition(Bitmap bmCard, int countryId, int cardId, RecogResult result) {
+        if (detector == null) {
+            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+        }
+        final Bitmap docBmp = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+        detector.processImage(FirebaseVisionImage.fromBitmap(docBmp))
+                .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                    @Override
+                    public void onSuccess(FirebaseVisionText text) {
+                        result.lines = "";
+                        StringBuilder MlKitOcr = new StringBuilder();
+                        List<FirebaseVisionText.TextBlock> textBlocks = text.getTextBlocks();
+                        for (FirebaseVisionText.TextBlock textBlock : textBlocks)
+                            for (FirebaseVisionText.Line line : textBlock.getLines())
+                                for (FirebaseVisionText.Element element : line.getElements()) {
+                                    if (element == null)
+                                        continue;
+                                    if (element.getBoundingBox() != null) {
+                                        int heightDifference = element.getBoundingBox().bottom - element.getBoundingBox().top;
+//                                        Util.logd("ocr_log", "h, text -> " + heightDifference + "," + element.getText());
+                                        if (heightDifference > 20) {
+                                            MlKitOcr.append(element.getText());
+                                        }
+                                    }
+                                }
+
+                        docBmp.recycle();
+                        if (!TextUtils.isEmpty(MlKitOcr)) {
+                            int ret = doDetectNumberPlate(MlKitOcr.toString(), intData, countryId, cardId);
+                            if (ret > 0) {
+                                int i, k = 0, len;
+                                byte[] tmp = new byte[100];
+                                len = intData[k++];
+                                for (i = 0; i < len; ++i) tmp[i] = (byte) intData[k++];
+                                tmp[i] = 0;
+                                result.lines = RecogResult.convchar2string(tmp);
+                                result.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                bmCard.recycle();
+                                if (RecogEngine.this.callBack != null) {
+                                    RecogEngine.this.callBack.onScannedSuccess(true,false);
+                                }
+                            } else if (RecogEngine.this.callBack != null) {
+                                if (ret < 0) RecogEngine.this.callBack.onUpdateProcess("DL Plate not Added");
+                                bmCard.recycle();
+                                RecogEngine.this.callBack.onScannedSuccess(false,false);
+                            }
+                        } else if (RecogEngine.this.callBack != null) {
+                            bmCard.recycle();
+                            RecogEngine.this.callBack.onScannedSuccess(false,false);
+                        }
+
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+
+            }
+        });
+
+    }
+
+    /**
      * Call this method if document is valid after {@see checkCard(Bitmap bmp)}
      *
-     * @param scanListener to get scanned data
+//     * @param scanListener to get scanned data
      * @param src
      * @param mat          pass met to retrieve ocr data.
      * @param ocrData      to fill data to this object
      */
-    void doRecognition(ScanListener scanListener, Bitmap src, Mat mat, OcrData ocrData) {
-        RecogEngine.this.callBack = scanListener;
+    void doRecognition(/*ScanListener scanListener, */Bitmap src, Mat mat, OcrData ocrData) {
+//        RecogEngine.this.callBack = scanListener;
 
 //        if (findFace == true && ocrData.getFaceImage() == null) {
 //            try {
@@ -771,6 +832,13 @@ public class RecogEngine {
                 .addOnSuccessListener(visionText -> {
 
                     OcrData.MapData mapData = MapDataFunction(mat.getNativeObjAddr(), visionText);
+//                    if (detector != null) {
+//                        try {
+//                            detector.close();
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
                     List<OcrData.MapData.ScannedData> result = null;
                     if (mapData != null) {
                         result = mapData.getOcr_data();
@@ -785,14 +853,15 @@ public class RecogEngine {
                         if (mapData.getCardSide().toLowerCase().contains("front")) {
                             if (ocrData.getFrontData() != null) {
                                 isdone = false;
-                            }
+//                                ocrData.getFrontimage().recycle();
+                            } else ocrData.setFrontimage(src.copy(Config.ARGB_8888, false));
                             ocrData.setFrontData(mapData);
-                            ocrData.setFrontimage(src);
                         } else {
-                            if (ocrData.getBackData() != null)
+                            if (ocrData.getBackData() != null) {
                                 isdone = false;
+                                ocrData.getBackimage().recycle();
+                            } else ocrData.setBackimage(src.copy(Config.ARGB_8888, false));
                             ocrData.setBackData(mapData);
-                            ocrData.setBackimage(src);
                         }
                     }
                     try {
@@ -800,7 +869,7 @@ public class RecogEngine {
                         if (findFace) {
                             isContinue = false;
                             boolean finalIsdone1 = isdone;
-                            detectFace(src, null, null, 0, ocrData, null, new ScanListener() {
+                            detectFace(src.copy(Config.ARGB_8888, false), ocrData, null, new ScanListener() {
                                 @Override
                                 void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
                                     boolean isFinal;
@@ -812,8 +881,10 @@ public class RecogEngine {
                                     }
                                     if (callBack != null) {
                                         findFace = false;
-                                        callBack.onScannedSuccess(isFinal, isMrzEnable && CheckMRZisRequired(mapData, "mrz"));
+                                        callBack.onScannedSuccess(isFinal, isMrzEnable && CheckMRZisRequired(mapData));
                                     }
+                                    src.recycle();
+                                    mat.release();
                                 }
 
                                 @Override
@@ -821,7 +892,9 @@ public class RecogEngine {
 //                                    if (finalIsdone && ocrData.getFrontData() != null && ocrData.getFaceImage() != null && ocrData.getBackData() == null) {
 //                                        updateData(mapData.card_side);
 //                                    }
-                                    callBack.onScannedSuccess(false, isMrzEnable && CheckMRZisRequired(mapData, "mrz"));
+                                    callBack.onScannedSuccess(false, isMrzEnable && CheckMRZisRequired(mapData));
+                                    src.recycle();
+                                    mat.release();
                                 }
                             });
                         }
@@ -829,24 +902,38 @@ public class RecogEngine {
                         e.printStackTrace();
                     }
                     if (isContinue && callBack != null) {
-                        if (isdone && ocrData.getFrontData() != null && ocrData.getFaceImage() != null && ocrData.getBackData() == null) {
+                        if (isdone && ocrData.getFrontData() != null && ocrData.getBackData() == null) {
                             updateData(mapData.card_side);
                         }
-                        callBack.onScannedSuccess(isdone, isMrzEnable && CheckMRZisRequired(mapData, "mrz"));
+                        callBack.onScannedSuccess(isdone, isMrzEnable && CheckMRZisRequired(mapData));
+                        src.recycle();
+                        image.recycle();
+                        mat.release();
                     }
                 })
                 .addOnFailureListener(e -> {
+//                    if (detector != null) {
+//                        try {
+//                            detector.close();
+//                        } catch (IOException e1) {
+//                            e1.printStackTrace();
+//                        }
+//                    }
+                    src.recycle();
+                    image.recycle();
+                    mat.release();
                     if (callBack != null) {
                         callBack.onScannedFailed(e.getMessage());
                     }
                 });
     }
 
-    public void detectFace(Bitmap image, byte[] data, Camera camera, int mDisplayOrientation, OcrData ocrData, RecogResult result, ScanListener scanListener) {
+    public void detectFace(Bitmap image, OcrData ocrData, RecogResult result, ScanListener scanListener) {
         if (/*(ocrData != null && ocrData.getFaceImage() != null) || */(result != null && result.faceBitmap != null)) {
             if (scanListener != null) {
                 scanListener.onScannedSuccess(true, true);
             }
+            image.recycle();
             return;
         }
         if (image != null && !image.isRecycled()) {
@@ -892,7 +979,7 @@ public class RecogEngine {
                                     currentPosition++;
                                 }
                                 FirebaseVisionFace face = faces.get(index);
-                                Util.logd(TAG, "detectFace: " + face);
+//                                Util.logd(TAG, "detectFace: " + face);
                                 Rect bounds = face.getBoundingBox();
                                 float rotY = face.getHeadEulerAngleY();  // Head is rotated to the right rotY degrees
                                 float rotZ = face.getHeadEulerAngleZ();  // Head is tilted sideways rotZ degrees
@@ -932,8 +1019,8 @@ public class RecogEngine {
                                     float newY = y - wY;
                                     float newWidth = (width + (wX * 2));
                                     float newHeight = (height + (wY * 2));
-                                    Util.logd(TAG, "detectFace: old" + x + "," + y + "," + width + "," + height);
-                                    Util.logd(TAG, "detectFace: new" + newX + "," + newY + "," + newWidth + "," + newHeight);
+//                                    Util.logd(TAG, "detectFace: old" + x + "," + y + "," + width + "," + height);
+//                                    Util.logd(TAG, "detectFace: new" + newX + "," + newY + "," + newWidth + "," + newHeight);
                                     if (newX < 0) {
                                         newWidth = newWidth + (int) (newX * 2);
                                         newX = 0;
@@ -950,7 +1037,7 @@ public class RecogEngine {
                                         newHeight = image1.getHeight() - newY;
 
                                     try {
-                                        Util.logd(TAG, "detectFace: final" + newX + "," + newY + "," + newWidth + "," + newHeight);
+//                                        Util.logd(TAG, "detectFace: final" + newX + "," + newY + "," + newWidth + "," + newHeight);
                                         //                                    Bitmap faceBitmap = Bitmap.createBitmap(image1,
                                         //                                            (int) 0,
                                         //                                            (int) 0,
@@ -969,88 +1056,96 @@ public class RecogEngine {
 //                                                new Rect(0,0,image1.getWidth(),image1.getHeight()),
 //                                                new Rect((int) newX, (int) newY, (int) (newWidth + newX), (int) (newHeight + newY)),
 //                                                image1);
-                                        //                                    if (ocrData != null) {
-                                        //                                        ocrData.setFaceImage(faceBitmap1.copy(Config.ARGB_8888, false));
-                                        //                                    } else if (result != null) {
-                                        //                                        result.faceBitmap = faceBitmap1.copy(Config.ARGB_8888, false);
-                                        //                                        //                                                result.recType = RecType.FACE;
-                                        ////                                        result.docFrontBitmap = image.copy(Config.ARGB_8888, false);
-                                        //                                        if (result.recType == RecType.MRZ) {
-                                        //                                            result.bRecDone = true;
-                                        //                                        }
-                                        //                                    }
-                                        //                                    if (scanListener != null) {
-                                        //                                        Util.logd(TAG, "detectFace: rotated to the right :" + rotY + "," + rotZ);
-                                        //                                        scanListener.onScannedSuccess(true, true);
-                                        //                                    }
                                         Mat clone = new Mat();
                                         Utils.bitmapToMat(faceBitmap1, clone);
-                                        String s = doFaceCheck(clone.getNativeObjAddr());
+                                        String s = doFaceCheck(clone.getNativeObjAddr(), v);
+                                        clone.release();
                                         try {
                                             if (s != null && !s.equals("")) {
                                                 JSONObject jsonObject = new JSONObject(s);
                                                 int ic = jsonObject.getInt("responseCode");
                                                 if (ic == 1) {
                                                     if (ocrData != null) {
+                                                        if (ocrData.getFaceImage() != null)
+                                                            ocrData.getFaceImage().recycle();
                                                         ocrData.setFaceImage(faceBitmap1.copy(Config.ARGB_8888, false));
                                                     } else if (result != null) {
                                                         result.faceBitmap = faceBitmap1.copy(Config.ARGB_8888, false);
-                                                        //                                                    result.recType = RecType.FACE;
-                                                        //                                                    result.docFrontBitmap = image.copy(Config.ARGB_8888, false);
+//                                                        result.recType = RecType.FACE;
+//                                                        result.docFrontBitmap = image.copy(Config.ARGB_8888, false);
                                                         if (result.recType == RecType.MRZ) {
                                                             result.bRecDone = true;
                                                         }
                                                     }
-                                                    //                                            if (ocrData instanceof OcrData) {
-                                                    //                                                ((OcrData) ocrData).setFaceImage(faceBitmap1.copy(Config.ARGB_8888, false));
-                                                    //                                            } else if (ocrData instanceof RecogResult) {
-                                                    //                                                ((RecogResult) ocrData).faceBitmap = faceBitmap1.copy(Config.ARGB_8888, false);
-                                                    ////                                                ((RecogResult) ocrData).recType = RecType.FACE;
-                                                    //                                                ((RecogResult) ocrData).docFrontBitmap = image.copy(Bitmap.Config.ARGB_8888, false);
-                                                    //                                                if (((RecogResult) ocrData).recType == RecType.MRZ) {
-                                                    //                                                    ((RecogResult) ocrData).bRecDone = true;
-                                                    //                                                }
-                                                    //                                            }
                                                     if (scanListener != null) {
-                                                        Util.logd(TAG, "detectFace: rotated to the right :" + rotY + "," + rotZ);
                                                         scanListener.onScannedSuccess(true, true);
                                                     }
+                                                    image1.recycle();
+                                                    image.recycle();
+                                                    faceBitmap1.recycle();
                                                     // TODO Success
                                                 } else if (ic == 10) {
+                                                    image1.recycle();
+                                                    image.recycle();
+                                                    faceBitmap1.recycle();
                                                     String message = jsonObject.getString("responseMessage");
                                                     if (!message.isEmpty() && this.callBack != null) {
                                                         this.callBack.onUpdateProcess(message);
                                                         scanListener.onScannedFailed("");
-
                                                     }
                                                 }
+//                                                faceBitmap1.recycle();
                                             }
                                         } catch (JSONException e) {
+                                            image1.recycle();
+                                            image.recycle();
+                                            faceBitmap1.recycle();
                                             scanListener.onScannedFailed("");
                                         }
                                     } catch (Exception e) {
+                                        image1.recycle();
+                                        image.recycle();
                                         Util.logd(TAG, "face  Failed");
                                         scanListener.onScannedFailed("");
                                     }
                                 }
                             } else {
+                                image1.recycle();
+//                                image.recycle();
                                 if (scanListener != null)
                                     scanListener.onScannedFailed("1");
 //                                scanListener.onScannedSuccess(false, false);
                             }
+//                            try {
+//                                if (faceDetector != null) {
+//                                    faceDetector.close();
+//                                }
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                            }
                         }).addOnFailureListener(e -> {
                     scanListener.onScannedFailed("");
+//                    try {
+//                        if (faceDetector != null) {
+//                            faceDetector.close();
+//                        }
+//                    } catch (IOException e1) {
+//                        e1.printStackTrace();
+//                    }
                 });
             } else {
+                image1.recycle();
+                image.recycle();
                 scanListener.onScannedFailed("");
             }
         } else {
+            image.recycle();
             scanListener.onScannedFailed("");
         }
     }
 
-    //    return true if mrz available
-    private boolean CheckMRZisRequired(OcrData.MapData mapData, String face) {
+    // return true if mrz available
+    private boolean CheckMRZisRequired(OcrData.MapData mapData) {
         if (mapData != null && mapData.getOcr_data() != null) {
             for (OcrData.MapData.ScannedData data : mapData.getOcr_data()) {
                 if (data != null) {
@@ -1062,6 +1157,79 @@ public class RecogEngine {
             }
         }
         return false;
+    }
+
+    private Bitmap bitmapFromMat(Mat mat) {
+        if (mat != null) {
+            Bitmap bmp = Bitmap.createBitmap(mat.width(), mat.height(), Config.ARGB_8888);
+            Utils.matToBitmap(mat, bmp);
+            return bmp;
+        }
+        return null;
+    }
+
+    private int getAssetFile(String fileName, String fileName1) {
+
+        int size = 0;
+        try {
+            InputStream is = this.con.getResources().getAssets().open(fileName);
+            size = is.available();
+            pDic = new byte[size];
+            pDicLen = size;
+            is.read(pDic);
+            is.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            InputStream is = this.con.getResources().getAssets().open(fileName1);
+            size = is.available();
+            pDic1 = new byte[size];
+            pDicLen1 = size;
+            is.read(pDic1);
+            is.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return size;
+    }
+
+    private File loadClassifierData(Context context) {
+
+        File faceClassifierFile;
+        InputStream is;
+        FileOutputStream os;
+
+
+        try {
+            is = context.getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
+            File cascadeDir = context.getDir("cascade", Context.MODE_PRIVATE);
+
+//            faceClassifierFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+            faceClassifierFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
+//            System.out.println("cascade path  = " + faceClassifierFile.getAbsolutePath());
+
+            if (!faceClassifierFile.exists()) {
+                os = new FileOutputStream(faceClassifierFile);
+
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+
+                is.close();
+                os.close();
+            }
+
+        } catch (IOException e) {
+            Util.logd("cascade", "Face cascade not found");
+            return null;
+        }
+
+        return faceClassifierFile;
     }
 
     public PointF getCenterPoint(List<FirebaseVisionFace> faces) {
@@ -1097,7 +1265,6 @@ public class RecogEngine {
         float height = (bounds.bottom - bounds.top);
         center.set(x + (width / 2), y + (height / 2)); // face center in original bitmap
     }
-
 
     public void transform(Bitmap original, PointF focusPoint,/*, FaceCenterCropListener faceCenterCropListener*/OcrData ocrData) {
 
@@ -1175,7 +1342,7 @@ public class RecogEngine {
         }
     }
 
-    void closeEngine() {
+    void closeEngine(int destroy) {
         try {
             if (detector != null) {
                 detector.close();
@@ -1190,6 +1357,7 @@ public class RecogEngine {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        closeOCR(destroy);
     }
 
     public enum RecType {

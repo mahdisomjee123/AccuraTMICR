@@ -17,7 +17,7 @@ import java.io.ByteArrayOutputStream;
 
 public class MyBardCodeDetector extends Detector<Barcode> {
     private Detector<Barcode> mDelegate;
-    Bitmap bitmap;
+    private Bitmap bitmap;
 
     public Bitmap getBitmap() {
         return bitmap;
@@ -41,11 +41,13 @@ public class MyBardCodeDetector extends Detector<Barcode> {
         Bitmap finalb = Bitmap.createBitmap(storedBitmap, 0, 0, storedBitmap.getWidth(), storedBitmap.getHeight(), mat, true);
         Bitmap centercrop =  BitmapUtil.centerCrop(finalb, finalb.getWidth(), finalb.getHeight() / 3);
         if (bitmap!=null){
+            if (!bitmap.isRecycled()) bitmap.recycle();
             bitmap = null;
         }
-        bitmap = centercrop;
-        Frame.Builder  builder = new Frame.Builder().setBitmap(centercrop);
-//        GraphicHolder.faceImage = bitmap;
+        bitmap =  centercrop.copy(Bitmap.Config.ARGB_8888, true);
+        Frame.Builder builder = new Frame.Builder().setBitmap(centercrop);
+        finalb.recycle();
+        storedBitmap.recycle();
 
         return mDelegate.detect(builder.build());
     }

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -37,7 +36,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
     }
 
     /**
-     * Set Camera type to scan Mrz or Ocr+Mrz
+     * Set Camera type to scan PDF417 or BARCODE
      *
      * @param recogType
      * @return
@@ -59,10 +58,15 @@ public abstract class ScannerView extends ScannerCameraPreview {
 
     /**
      * Set Country code to load Scanner
-     * @param code
+     * @param countryId
      */
-    public ScannerView setCountryCode(int code) {
-        countryCode = code;
+    public ScannerView setCardData(int countryId) {
+        this.countryId = countryId;
+        return this;
+    }
+
+    public ScannerView setBarcodeFormat(int barcodeFormat) {
+        this.barcodeFormat = barcodeFormat;
         return this;
     }
 
@@ -79,7 +83,8 @@ public abstract class ScannerView extends ScannerCameraPreview {
 //        if (this.countryCode < 0) {
 //            throw new IllegalStateException("Country Code must have to > 0");
 //        }
-        initializeScanner(context, countryCode);
+        isPreviewAdded = false;
+        initializeScanner(context, countryId);
     }
 
     private void addCameraPreview(Context context) {
@@ -195,6 +200,10 @@ public abstract class ScannerView extends ScannerCameraPreview {
         startCameraPreview();
         if (isflashOn)
             setFlash();
+    }
+
+    public void onDestroy(){
+        destroy();
     }
 
     public void stopCamera() {

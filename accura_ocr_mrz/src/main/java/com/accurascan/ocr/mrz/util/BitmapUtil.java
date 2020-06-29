@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -184,22 +185,25 @@ public class BitmapUtil {
      * {@link Camera.PreviewCallback#onPreviewFrame(byte[] data, Camera camera)}
      *
      * @param data                an encoded image
-     * @param camera
+     * @param size                image size
+     * @param format              image format {@see ImageFormat} to decode image
      * @param mDisplayOrientation camera orientation
      * @param croppedHeight       center cropped image according to height which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData} cameraHeight
      * @param croppedWidth        center cropped image according to width which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData} cameraWidth
      * @param recogType
      * @return a decoded bitmap with cropped image
      */
-    public static Bitmap getBitmapFromData(byte[] data, Camera camera, int mDisplayOrientation, int croppedHeight, int croppedWidth, RecogType recogType) {
+    public static Bitmap getBitmapFromData(byte[] data, Camera.Size size, int format, int mDisplayOrientation, int croppedHeight, int croppedWidth, RecogType recogType) {
 
         final int width;
         final int height;
-        final int format;
-        if (camera != null) {
-            width = camera.getParameters().getPreviewSize().width;
-            height = camera.getParameters().getPreviewSize().height;
-            format = camera.getParameters().getPreviewFormat();
+        if (size != null) {
+            try {
+                width = size.width;
+                height = size.height;
+            } catch (Exception e) {
+                return null;
+            }
         } else {
             return null;
         }
@@ -235,7 +239,7 @@ public class BitmapUtil {
                 Rect finalrect = new Rect((int) (frameRect.left), (int) (frameRect.top), (int) (frameRect.right), (int) (frameRect.bottom));
 
                 bmCard = Bitmap.createBitmap(bmp1, finalrect.left, finalrect.top, finalrect.width(), finalrect.height());
-            } else if (RecogType.MRZ == recogType || RecogType.PDF417 == recogType) {
+            } else if (RecogType.MRZ == recogType || RecogType.DL_PLATE == recogType|| RecogType.PDF417 == recogType) {
                 bmCard = BitmapUtil.centerCrop(bmp1, bmp1.getWidth(), bmp1.getHeight() / 3);
             }
 
@@ -335,8 +339,6 @@ public class BitmapUtil {
             angle = (mDisplayOrientation - degrees + 360) % 360;
             displayAngle = angle;
         }
-
-
         return (angle / 90);
     }
 

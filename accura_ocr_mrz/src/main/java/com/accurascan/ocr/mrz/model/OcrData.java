@@ -148,9 +148,9 @@ public class OcrData {
     private static OcrData ocrResult;
 
     public static OcrData getOcrResult() {
-        OcrData ocrData = ocrResult;
-        ocrResult = null;
-        return ocrData;
+//        OcrData ocrData = ocrResult;
+//        ocrResult = null;
+        return ocrResult;
     }
 
     public static void setOcrResult(OcrData ocrResult) {

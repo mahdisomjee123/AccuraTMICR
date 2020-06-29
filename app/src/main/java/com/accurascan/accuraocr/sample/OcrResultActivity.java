@@ -27,7 +27,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
 
     ImageView ivUserProfile, iv_frontside, iv_backside;
     LinearLayout ly_back, ly_front;
-    View ly_mrz_container, ly_front_container, ly_back_container, ly_security_container, ly_pdf417_container, ly_usdl_container;
+    View dl_plate_lout, ly_mrz_container, ly_front_container, ly_back_container, ly_security_container, ly_pdf417_container, ly_usdl_container;
     OcrData.MapData Frontdata;
     OcrData.MapData Backdata;
 
@@ -62,6 +62,21 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                 face1 = g_recogResult.faceBitmap;
             }
             setData();
+        } else if (RecogType.detachFrom(getIntent()) == RecogType.DL_PLATE) {
+            dl_plate_lout.setVisibility(View.VISIBLE);
+            ly_back.setVisibility(View.GONE);
+            ly_front.setVisibility(View.GONE);
+            ivUserProfile.setVisibility(View.GONE);
+            OcrData ocrData = OcrData.getOcrResult();
+
+            TextView textView = findViewById(R.id.tv_value);
+            ImageView imageView = findViewById(R.id.im_doc);
+            textView.setText(ocrData.getFrontData().getOcr_data().get(0).getKey_data());
+            if (ocrData.getFrontimage() != null) {
+                imageView.setImageBitmap(ocrData.getFrontimage());
+            } else {
+                imageView.setVisibility(View.GONE);
+            }
         } else if (RecogType.detachFrom(getIntent()) == RecogType.PDF417) {
             PDF417Data pdf417Data = PDF417Data.getPDF417Result();
 
@@ -105,6 +120,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         pdf417_table_layout = findViewById(R.id.pdf417_table_layout);
         usdl_table_layout = findViewById(R.id.usdl_table_layout);
 
+        dl_plate_lout = findViewById(R.id.dl_plate_lout);
         ly_mrz_container = findViewById(R.id.ly_mrz_container);
         ly_front_container = findViewById(R.id.ly_front_container);
         ly_back_container = findViewById(R.id.ly_back_container);
@@ -112,6 +128,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         ly_pdf417_container = findViewById(R.id.ly_pdf417_container);
         ly_usdl_container = findViewById(R.id.ly_usdl_container);
 
+        dl_plate_lout.setVisibility(View.GONE);
     }
 
     private void setOcrData(OcrData ocrData) {
@@ -184,6 +201,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                     }
                 }
             }
+//            Glide.with(this).load(Base64.decode(ocrData.getFrontDocument(), Base64.DEFAULT)).into(iv_frontside);
             final Bitmap frontBitmap = ocrData.getFrontimage();
             if (frontBitmap != null && !frontBitmap.isRecycled()) {
                 iv_frontside.setImageBitmap(frontBitmap);
@@ -250,6 +268,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
 
                 }
             }
+//            Glide.with(this).load(Base64.decode(ocrData.getBackDocument(), Base64.DEFAULT)).into(iv_backside);
             final Bitmap BackImage = ocrData.getBackimage();
             if (BackImage != null && !BackImage.isRecycled()) {
                 iv_backside.setImageBitmap(BackImage);
@@ -429,6 +448,38 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
 
     @Override
     public void onBackPressed() {
+
+        //<editor-fold desc="To resolve memory leak">
+        if ((RecogType.detachFrom(getIntent()) == RecogType.OCR || RecogType.detachFrom(getIntent()) == RecogType.DL_PLATE) && OcrData.getOcrResult() != null) {
+            try {
+                OcrData.getOcrResult().getFrontimage().recycle();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            try {
+                OcrData.getOcrResult().getBackimage().recycle();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            try {
+                OcrData.getOcrResult().getFaceImage().recycle();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }else if (RecogType.detachFrom(getIntent()) == RecogType.MRZ && RecogResult.getRecogResult() != null) {
+            try {
+                RecogResult.getRecogResult().docFrontBitmap.recycle();
+                RecogResult.getRecogResult().faceBitmap.recycle();
+                RecogResult.getRecogResult().docBackBitmap.recycle();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }else if (RecogType.detachFrom(getIntent()) == RecogType.PDF417 && PDF417Data.getPDF417Result() != null) {
+            PDF417Data.getPDF417Result().faceBitmap.recycle();
+            PDF417Data.getPDF417Result().docFrontBitmap.recycle();
+            PDF417Data.getPDF417Result().docBackBitmap.recycle();
+        }
+        //</editor-fold>
 
         try {
             Thread.sleep(100);

@@ -141,7 +141,6 @@ public class BarcodeHelper {
                             }
                         }
                     }
-                    Log.e("RESULT ", "line -->" + line);
                 }
             }
         }
@@ -242,7 +241,7 @@ public class BarcodeHelper {
         if (dataHashMap.containsKey(Customer_Given_Name)) {
             Log.v("TAG", "users Given name:" + dataHashMap.get(Customer_Given_Name));
             try {
-                String CustomerName[] = dataHashMap.get(Customer_Given_Name).split(" ");
+                String[] CustomerName = dataHashMap.get(Customer_Given_Name).split(" ");
                 if (CustomerName.length >= 1)
                     pdf417Data.firstName1 = CustomerName[0].trim();
 //                pdf417Data.mname = CustomerName[1].substring(0, 1).trim();

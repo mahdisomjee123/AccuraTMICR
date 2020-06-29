@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.util.DisplayMetrics;
@@ -41,16 +43,21 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     private CameraSource cameraSource;
     private DisplayMetrics displayMetrics;
     public Camera camera;
-    private int barcodeFormate = Barcode.ALL_FORMATS;
+    public int barcodeFormat = Barcode.ALL_FORMATS;
     private Context mContext;
     private PDF417Data pdf417Data;
     private boolean isDone = false;
-    public int countryCode = 0;
+    public int countryId = 0;
     public RecogType barcodeType = null;
     protected Preview preview;
     protected ViewGroup cameraContainer;
     private SurfaceHolder mSurfaceHolder;
-    private ProgressBar progressBar;
+    private boolean isSelection = false;
+    private BarcodeDetector barcodeDetector;
+    private MyBardCodeDetector myBarcodedetecter;
+    private FaceDetector detector;
+    private MyFaceDetector myFaceDetector;
+//    private ProgressBar progressBar;
 
     protected abstract void onScannedSuccess(String rawResult);
 
@@ -65,7 +72,15 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         recogEngine = new RecogEngine();
     }
 
-    protected void initializeScanner(Context context, int countryCode) {
+    public void updateFormat(int barcodeFormat) {
+        if (barcodeType == RecogType.BARCODE && isSelection) {
+            this.barcodeFormat = barcodeFormat;
+            addScanner(this.mContext);
+        }
+    }
+
+    protected void initializeScanner(Context context, int countryId) {
+        isDone = false;
         preview = new Preview(mContext);
         this.cameraContainer.addView(preview);
 //        progressBar = new ProgressBar(mContext, null, android.R.attr.progressBarStyleLarge);
@@ -75,7 +90,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                InitModel initModel = recogEngine.initScanner(context, countryCode);
+                InitModel initModel = recogEngine.initScanner(context, countryId);
                 if (initModel != null ) {
                     if (initModel.getResponseCode() == 1) {
                         startScan();
@@ -97,8 +112,9 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         if (barcodeType == RecogType.BARCODE) {
             addScanner(this.mContext);
             onUpdate("", false);
+            isSelection = true;
         } else if (barcodeType == RecogType.PDF417) {
-            barcodeFormate = Barcode.PDF417;
+            barcodeFormat = Barcode.PDF417;
             initFrontCamera();
             onUpdate(mContext.getResources().getString(R.string.scan_front), false);
         }
@@ -106,10 +122,10 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
     private void initFrontCamera() {
 
-        FaceDetector detector = new FaceDetector.Builder(mContext)
+        detector = new FaceDetector.Builder(mContext)
                 .setTrackingEnabled(false)
                 .build();
-        MyFaceDetector myFaceDetector = new MyFaceDetector(detector);
+        myFaceDetector = new MyFaceDetector(detector);
 
         cameraSource = new CameraSource.Builder(mContext, myFaceDetector)
                 .setAutoFocusEnabled(true)
@@ -144,6 +160,8 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                 pdf417Data.faceBitmap = faceBitmap1;
                                 pdf417Data.docFrontBitmap = source.copy(Bitmap.Config.ARGB_8888, true);
                                 try {
+                                    if (!source.isRecycled()) source.recycle();
+                                    if (myFaceDetector.getBitmap() != null && !myFaceDetector.getBitmap().isRecycled()) myFaceDetector.getBitmap().recycle();
                                     detector.release();
                                     myFaceDetector.release();
                                 } catch (Exception e) {
@@ -176,10 +194,10 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     }
 
     private void addScanner(Context context) {
-        BarcodeDetector barcodeDetector = new BarcodeDetector.Builder(context)
-                .setBarcodeFormats(barcodeFormate).build();
+        barcodeDetector = new BarcodeDetector.Builder(context)
+                .setBarcodeFormats(barcodeFormat).build();
 
-        MyBardCodeDetector myBarcodedetecter = new MyBardCodeDetector(barcodeDetector);
+        myBarcodedetecter = new MyBardCodeDetector(barcodeDetector);
 
         cameraSource = new CameraSource.Builder(context, myBarcodedetecter)
                 .setAutoFocusEnabled(true)
@@ -205,12 +223,14 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                         @Override
                         public void run() {
                             cameraSource.stop();
-                            if (barcodeType == RecogType.BARCODE) {
-                                pdf417Data.docFrontBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
-                            } else if (barcodeType == RecogType.PDF417) {
-                                pdf417Data.docBackBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
+                            if (myBarcodedetecter.getBitmap() != null && !myBarcodedetecter.getBitmap().isRecycled()) {
+                                /*if (barcodeType == RecogType.BARCODE) {
+                                    pdf417Data.docFrontBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
+                                } else*/ if (barcodeType == RecogType.PDF417) {
+                                    pdf417Data.docBackBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
+                                }
+                                myBarcodedetecter.getBitmap().recycle();
                             }
-
                             String output = qrcode.valueAt(0).rawValue;
                             if (BarcodeHelper.extractScanResult(output, pdf417Data)) {
                                 if (!isDone) {
@@ -277,7 +297,9 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             mSurfaceHolder = holder;
 
             try {
-                cameraSource.start(holder);
+                if (cameraSource != null) {
+                    cameraSource.start(holder);
+                }
             } catch (RuntimeException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -302,12 +324,27 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     protected void startCameraPreview() {
 //        progressBar.setVisibility(View.GONE);
 //        getHolder().addCallback(this);
+        isDone = false;
         try {
-            cameraSource.start(mSurfaceHolder);
+            if (cameraSource != null && mSurfaceHolder != null) {
+                cameraSource.start(mSurfaceHolder);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        setCamera();
+        try {
+            setCamera();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    protected void destroy(){
+        if (barcodeDetector != null) barcodeDetector.release();
+        if (myBarcodedetecter != null) myBarcodedetecter.release();
+        if (detector != null) detector.release();
+        if (myFaceDetector != null) myFaceDetector.release();
+        stopCameraPreview();
     }
 
     protected void stopCameraPreview() {

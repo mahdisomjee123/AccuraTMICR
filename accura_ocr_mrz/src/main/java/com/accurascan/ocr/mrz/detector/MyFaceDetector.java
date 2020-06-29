@@ -17,7 +17,7 @@ import java.io.ByteArrayOutputStream;
 
 public class MyFaceDetector extends Detector<Face> {
     private Detector<Face> mDelegate;
-    Bitmap bitmap;
+    private Bitmap bitmap;
 
     public Bitmap getBitmap() {
         return bitmap;
@@ -39,13 +39,13 @@ public class MyFaceDetector extends Detector<Face> {
         Matrix mat = new Matrix();
         mat.postRotate(90);
         Bitmap finalb = Bitmap.createBitmap(storedBitmap, 0, 0, storedBitmap.getWidth(), storedBitmap.getHeight(), mat, true);
-        Bitmap centercrop =  BitmapUtil.centerCrop(finalb, finalb.getWidth(), finalb.getHeight() / 3);
-        if (bitmap!=null){
-            bitmap = null;
+        if (bitmap!=null && bitmap.isRecycled()){
+            bitmap.recycle();bitmap = null;
         }
-        bitmap = centercrop;
-        Frame.Builder  builder = new Frame.Builder().setBitmap(centercrop);
-//        GraphicHolder.faceImage = bitmap;
+        bitmap =  BitmapUtil.centerCrop(finalb, finalb.getWidth(), finalb.getHeight() / 3);
+//        finalb.recycle();
+        storedBitmap.recycle();
+        Frame.Builder  builder = new Frame.Builder().setBitmap(bitmap);
 
         return mDelegate.detect(builder.build());
     }

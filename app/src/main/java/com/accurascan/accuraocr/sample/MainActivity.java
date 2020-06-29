@@ -27,6 +27,7 @@ import com.accurascan.ocr.mrz.util.Util;
 import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,22 +35,77 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private ProgressDialog progressBar;
-    private Handler handler = new Handler() {
+
+    private static class MyHandler extends Handler {
+        private final WeakReference<MainActivity> mActivity;
+
+        public MyHandler(MainActivity activity) {
+            mActivity = new WeakReference<>(activity);
+        }
+
         @Override
         public void handleMessage(Message msg) {
-            if (progressBar != null && progressBar.isShowing()) {
-                progressBar.dismiss();
-            }
-            Log.e(TAG, "handleMessage: " + msg.what);
-            if (msg.what == 1) {
-                if (sdkModel.isMRZEnable) btnMrz.setVisibility(View.VISIBLE);
-                if (sdkModel.isAllBarcodeEnable) btnPDF417.setVisibility(View.VISIBLE);
-                if (sdkModel.isOCREnable && modelList != null) {
-                    setCountryLayout();
+            MainActivity activity = mActivity.get();
+            if (activity != null) {
+                if (activity.progressBar != null && activity.progressBar.isShowing()) {
+                    activity.progressBar.dismiss();
+                }
+                Log.e(TAG, "handleMessage: " + msg.what);
+                if (msg.what == 1) {
+                    if (activity.sdkModel.isMRZEnable) activity.btnMrz.setVisibility(View.VISIBLE);
+                    if (activity.sdkModel.isAllBarcodeEnable)
+                        activity.btnPDF417.setVisibility(View.VISIBLE);
+                    if (activity.sdkModel.isOCREnable && activity.modelList != null) {
+                        activity.setCountryLayout();
+                    }
                 }
             }
         }
-    };
+    }
+
+    private static class NativeThread extends Thread {
+        private final WeakReference<MainActivity> mActivity;
+
+        public NativeThread(MainActivity activity) {
+            mActivity = new WeakReference<MainActivity>(activity);
+        }
+
+        @Override
+        public void run() {
+            MainActivity activity = mActivity.get();
+            if (activity != null) {
+                try {
+                    // doWorkNative();
+                    RecogEngine recogEngine = new RecogEngine();
+                    activity.sdkModel = recogEngine.initEngine(activity);
+
+                    if (activity.sdkModel.i >= 0) {
+
+                        // if OCR enable then get card list
+                        if (activity.sdkModel.isOCREnable)
+                            activity.modelList = recogEngine.getCardList(activity);
+
+                        recogEngine.setBlurPercentage(activity, 50);
+                        recogEngine.setFaceBlurPercentage(activity, 50);
+                        recogEngine.setGlarePercentage(activity, 6, 98);
+                        recogEngine.isCheckPhotoCopy(activity, false);
+                        recogEngine.SetHologramDetection(activity, true);
+                        recogEngine.setLowLightTolerance(activity, 30);
+                        recogEngine.setMotionData(activity, 15, "Keep Document Steady");
+
+                        activity.handler.sendEmptyMessage(1);
+                    } else
+                        activity.handler.sendEmptyMessage(0);
+
+                } catch (Exception e) {
+                }
+            }
+            super.run();
+        }
+    }
+
+    private Handler handler = new MyHandler(this);
+    private Thread nativeThread = new NativeThread(this);
     private RecyclerView rvCountry, rvCards;
     private CardListAdpter countryAdapter, cardAdapter;
     private List<Object> contryList = new ArrayList<>();
@@ -153,34 +209,7 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setMessage("Please wait...");
         progressBar.setCancelable(false);
         progressBar.show();
-
-        new Handler().postDelayed(new Runnable() {
-            public void run() {
-                Log.d(TAG, "Worker started");
-                try {
-                    // doWorkNative();
-                    RecogEngine recogEngine = new RecogEngine();
-                    sdkModel = recogEngine.initEngine(MainActivity.this);
-                    recogEngine.setBlurPercentage(MainActivity.this, 50);
-                    recogEngine.setFaceBlurPercentage(MainActivity.this, 50/*35*/);
-                    recogEngine.setGlarePercentage(MainActivity.this, 6,98);
-                    recogEngine.isCheckPhotoCopy(MainActivity.this, false);
-                    recogEngine.SetHologramDetection(MainActivity.this, true);
-                    recogEngine.setLowLightTolerance(MainActivity.this, 40);
-                    recogEngine.setMotionData(MainActivity.this, 30,"Keep Document Steady");
-
-                    if (sdkModel.i > 0) {
-                        // if OCR enable then get card list
-                        if (sdkModel.isOCREnable) modelList = recogEngine.getCardList(MainActivity.this);
-                        handler.sendEmptyMessage(1);
-                    } else
-                        handler.sendEmptyMessage(0);
-
-                } catch (Exception e) {
-                    Log.e("threadmessage", e.getMessage());
-                }
-            }
-        },500);
+        nativeThread.start();
     }
 
     public class CardListAdpter extends RecyclerView.Adapter {
@@ -229,11 +258,13 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(View v) {
 
                         Intent intent = new Intent(CardListAdpter.this.context, OcrActivity.class);
-                        intent.putExtra("country_code", ((ContryModel) MainActivity.this.contryList.get(selectedPosition)).getCountry_id());
-                        intent.putExtra("card_code", cardModel.getCard_id());
+                        intent.putExtra("country_id", ((ContryModel) MainActivity.this.contryList.get(selectedPosition)).getCountry_id());
+                        intent.putExtra("card_id", cardModel.getCard_id());
                         if (cardModel.getCard_type() == 1) {
                             RecogType.PDF417.attachTo(intent);
-                        }else {
+                        } else if (cardModel.getCard_type() == 2) {
+                            RecogType.DL_PLATE.attachTo(intent);
+                        } else {
                             RecogType.OCR.attachTo(intent);
                         }
                         startActivity(intent);
@@ -277,5 +308,4 @@ public class MainActivity extends AppCompatActivity {
             MainActivity.this.rvCards.setVisibility(View.INVISIBLE);
         }
     }
-
 }

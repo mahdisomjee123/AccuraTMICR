@@ -3,15 +3,13 @@ package com.docrecog.scan;
 import android.app.Activity;
 import android.view.ViewGroup;
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
-import com.accurascan.ocr.mrz.model.OcrData;
-import com.accurascan.ocr.mrz.model.RecogResult;
 
 public abstract class OcrView extends OcrCameraPreview {
 
     private final Activity context;
     private OcrCallback ocrCallBack;
-    private int countryCode = -1;
-    private int cardCode = -1;
+    private int countryId = -1;
+    private int cardId = -1;
     private ViewGroup cameraContainer;
 //    private boolean isSetPlayer = true;
 //    private MediaPlayer mediaPlayer = null;
@@ -24,16 +22,17 @@ public abstract class OcrView extends OcrCameraPreview {
     }
 
     public abstract void onPlaySound();
+
     /**
      * set data for scan specific card of the country
      *
-     * @param countryCode
-     * @param cardCode
+     * @param countryId
+     * @param cardId
      * @return
      */
-    public OcrView setCardData(int countryCode, int cardCode) {
-        this.countryCode = countryCode;
-        this.cardCode = cardCode;
+    public OcrView setCardData(int countryId, int cardId) {
+        this.countryId = countryId;
+        this.cardId = cardId;
         return this;
     }
 
@@ -111,24 +110,23 @@ public abstract class OcrView extends OcrCameraPreview {
         if (this.ocrCallBack == null) {
             throw new NullPointerException(context.getClass().getName() + " must have to implement " + OcrCallback.class.getName());
         }
-        if (recogType == RecogType.OCR) {
-            if (this.countryCode < 0) {
+        if (recogType == RecogType.OCR || recogType == RecogType.DL_PLATE) {
+            if (this.countryId < 0) {
                 throw new IllegalArgumentException("Country Code must have to > 0");
-            } else if (this.cardCode < 0) {
+            }
+            if (this.cardId < 0) {
                 throw new IllegalArgumentException("Card Code must have to > 0");
             }
         }
-        setData(countryCode, cardCode);
+        setData(countryId, cardId);
         setLayout(cameraContainer);
         setType(recogType);
-//        isSetMediaPlayer(isSetPlayer);
-//        setCustomMPlayer(mediaPlayer);
         setHeight(titleBarHeight);
         start();
     }
 
     /**
-     * to handle camera on window focus update
+     * To handle camera on window focus update
      *
      * @param hasFocus
      */
@@ -137,7 +135,7 @@ public abstract class OcrView extends OcrCameraPreview {
     }
 
     /**
-     * call this method from
+     * Call this method from
      *
      * @see com.accurascan.ocr.mrz.interfaces.OcrCallback#onUpdateLayout(int, int)
      * to start your camera preview and ocr
@@ -212,36 +210,36 @@ public abstract class OcrView extends OcrCameraPreview {
     @Override
     void onProcessUpdate(String s, String s1, boolean b) {
         if (ocrCallBack != null) {
-            context.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
+//            context.runOnUiThread(new Runnable() {
+//                @Override
+//                public void run() {
                     OcrView.this.ocrCallBack.onProcessUpdate(s, s1, b);
-                }
-            });
+//                }
+//            });
         }
     }
 
     @Override
     void onError(String s) {
         if (ocrCallBack != null) {
-            context.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
+//            context.runOnUiThread(new Runnable() {
+//                @Override
+//                public void run() {
                     OcrView.this.ocrCallBack.onError(s);
-                }
-            });
+//                }
+//            });
         }
     }
 
     @Override
     void onUpdateLayout(int width, int height) {
         if (ocrCallBack != null) {
-            context.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
+//            context.runOnUiThread(new Runnable() {
+//                @Override
+//                public void run() {
                     OcrView.this.ocrCallBack.onUpdateLayout(width, height);
-                }
-            });
+//                }
+//            });
         }
     }
 
@@ -249,18 +247,19 @@ public abstract class OcrView extends OcrCameraPreview {
     void onScannedComplete(Object result) {
         onPlaySound();
         if (ocrCallBack != null) {
-            context.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (recogType == RecogType.OCR && result instanceof OcrData) {
-//                        OcrView.this.ocrCallBack.onScannedComplete((OcrData) result, null, null);
-                        OcrView.this.ocrCallBack.onScannedComplete(result);
-                    } else if (recogType == RecogType.MRZ && result instanceof RecogResult) {
-//                        OcrView.this.ocrCallBack.onScannedComplete(null, (RecogResult) result, null);
-                        OcrView.this.ocrCallBack.onScannedComplete(result);
-                    }
-                }
-            });
+            OcrView.this.ocrCallBack.onScannedComplete(result);
+//            context.runOnUiThread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    if (recogType == RecogType.OCR && result instanceof OcrData) {
+////                        OcrView.this.ocrCallBack.onScannedComplete((OcrData) result, null, null);
+//                        OcrView.this.ocrCallBack.onScannedComplete(result);
+//                    } else if (recogType == RecogType.MRZ && result instanceof RecogResult) {
+////                        OcrView.this.ocrCallBack.onScannedComplete(null, (RecogResult) result, null);
+//                        OcrView.this.ocrCallBack.onScannedComplete(result);
+//                    }
+//                }
+//            });
         }
     }
 }

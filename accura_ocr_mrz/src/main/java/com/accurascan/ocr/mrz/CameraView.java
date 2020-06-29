@@ -15,20 +15,23 @@ import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.docrecog.scan.OcrView;
 import com.docrecog.scan.RecogType;
 import com.docrecog.scan.ScannerView;
+import com.google.android.gms.vision.barcode.Barcode;
+
+import static com.accurascan.ocr.mrz.BuildConfig.DEBUG;
 
 public class CameraView {
 
     private final Activity context;
     private RecogType type;
-    private int countryCode;
-    private int cardCode;
+    private int countryId;
+    private int cardId;
     private ViewGroup cameraContainer;
     private OcrCallback callback;
     private int titleBarHeight = 0;
     private boolean isSetPlayer = true;
+    private int barcodeFormat = -1;
     private MediaPlayer mediaPlayer = null;
     private AudioManager audioManager = null;
-    ObjectAnimator anim = null;
     private OcrView ocrView = null;
     private ScannerView scannerView = null;
 
@@ -50,22 +53,22 @@ public class CameraView {
     /**
      * set data for scan specific document of country
      *
-     * @param countryCode
+     * @param countryId
      * @return
      */
-    public CameraView setCountryCode(int countryCode) {
-        this.countryCode = countryCode;
+    public CameraView setCountryId(int countryId) {
+        this.countryId = countryId;
         return this;
     }
 
     /**
      * set data for scan specific card
      *
-     * @param cardCode
+     * @param cardId
      * @return
      */
-    public CameraView setCardCode(int cardCode) {
-        this.cardCode = cardCode;
+    public CameraView setCardId(int cardId) {
+        this.cardId = cardId;
         return this;
     }
 
@@ -99,7 +102,7 @@ public class CameraView {
 
     /**
      * set false to disable sound after scanned success
-     * else true to enable sound
+     * default true to enable sound
      *
      * @param isPlayMedia is default true
      * @return
@@ -121,6 +124,18 @@ public class CameraView {
     }
 
     /**
+     * Set Barcode format to scan specific barcode.
+     * Default Support All Barcode format
+     *
+     * @param barcodeFormat {@link com.accurascan.ocr.mrz.model.BarcodeTypeSelection#CODE_NAMES}
+     */
+    public void setBarcodeFormat(int barcodeFormat) {
+        if (this.barcodeFormat > -1 && scannerView != null)
+            scannerView.updateFormat(this.barcodeFormat);
+        this.barcodeFormat = barcodeFormat;
+    }
+
+    /**
      * call this method to initialized camera and ocr
      */
     public void init() {
@@ -133,14 +148,14 @@ public class CameraView {
         if (this.callback == null) {
             throw new NullPointerException(context.getClass().getName() + " must have to implement " + OcrCallback.class.getName());
         }
-        if (this.countryCode < 0) {
-            if (type == RecogType.OCR || type == RecogType.PDF417) {
+        if (this.countryId < 0) {
+            if (type == RecogType.OCR || type == RecogType.DL_PLATE || type == RecogType.PDF417) {
                 throw new IllegalArgumentException("Country Code must have to > 0");
             } else if (type == RecogType.BARCODE) {
-                countryCode = 0;
+                countryId = 0;
             }
         }
-        if (this.cardCode < 0) {
+        if (this.cardId < 0 || type == RecogType.DL_PLATE) {
             if (type == RecogType.OCR)
                 throw new IllegalArgumentException("Card Code must have to > 0");
         }
@@ -153,7 +168,7 @@ public class CameraView {
             this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         }
 
-        if (type == RecogType.OCR || type == RecogType.MRZ) {
+        if (type == RecogType.OCR || type == RecogType.MRZ || type == RecogType.DL_PLATE) {
             ocrView = new OcrView(context) {
                 @Override
                 public void onPlaySound() {
@@ -162,11 +177,9 @@ public class CameraView {
             };
             ocrView.setRecogType(this.type)
                     .setView(this.cameraContainer)
-                    .setCardData(countryCode, cardCode)
+                    .setCardData(countryId, cardId)
                     .setOcrCallBack(this.callback)
                     .setTitleBarHeight(this.titleBarHeight)
-//                    .setCustomMediaPlayer(this.mediaPlayer)
-//                    .setMediaPlayer(isSetPlayer)
                     .init();
         } else if (type == RecogType.PDF417 || type == RecogType.BARCODE) {
             scannerView = new ScannerView(context) {
@@ -178,7 +191,8 @@ public class CameraView {
             scannerView.setBarcodeType(this.type)
                     .setOcrCallBack(this.callback)
                     .setView(this.cameraContainer)
-                    .setCountryCode(countryCode)
+                    .setCardData(countryId)
+                    .setBarcodeFormat(barcodeFormat > -1 ? barcodeFormat : Barcode.ALL_FORMATS)
                     .init();
         }
     }
@@ -189,13 +203,16 @@ public class CameraView {
      * @see com.accurascan.ocr.mrz.interfaces.OcrCallback#onUpdateLayout(int, int)
      * to start your camera preview and ocr
      */
-    public void startOcrScan() {
+    public void startOcrScan(boolean isReset) {
         if (ocrView != null) ocrView.startOcrScan();
-        if (scannerView != null) scannerView.startScan();
+        if (scannerView != null)
+            if (!isReset) scannerView.startScan();
+             else scannerView.init();
+
     }
 
     /**
-     * to handle camera on change window focus
+     * To handle camera on change window focus
      *
      * @param hasFocus
      */
@@ -206,25 +223,25 @@ public class CameraView {
     }
 
     /**
-     * call on activity resume to restart preview
+     * Call on activity resume to restart preview
      */
     public void onResume() {
         if (ocrView != null) {
             ocrView.resume();
-        }
+        } else if (scannerView != null) scannerView.startScan();
     }
 
     /**
-     * call on activity pause to stop preview
+     * Call on activity pause to stop preview
      */
     public void onPause() {
         if (ocrView != null) {
             ocrView.pause();
-        }
+        }else if (scannerView != null) scannerView.stopCamera();
     }
 
     /**
-     * call destroy method to stop camera preview
+     * Call destroy method to release camera
      */
     public void onDestroy() {
         if (mediaPlayer != null)
@@ -232,19 +249,19 @@ public class CameraView {
         if (ocrView != null) {
             ocrView.destroy();
         } else if (scannerView != null) {
-            scannerView.stopCamera();
+            scannerView.onDestroy();
         }
     }
 
     /**
-     * call this method for show user to flip card
+     * Call this method to flip card
      *
      * @param mFlipImage to animate imageView
      */
     public void flipImage(ImageView mFlipImage) {
         try {
             mFlipImage.setVisibility(View.VISIBLE);
-            anim = (ObjectAnimator) AnimatorInflater.loadAnimator(context, R.animator.flipping);
+            ObjectAnimator anim = (ObjectAnimator) AnimatorInflater.loadAnimator(context, R.animator.flipping);
             anim.setTarget(mFlipImage);
             anim.setDuration(1000);
 
