@@ -15,7 +15,8 @@
 *.apk
 /app/build
 /app/release
-accura_ocr_mrz/build
+/accura_ocr_mrz/build
+/accura_ocr_mrz/.cxx
 *.zip
 *.license
 Document
