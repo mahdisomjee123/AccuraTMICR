@@ -39,7 +39,7 @@
                     android:visibility="gone"/>
 
                 <com.accurascan.ocr.mrz.customview.CustomTextView
-                    android:id="@+id/lout_pdf417"
+                    android:id="@+id/lout_barcode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_margin="@dimen/_5dp"

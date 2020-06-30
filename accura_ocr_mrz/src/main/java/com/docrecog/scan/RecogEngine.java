@@ -93,6 +93,13 @@ public class RecogEngine {
         public boolean isAllBarcodeEnable = false;
     }
 
+    public static final int SCAN_TITLE_OCR_FRONT = 1;
+    public static final int SCAN_TITLE_OCR_BACK = 2;
+    public static final int SCAN_TITLE_OCR = 3;
+    public static final int SCAN_TITLE_MRZ_PDF417_FRONT = 4;
+    public static final int SCAN_TITLE_MRZ_PDF417_BACK = 5;
+    public static final int SCAN_TITLE_DLPLATE = 6;
+    public static final int SCAN_TITLE_DEFAULT = 0;
     private static final String TAG = "PassportRecog";
     private byte[] pDic = null;
     private int pDicLen = 0;
@@ -104,10 +111,10 @@ public class RecogEngine {
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
-    static String nM = "Keep Document Steady";
-    static float mT;
+    static String nM;
+    static float mT = 15;
     Boolean isMrzEnable = true;
-    static float v = 0f;
+    static float v = 5f;
 
     private static float[] fConf = new float[3]; //face detection confidence
     private static int[] faced = new int[3]; //value for detected face or not
@@ -164,7 +171,7 @@ public class RecogEngine {
      * @param blurPercentage is 0 to 100, 0 - clean document and 100 - Blurry document
      * @return 1 if success else 0
      */
-    public native int setBlurPercentage(Context context, int blurPercentage);
+    public native int setBlurPercentage(Context context, int blurPercentage, String errorMessage);
 
     /**
      * Set Blur Percentage to allow blur on detected Face
@@ -173,7 +180,7 @@ public class RecogEngine {
      * @param faceBlurPercentage is 0 to 100, 0 - clean face and 100 - Blurry face
      * @return 1 if success else 0
      */
-    public native int setFaceBlurPercentage(Context context, int faceBlurPercentage);
+    public native int setFaceBlurPercentage(Context context, int faceBlurPercentage, String errorMessage);
 
     /**
      * @param context
@@ -181,7 +188,7 @@ public class RecogEngine {
      * @param maxPercentage
      * @return 1 if success else 0
      */
-    public native int setGlarePercentage(Context context, int minPercentage, int maxPercentage);
+    public native int setGlarePercentage(Context context, int minPercentage, int maxPercentage, String errorMessage);
 
     /**
      * Set CheckPhotoCopy to allow photocopy document or not
@@ -190,7 +197,7 @@ public class RecogEngine {
      * @param isCheckPhotoCopy if true then reject photo copy document else vice versa
      * @return 1 if success else 0
      */
-    public native int isCheckPhotoCopy(Context context, boolean isCheckPhotoCopy);
+    public native int isCheckPhotoCopy(Context context, boolean isCheckPhotoCopy, String errorMessage);
 
     /**
      * set Hologram detection to allow hologram on face or not
@@ -199,7 +206,7 @@ public class RecogEngine {
      * @param isDetectHologram if true then reject hologram is on face else it is allow .
      * @return 1 if success else 0
      */
-    public native int SetHologramDetection(Context context, boolean isDetectHologram);
+    public native int SetHologramDetection(Context context, boolean isDetectHologram, String errorMessage);
 
     /**
      * set light tolerance to detect light on document if low light
@@ -208,7 +215,7 @@ public class RecogEngine {
      * @param tolerance is 0 to 100, 0 - allow full dark document and 100 - allow full bright document
      * @return 1 if success else 0
      */
-    public native int setLowLightTolerance(Context context, int tolerance);
+    public native int setLowLightTolerance(Context context, int tolerance, String errorMessage);
 
     /**
      * set motion threshold to detect motion on camera document
@@ -276,6 +283,7 @@ public class RecogEngine {
 //        File file = loadClassifierData(context);
         int ret = loadDictionary(context, /*file != null ? file.getAbsolutePath() : */"", pDic, pDicLen, pDic1, pDicLen1, context.getAssets());
         Log.i("recogPassport", "loadDictionary: " + ret);
+        nM = "Keep Document Steady";
         if (ret < 0) {
             String message = "";
             if (ret == -1) {
@@ -578,7 +586,7 @@ public class RecogEngine {
             if (frames.isSucess) {
                 frames.mat = new Mat();
                 outMat.copyTo(frames.mat);
-                this.callBack.onUpdateProcess("Processing...");
+                this.callBack.onUpdateProcess("3"/*"Processing..."*/);
             } else {
                 bmp.recycle();
                 frames.mat = null;

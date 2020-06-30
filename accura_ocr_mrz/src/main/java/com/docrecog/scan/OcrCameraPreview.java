@@ -56,9 +56,8 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private final RgbMotionDetection detection;
     private boolean isPreviewStarted = false;
     private InitModel i1 = null;
-    private float resolution = 0f;
 
-    abstract void onProcessUpdate(String s, String s1, boolean b);
+    abstract void onProcessUpdate(int s, String s1, boolean b);
 
     abstract void onError(String s);
 
@@ -145,7 +144,6 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private int fCount = 0;
 
     private boolean isBlurSet = false;
-    private boolean doblurcheck = true;
 
 //    private ProgressBar progressBar;
 
@@ -183,9 +181,9 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         mReference.ocrData.setCardname(mReference.i1.getInitData().getCardName());
                         mReference.isbothavailable = mReference.i1.getInitData().getIsbothavailable();
                         if (mReference.isbothavailable) {
-                            mReference.onProcessUpdate(String.format("Scan %s of %s", mReference.i1.getInitData().getCardside(), mReference.ocrData.getCardname()), null, false);
+                            mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_OCR_FRONT, null, false);
                         } else {
-                            mReference.onProcessUpdate(String.format("Scan %s", mReference.ocrData.getCardname()), null, false);
+                            mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_OCR, null, false);
                         }
                         mReference.handler.sendEmptyMessage(1);
                     } else {
@@ -200,12 +198,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 mReference.rectW = mReference.dm.widthPixels - 20;
                 mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) / 3;
                 if (mReference.recogType == RecogType.MRZ) {
-                    mReference.onProcessUpdate(mReference.mActivity.getResources().getString(R.string.scan_front), null, false);
+                    mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
                     mReference.handler.sendEmptyMessage(1);
                 } else if (mReference.recogType == RecogType.DL_PLATE) {
                     InitModel initModel = mReference.recogEngine.initLicense(mReference.mActivity, mReference.countryId, mReference.cardId);
                     if (initModel != null && initModel.getResponseCode() == 1) {
-                        mReference.onProcessUpdate("Scan Number Plate", null, false);
+                        mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_DLPLATE, null, false);
                         mReference.handler.sendEmptyMessage(1);
                     } else {
                         mReference.onError(initModel.getResponseMessage());
@@ -245,9 +243,9 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     final int format = camera.getParameters().getPreviewFormat();
 
                     int[] ints = ImageProcessing.decodeYUV420SPtoRGB(data, size.width, size.height);
-                    if (!mReference.detection.detect(ints, size.width, size.height, mReference.recogEngine.mT, mReference.resolution)/*mReference.recogEngine.doCheckFrame(data, size.width, size.height) > 0*/) {
+                    if (!mReference.detection.detect(ints, size.width, size.height, RecogEngine.mT, RecogEngine.v)/*mReference.recogEngine.doCheckFrame(data, size.width, size.height) > 0*/) {
                         if (mReference.newMessage.contains(mReference.recogEngine.nM))
-                            mReference.onProcessUpdate(null, "", false);
+                            mReference.onProcessUpdate(-1, "", false);
                         bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.mDisplayOrientation, mReference.rectH, mReference.rectW, mReference.recogType);
 
                         mReference._mutex.lock();
@@ -380,7 +378,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                                 bmCard.recycle();
                                                 if (mReference.bRet == 3) {
                                                     mReference.bRet = -1;
-                                                    mReference.onProcessUpdate(mReference.mActivity.getResources().getString(R.string.scan_back), null, true);
+                                                    mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null, true);
                                                 }
 
                                                 if (mReference.g_recogResult.recType == RecogEngine.RecType.FACE || mReference.g_recogResult.faceBitmap != null) {
@@ -684,14 +682,14 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         recogEngine.setCallBack(this, recogType);
         if (recogType == RecogType.OCR) {
             if (isbothavailable) {
-                onProcessUpdate(String.format("Scan %s of %s", i1.getInitData().getCardside(), ocrData.getCardname()), null, false);
+                onProcessUpdate(RecogEngine.SCAN_TITLE_OCR_FRONT, null, false);
             } else {
-                onProcessUpdate(String.format("Scan %s", ocrData.getCardname()), null, false);
+                onProcessUpdate(RecogEngine.SCAN_TITLE_OCR, null, false);
             }
         } else if (recogType == RecogType.MRZ) {
-            onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, false);
+            onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
         } else if (recogType == RecogType.DL_PLATE) {
-            onProcessUpdate("Scan Number Plate", null, false);
+            onProcessUpdate(RecogEngine.SCAN_TITLE_DLPLATE, null, false);
         }
 //        progressBar.setVisibility(View.GONE);
 //        if (progressBar != null && progressBar.isShowing()) {
@@ -1674,13 +1672,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 arrayListForHeight.add(result.height);
             }
             if (arrayListForWidth.size() != 0 && arrayListForHeight.size() != 0) {
-                resolution = ((Collections.max(arrayListForWidth)) * (Collections.max(arrayListForHeight))) / 1024000f;
-                recogEngine.v = resolution;
-                if (resolution >= 10) {
-                    doblurcheck = true;
-                } else {
-                    doblurcheck = false;
-                }
+                recogEngine.v = ((Collections.max(arrayListForWidth)) * (Collections.max(arrayListForHeight))) / 1024000f;
             }
 
             arrayListForWidth.clear();
@@ -1694,13 +1686,13 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     public void onUpdateProcess(String s) {
         if (!s.isEmpty()) {
             newMessage = s;
-            onProcessUpdate(null, s, false);
+            onProcessUpdate(-1, s, false);
             if (!s.contains("Process")) {
             final Runnable runnable = () -> {
                 try {
                     if (!s.contains("lighting"))
                         if (newMessage.equals(s) || !s.contains("Process")) {
-                            onProcessUpdate(null, "", false);
+                            onProcessUpdate(-1, "", false);
                         }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -1774,13 +1766,13 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     }
 
     private void updateData() {
-        String updateMessage = null;
+        int updateMessage = -1;
         if (ocrData.getFrontData() != null && ocrData.getBackData() == null) {
-            updateMessage = "Now Scan Back Side of " + ocrData.getCardname();
+            updateMessage = RecogEngine.SCAN_TITLE_OCR_BACK/*"Now Scan Back Side of " + ocrData.getCardname()*/;
         } else if (ocrData.getBackData() != null && ocrData.getFrontData() == null) {
-            updateMessage = "Now Scan Front Side of " + ocrData.getCardname();
+            updateMessage = RecogEngine.SCAN_TITLE_OCR_FRONT/*"Now Scan Front Side of " + ocrData.getCardname()*/;
         }
-        if (ocrData.getBackData() == null || ocrData.getFrontData() == null && updateMessage != null) {
+        if (ocrData.getBackData() == null || ocrData.getFrontData() == null && updateMessage > -1) {
             onProcessUpdate(updateMessage, "", true);
         }
     }
@@ -1817,7 +1809,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             g_recogResult.recType = RecogEngine.RecType.INIT;
             g_recogResult.bRecDone = false;
             try {
-                onProcessUpdate(null, "", false);
+                onProcessUpdate(-1, "", false);
             } catch (Exception e) {
                 e.printStackTrace();
             }

@@ -17,8 +17,6 @@ import com.docrecog.scan.RecogType;
 import com.docrecog.scan.ScannerView;
 import com.google.android.gms.vision.barcode.Barcode;
 
-import static com.accurascan.ocr.mrz.BuildConfig.DEBUG;
-
 public class CameraView {
 
     private final Activity context;
@@ -27,8 +25,8 @@ public class CameraView {
     private int cardId;
     private ViewGroup cameraContainer;
     private OcrCallback callback;
-    private int titleBarHeight = 0;
-    private boolean isSetPlayer = true;
+    private int statusBarHeight = 0;
+    private boolean setPlayer = true;
     private int barcodeFormat = -1;
     private MediaPlayer mediaPlayer = null;
     private AudioManager audioManager = null;
@@ -94,21 +92,21 @@ public class CameraView {
         return this;
     }
 
-    public CameraView setTitleBarHeight(int titleBarHeight) {
-        this.titleBarHeight = titleBarHeight;
+    public CameraView setStatusBarHeight(int statusBarHeight) {
+        this.statusBarHeight = statusBarHeight;
         return this;
     }
 
 
     /**
-     * set false to disable sound after scanned success
+     * set false to disable sound
      * default true to enable sound
      *
      * @param isPlayMedia is default true
      * @return
      */
-    public CameraView setMediaPlayer(boolean isPlayMedia) {
-        this.isSetPlayer = isPlayMedia;
+    public CameraView setEnableMediaPlayer(boolean isPlayMedia) {
+        this.setPlayer = isPlayMedia;
         return this;
     }
 
@@ -161,7 +159,7 @@ public class CameraView {
         }
 
         // initialize media to play sound after scanned.
-        if (this.isSetPlayer) {
+        if (this.setPlayer) {
             if (this.mediaPlayer == null) {
                 this.mediaPlayer = MediaPlayer.create(context, R.raw.beep);
             }
@@ -179,7 +177,7 @@ public class CameraView {
                     .setView(this.cameraContainer)
                     .setCardData(countryId, cardId)
                     .setOcrCallBack(this.callback)
-                    .setTitleBarHeight(this.titleBarHeight)
+                    .setStatusBarHeight(this.statusBarHeight)
                     .init();
         } else if (type == RecogType.PDF417 || type == RecogType.BARCODE) {
             scannerView = new ScannerView(context) {
@@ -293,7 +291,7 @@ public class CameraView {
     }
 
     private void playEffect() {
-        if (isSetPlayer && mediaPlayer != null) {
+        if (setPlayer && mediaPlayer != null) {
             if (audioManager != null)
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, audioManager.getStreamVolume(AudioManager.STREAM_MUSIC), 0);
             mediaPlayer.start();

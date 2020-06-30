@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
                 if (msg.what == 1) {
                     if (activity.sdkModel.isMRZEnable) activity.btnMrz.setVisibility(View.VISIBLE);
                     if (activity.sdkModel.isAllBarcodeEnable)
-                        activity.btnPDF417.setVisibility(View.VISIBLE);
+                        activity.btnBarcode.setVisibility(View.VISIBLE);
                     if (activity.sdkModel.isOCREnable && activity.modelList != null) {
                         activity.setCountryLayout();
                     }
@@ -85,12 +85,12 @@ public class MainActivity extends AppCompatActivity {
                         if (activity.sdkModel.isOCREnable)
                             activity.modelList = recogEngine.getCardList(activity);
 
-                        recogEngine.setBlurPercentage(activity, 50);
-                        recogEngine.setFaceBlurPercentage(activity, 50);
-                        recogEngine.setGlarePercentage(activity, 6, 98);
-                        recogEngine.isCheckPhotoCopy(activity, false);
-                        recogEngine.SetHologramDetection(activity, true);
-                        recogEngine.setLowLightTolerance(activity, 30);
+                        recogEngine.setBlurPercentage(activity, 50, "Blur detect in document");
+                        recogEngine.setFaceBlurPercentage(activity, 50, "Blur detected over face");
+                        recogEngine.setGlarePercentage(activity, 6, 98, "Glare detect in document");
+                        recogEngine.isCheckPhotoCopy(activity, false, "Can not accept Photo Copy Document");
+                        recogEngine.SetHologramDetection(activity, true, "Hologram Detected");
+                        recogEngine.setLowLightTolerance(activity, 30, "Low lighting detected");
                         recogEngine.setMotionData(activity, 15, "Keep Document Steady");
 
                         activity.handler.sendEmptyMessage(1);
@@ -112,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Object> cardList = new ArrayList<>();
     private List<ContryModel> modelList;
     private int selectedPosition = -1;
-    private View btnMrz, btnPDF417, lout_country;
+    private View btnMrz, btnBarcode, lout_country;
     private RecogEngine.SDKModel sdkModel;
 
     private void setCountryLayout() {
@@ -135,17 +135,19 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
                 RecogType.MRZ.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.passport_id_mrz));
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }
         });
 
-        btnPDF417 = findViewById(R.id.lout_pdf417);
-        btnPDF417.setOnClickListener(new View.OnClickListener() {
+        btnBarcode = findViewById(R.id.lout_barcode);
+        btnBarcode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
                 RecogType.BARCODE.attachTo(intent);
+                intent.putExtra("card_name", "Barcode");
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }
@@ -260,6 +262,7 @@ public class MainActivity extends AppCompatActivity {
                         Intent intent = new Intent(CardListAdpter.this.context, OcrActivity.class);
                         intent.putExtra("country_id", ((ContryModel) MainActivity.this.contryList.get(selectedPosition)).getCountry_id());
                         intent.putExtra("card_id", cardModel.getCard_id());
+                        intent.putExtra("card_name", cardModel.getCard_name());
                         if (cardModel.getCard_type() == 1) {
                             RecogType.PDF417.attachTo(intent);
                         } else if (cardModel.getCard_type() == 2) {

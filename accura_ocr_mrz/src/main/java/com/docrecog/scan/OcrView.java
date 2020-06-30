@@ -13,7 +13,7 @@ public abstract class OcrView extends OcrCameraPreview {
     private ViewGroup cameraContainer;
 //    private boolean isSetPlayer = true;
 //    private MediaPlayer mediaPlayer = null;
-    private int titleBarHeight = 0;
+    private int statusBarHeight = 0;
     private RecogType recogType = null;
 
     public OcrView(Activity context) {
@@ -92,8 +92,8 @@ public abstract class OcrView extends OcrCameraPreview {
 //        return this;
 //    }
 
-    public OcrView setTitleBarHeight(int titleBarHeight) {
-        this.titleBarHeight = titleBarHeight;
+    public OcrView setStatusBarHeight(int statusBarHeight) {
+        this.statusBarHeight = statusBarHeight;
         return this;
     }
 
@@ -121,7 +121,7 @@ public abstract class OcrView extends OcrCameraPreview {
         setData(countryId, cardId);
         setLayout(cameraContainer);
         setType(recogType);
-        setHeight(titleBarHeight);
+        setHeight(statusBarHeight);
         start();
     }
 
@@ -208,7 +208,7 @@ public abstract class OcrView extends OcrCameraPreview {
 
 
     @Override
-    void onProcessUpdate(String s, String s1, boolean b) {
+    void onProcessUpdate(int s, String s1, boolean b) {
         if (ocrCallBack != null) {
 //            context.runOnUiThread(new Runnable() {
 //                @Override

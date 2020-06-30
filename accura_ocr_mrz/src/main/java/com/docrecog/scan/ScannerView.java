@@ -234,7 +234,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
     }
 
     @Override
-    protected void onUpdate(String s, boolean isFlip) {
+    protected void onUpdate(int s, boolean isFlip) {
         if (scanCallBack != null) {
             if (!isPreviewAdded) {
                 addCameraPreview(context);

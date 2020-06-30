@@ -65,7 +65,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
     protected abstract void onError(String s);
 
-    protected abstract void onUpdate(String s, boolean isFlip);
+    protected abstract void onUpdate(int s, boolean isFlip);
 
     protected ScannerCameraPreview(Context context) {
         this.mContext = context;
@@ -111,12 +111,12 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         displayMetrics = this.mContext.getResources().getDisplayMetrics();
         if (barcodeType == RecogType.BARCODE) {
             addScanner(this.mContext);
-            onUpdate("", false);
+            onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, false);
             isSelection = true;
         } else if (barcodeType == RecogType.PDF417) {
             barcodeFormat = Barcode.PDF417;
             initFrontCamera();
-            onUpdate(mContext.getResources().getString(R.string.scan_front), false);
+            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, false);
         }
     }
 
@@ -172,7 +172,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                     @Override
                                     public void run() {
                                         cameraSource.stop();
-                                        onUpdate(mContext.getResources().getString(R.string.scan_back), true);
+                                        onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, true);
 
                                         Runnable runnable = new Runnable() {
                                             public void run() {

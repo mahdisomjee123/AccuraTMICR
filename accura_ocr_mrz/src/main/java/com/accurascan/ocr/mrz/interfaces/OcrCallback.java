@@ -31,14 +31,14 @@ public interface OcrCallback {
 
     /**
      * To get update message for user interaction which is called continuously
-     * @param title to display scan card message(is front/ back card of the @cardname)
-     *              is null if data is not available.
-     * @param message to display process message.
+     * @param titleCode to display scan card message ontop of border Frame
+     *
+     * @param errorMessage to display process message.
      *                is null if message is not available
      * @param isFlip to set your customize animation after complete front scan
      *               and then scan back side. true if front and back side available in cards.
      */
-    void onProcessUpdate(String title, String message, boolean isFlip);
+    void onProcessUpdate(int titleCode, String errorMessage, boolean isFlip);
 
     /**
      * call this method if error on getting data from sdk

@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.Rect;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -29,6 +30,7 @@ import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.motiondetection.SensorsActivity;
+import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
 
 import java.lang.ref.WeakReference;
@@ -44,6 +46,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     private int countryId;
     RecogType recogType;
     Dialog types_dialog;
+    private String cardName;
 
     private static class MyHandler extends Handler {
         private final WeakReference<OcrActivity> mActivity;
@@ -57,44 +60,20 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             OcrActivity activity = mActivity.get();
             if (activity != null) {
                 String s = "";
-                if (msg.obj instanceof String) {
-                    s = (String) msg.obj;
-                }
+                if (msg.obj instanceof String) s = (String) msg.obj;
                 switch (msg.what) {
-                    case 0:
-                        activity.tvTitle.setText(s);
+                    case 0: activity.tvTitle.setText(s);break;
+                    case 1: activity.tvScanMessage.setText(s);break;
+                    case 2: if (activity.cameraView != null) activity.cameraView.flipImage(activity.imageFlip);
                         break;
-                    case 1:
-                        activity.tvScanMessage.setText(s);
-                        break;
-                    case 2:
-                        if (activity.cameraView != null)
-                            activity.cameraView.flipImage(activity.imageFlip);
-                        break;
-                    default:
-                        break;
+                    default: break;
                 }
             }
             super.handleMessage(msg);
         }
     }
 
-    private Handler handler = new MyHandler(this);/*new Handler(){
-        @Override
-        public void handleMessage(@NonNull Message msg) {
-            String s = "";
-            if (msg.obj != null && msg.obj instanceof String) {
-                s = (String) msg.obj;
-            }
-            switch (msg.what){
-                case 0: tvTitle.setText(s);break;
-                case 1: tvScanMessage.setText(s);break;
-                case 2: if (cameraView != null) cameraView.flipImage(imageFlip); break;
-                default: break;
-            }
-            super.handleMessage(msg);
-        }
-    };*/
+    private Handler handler = new MyHandler(this);
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -107,30 +86,40 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         recogType = RecogType.detachFrom(getIntent());
         cardId = getIntent().getIntExtra("card_id", 0);
         countryId = getIntent().getIntExtra("country_id", 0);
+        cardName = getIntent().getStringExtra("card_name");
 
+        initCamera();
+        if (recogType == RecogType.BARCODE) barcodeFormatDialog();
+    }
+
+    private void initCamera() {
+        //<editor-fold desc="To get status bar height">
         Rect rectangle = new Rect();
         Window window = getWindow();
         window.getDecorView().getWindowVisibleDisplayFrame(rectangle);
-        int statusBarHeight = rectangle.top;
-        int contentViewTop =
-                window.findViewById(Window.ID_ANDROID_CONTENT).getTop();
-        int titleBarHeight = contentViewTop - statusBarHeight;
+        int statusBarTop = rectangle.top;
+        int contentViewTop = window.findViewById(Window.ID_ANDROID_CONTENT).getTop();
+        int statusBarHeight = contentViewTop - statusBarTop;
+        //</editor-fold>
 
         RelativeLayout linearLayout = findViewById(R.id.ocr_root); // layout width and height is match_parent
+
         cameraView = new CameraView(this);
         if (recogType == RecogType.OCR || recogType == RecogType.DL_PLATE) {
-            cameraView.setCountryId(countryId)
-                    .setCardId(cardId);
-
+            // must have to set data for RecogType.OCR and RecogType.DL_PLATE
+            cameraView.setCountryId(countryId).setCardId(cardId);
         } else if (recogType == RecogType.PDF417) {
+            // must have to set data RecogType.PDF417
             cameraView.setCountryId(countryId);
         }
         cameraView.setRecogType(recogType)
-                .setView(linearLayout)
-                .setOcrCallback(this)
-                .setTitleBarHeight(titleBarHeight)
-                .init();
-        if (recogType == RecogType.BARCODE) setTypes_dialog();
+                .setView(linearLayout) // To add camera view
+                .setOcrCallback(this)  // To get Update and Success Call back
+                .setStatusBarHeight(statusBarHeight)  // To remove Height from Camera View if status bar visible
+//                optional field
+//                .setEnableMediaPlayer(false) // false to disable sound and true to enable sound and default it is true
+//                .setCustomMediaPlayer(MediaPlayer.create(this, com.accurascan.ocr.mrz.R.raw.beep)) // To add your custom sound and Must have to enable media player
+                .init();  // initialized camera
     }
 
     private void init() {
@@ -164,13 +153,16 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     protected void onDestroy() {
         if (cameraView != null) cameraView.onDestroy();
         super.onDestroy();
-        Runtime.getRuntime().gc();
+        Runtime.getRuntime().gc(); // to clear garbage
     }
 
     /**
-     * To update your border frame according to width and height
+     * Override method call after camera initialized successfully
+     *
+     * And update your border frame according to width and height
      * it's different for different card
-     * Call {@link CameraView#startOcrScan(boolean)} method to start camera preview
+     *
+     * Call {@link CameraView#startOcrScan(boolean isReset)} To start Camera Preview
      *
      * @param width    border layout width
      * @param height   border layout height
@@ -178,6 +170,8 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     @Override
     public void onUpdateLayout(int width, int height) {
         if (cameraView != null) cameraView.startOcrScan(false);
+
+        //<editor-fold desc="To set camera overlay Frame">
         ViewGroup.LayoutParams layoutParams = borderFrame.getLayoutParams();
         layoutParams.width = width;
         layoutParams.height = height;
@@ -190,9 +184,12 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         viewLeft.setLayoutParams(lpLeft);
 
         findViewById(R.id.ocr_frame).setVisibility(View.VISIBLE);
+        //</editor-fold>
 
+        //<editor-fold desc="Barcode Selection only add for RecogType.BARCODE">
         if (recogType == RecogType.BARCODE) btn_barcode_selection.setVisibility(View.VISIBLE);
         else btn_barcode_selection.setVisibility(View.GONE);
+        //</editor-fold>
     }
 
     /**
@@ -244,35 +241,77 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     }
 
     /**
-     * @param title   to display scan card message(is front/ back card of the #cardName)
-     *                null if title is not available.
-     * @param message to display process message.
+     * @param titleCode to display scan card message on top of border Frame
+     *
+     * @param errorMessage To display process message.
      *                null if message is not available
-     * @param isFlip  to set your customize animation after complete front scan
+     * @param isFlip  To set your customize animation after complete front scan
      */
     @Override
-    public void onProcessUpdate(String title, String message, boolean isFlip) {
-        Message message1 = new Message();
-        message1.what = -1;
-        if (title != null) {
-            message1.what = 0;
-            message1.obj = title;
-            handler.sendMessage(message1);
+    public void onProcessUpdate(int titleCode, String errorMessage, boolean isFlip) {
+        Message message = null;
+        if (getTitleMessage(titleCode) != null) {
+            /**
+             *
+             * 1. Scan Frontside of Card Name // for front side ocr
+             * 2. Scan Backside of Card Name // for back side ocr
+             * 3. Scan Card Name // only for single side ocr
+             * 4. Scan Front Side of Document // for MRZ and PDF417
+             * 5. Now Scan Back Side of Document // for MRZ and PDF417
+             * 6. Scan Number Plate // for DL plate
+             */
+
+            message = new Message();
+            message.what = 0;
+            message.obj = getTitleMessage(titleCode);
+            handler.sendMessage(message);
 //            tvTitle.setText(title);
         }
-        if (message != null) {
-            message1 = new Message();
-            message1.what = 1;
-            message1.obj = message;
-            handler.sendMessage(message1);
+        if (errorMessage != null) {
+            message = new Message();
+            message.what = 1;
+            message.obj = getErrorMessage(errorMessage);
+            handler.sendMessage(message);
 //            tvScanMessage.setText(message);
         }
         if (isFlip) {
-            message1 = new Message();
-            message1.what = 2;
-            handler.sendMessage(message1);//  to set default animation or remove this line to set your customize animation
+            message = new Message();
+            message.what = 2;
+            handler.sendMessage(message);//  to set default animation or remove this line to set your customize animation
         }
 
+    }
+
+    private String getTitleMessage(int titleCode) {
+        if (titleCode < 0) return null;
+        switch (titleCode){
+            case RecogEngine.SCAN_TITLE_OCR_FRONT:// for front side ocr;
+                return String.format("Scan Front Side of %s", cardName);
+            case RecogEngine.SCAN_TITLE_OCR_BACK: // for back side ocr
+                return String.format("Scan Back Side of %s", cardName);
+            case RecogEngine.SCAN_TITLE_OCR: // only for single side ocr
+                return String.format("Scan %s", cardName);
+            case RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT:// for front side MRZ and PDF417
+                return "Scan Front Side of Document";
+            case RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK: // for back side MRZ and PDF417
+                return "Now Scan Back Side of Document";
+            case RecogEngine.SCAN_TITLE_DLPLATE: // for DL plate
+                return "Scan Number Plate";
+            default:return "";
+        }
+    }
+
+    private String getErrorMessage(String s){
+        switch (s){
+            case "1":
+                return "Keep document in frame";
+            case "2":
+                return "Bring card near to frame.";
+            case "3":
+                return "Processing...";
+            default:
+                return s;
+        }
     }
 
     @Override
@@ -287,12 +326,20 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
             if (requestCode == 101) {
-                Runtime.getRuntime().gc();
+                Runtime.getRuntime().gc(); // To clear garbage
+                //<editor-fold desc="Call CameraView#startOcrScan(true) To start again Camera Preview
+                //And CameraView#startOcrScan(false) To start first time">
                 if (cameraView != null) cameraView.startOcrScan(true);
+                //</editor-fold>
             }
         }
     }
 
+    /**
+     * If recogType is RecogType.BARCODE then display Barcode data on Dialog
+     *
+     * @param output it is the barcode data
+     */
     private void setResultDialog(final String output) {
         Runnable runnable = new Runnable() {
             public void run() {
@@ -301,7 +348,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 dialog.setMessage(output);
                 dialog.setCancelable(false);
                 dialog.setNegativeButton("Retry", (dialog1, which) -> {
-                    if (cameraView != null) cameraView.onResume();
+                    if (cameraView != null) cameraView.onResume(); // Resume camera after dismiss dialog
                 });
                 dialog.setPositiveButton("Ok", (dialog1, which) -> {
                     onBackPressed();
@@ -317,9 +364,13 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
 
     }
 
+    /**
+     * Set Barcode selection Dialog to Scan only selected barcode format
+     * See {@link BarcodeTypeSelection} to get All Barcode format
+     * And use Array List {@link BarcodeTypeSelection#CODE_NAMES}
+     */
     int mposition = 0;
-
-    private void setTypes_dialog() {
+    private void barcodeFormatDialog() {
         btn_barcode_selection.setOnClickListener(v -> {
             if (cameraView != null) cameraView.onPause();
             types_dialog.show();
@@ -351,7 +402,9 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 }
                 adapter.notifyDataSetChanged();
                 mposition = position;
+                // to set barcode selected barcode format and default scan all barcode
                 cameraView.setBarcodeFormat(CODE_NAMES.get(mposition).formatsType);
+
                 types_dialog.cancel();
             }
 
