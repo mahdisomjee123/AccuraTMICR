@@ -288,7 +288,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             case RecogEngine.SCAN_TITLE_OCR_FRONT:// for front side ocr;
                 return String.format("Scan Front Side of %s", cardName);
             case RecogEngine.SCAN_TITLE_OCR_BACK: // for back side ocr
-                return String.format("Scan Back Side of %s", cardName);
+                return String.format("Now Scan Back Side of %s", cardName);
             case RecogEngine.SCAN_TITLE_OCR: // only for single side ocr
                 return String.format("Scan %s", cardName);
             case RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT:// for front side MRZ and PDF417

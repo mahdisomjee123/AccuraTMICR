@@ -2,6 +2,7 @@ package com.accurascan.ocr.mrz.model;
 
 import com.google.gson.Gson;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ContryModel {
@@ -26,7 +27,7 @@ public class ContryModel {
     }
 
     public List<CardModel> getCards() {
-        return cards;
+        return cards != null ? cards : new ArrayList<>();
     }
 
     public void setCards(List<CardModel> cards) {
