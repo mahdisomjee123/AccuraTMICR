@@ -249,7 +249,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
      */
     @Override
     public void onProcessUpdate(int titleCode, String errorMessage, boolean isFlip) {
-        Message message = null;
+        Message message;
         if (getTitleMessage(titleCode) != null) {
             /**
              *
@@ -315,10 +315,11 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     }
 
     @Override
-    public void onError(String errorMessage) {
+    public void onError(final String errorMessage) {
         // stop ocr if failed
         tvScanMessage.setText(errorMessage);
-        Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
+        Runnable runnable = () -> Toast.makeText(OcrActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+        runOnUiThread(runnable);
     }
 
     @Override
@@ -341,23 +342,19 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
      * @param output it is the barcode data
      */
     private void setResultDialog(final String output) {
-        Runnable runnable = new Runnable() {
-            public void run() {
-                AlertDialog.Builder dialog = new AlertDialog.Builder(OcrActivity.this);
-                dialog.setTitle("Barcode Result");
-                dialog.setMessage(output);
-                dialog.setCancelable(false);
-                dialog.setNegativeButton("Retry", (dialog1, which) -> {
-                    if (cameraView != null) cameraView.onResume(); // Resume camera after dismiss dialog
-                });
-                dialog.setPositiveButton("Ok", (dialog1, which) -> {
-                    onBackPressed();
-                });
-                try {
-                    dialog.show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        Runnable runnable = () -> {
+            AlertDialog.Builder dialog = new AlertDialog.Builder(OcrActivity.this);
+            dialog.setTitle("Barcode Result");
+            dialog.setMessage(output);
+            dialog.setCancelable(false);
+            dialog.setNegativeButton("Retry", (dialog1, which) -> {
+                if (cameraView != null) cameraView.onResume(); // Resume camera after dismiss dialog
+            });
+            dialog.setPositiveButton("Ok", (dialog1, which) -> onBackPressed());
+            try {
+                dialog.show();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         };
         runOnUiThread(runnable);
@@ -394,20 +391,16 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         BarCodeTypeListAdapter adapter = new BarCodeTypeListAdapter(this, CODE_NAMES);
         listView.setAdapter(adapter);
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                for (int i = 0; i < CODE_NAMES.size(); i++) {
-                    CODE_NAMES.get(i).isSelected = i == position;
-                }
-                adapter.notifyDataSetChanged();
-                mposition = position;
-                // to set barcode selected barcode format and default scan all barcode
-                cameraView.setBarcodeFormat(CODE_NAMES.get(mposition).formatsType);
-
-                types_dialog.cancel();
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            for (int i = 0; i < CODE_NAMES.size(); i++) {
+                CODE_NAMES.get(i).isSelected = i == position;
             }
+            adapter.notifyDataSetChanged();
+            mposition = position;
+            // to set barcode selected barcode format and default scan all barcode
+            cameraView.setBarcodeFormat(CODE_NAMES.get(mposition).formatsType);
 
+            types_dialog.cancel();
         });
 
     }
