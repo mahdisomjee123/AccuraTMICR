@@ -288,18 +288,23 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         addLayout("Last Name", recogResult.surname);
         addLayout("Document No.", recogResult.docnumber);
         addLayout("Document check No.", recogResult.docchecksum);
+        addLayout("Correct Document check No.", recogResult.correctdocchecksum);
         addLayout("Country", recogResult.country);
         addLayout("Nationality", recogResult.nationality);
         addLayout("Sex", recogResult.sex);
         addLayout("Date of Birth", recogResult.birth);
         addLayout("Birth Check No.", recogResult.birthchecksum);
+        addLayout("Correct Birth Check No.", recogResult.correctbirthchecksum);
         addLayout("Date of Expiry", recogResult.expirationdate);
         addLayout("Expiration Check No.", recogResult.expirationchecksum);
+        addLayout("Correct Expiration Check No.", recogResult.correctexpirationchecksum);
         addLayout("Date Of Issue", recogResult.issuedate);
         addLayout("Department No.", recogResult.departmentnumber);
         addLayout("Other ID", recogResult.otherid);
         addLayout("Other ID Check", recogResult.otheridchecksum);
+        addLayout("Correct Other ID Check", recogResult.correctotheridchecksum);
         addLayout("Second Row Check No.", recogResult.secondrowchecksum);
+        addLayout("Correct Second Row Check No.", recogResult.correctsecondrowchecksum);
     }
 
     private void addLayout(String key, String s) {
