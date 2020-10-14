@@ -156,7 +156,7 @@ public class RecogEngine {
 
     public native String doCheckData(byte[] yuvdata, int width, int height);
 
-    private native int doRecogBitmap(Bitmap bitmap, int facepick, int[] intData, Bitmap faceBitmap, int[] faced, boolean unknownVal);
+    private native int doRecogBitmap(Bitmap bitmap, int facepick, int[] intData, Bitmap faceBitmap, int[] faced, boolean unknownVal, int documentType);
 
     private native int doFaceDetect(Bitmap bitmap, Bitmap faceBitmap, float[] fConf);
 
@@ -633,7 +633,7 @@ public class RecogEngine {
 //            if (facepick == 1) {
 //                faceBmp = Bitmap.createBitmap(NOR_W, NOR_H, Config.ARGB_8888);
 //            }
-        ret = doRecogBitmap(bmCard, 0, intData, faceBmp, faced, true);
+        ret = doRecogBitmap(bmCard, 0, intData, faceBmp, faced, true,0);
 
         if (ret > 0) {
             if (result.recType == RecType.INIT) {

@@ -297,7 +297,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                             } else if (mReference.recogType == RecogType.MRZ) {
                                 Bitmap docBmp = bmCard.copy(Bitmap.Config.ARGB_8888, false);
                                 if (mReference.g_recogResult.recType == RecogEngine.RecType.INIT) {
-                                                                ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult);
+                                    ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult);
                                     //                            if (ret <= 0 && mRecCnt > 2) {
 
                                     //                                if (mRecCnt % 4 == 1)
@@ -376,6 +376,17 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 //                                    docBmp.recycle();
                                                 } else*/
                                                 bmCard.recycle();
+                                                if (ret == -3) {
+                                                    mReference.onUpdateProcess("MRZ not detected");
+                                                } else if (ret == -10) {
+                                                    mReference.onUpdateProcess("Passport MRZ not detected");
+                                                } else if (ret == -11) {
+                                                    mReference.onUpdateProcess("ID MRZ not detected");
+                                                } else if (ret == -12) {
+                                                    mReference.onUpdateProcess("Visa MRZ not detected");
+                                                } else if (ret == -13) {
+                                                    mReference.onUpdateProcess("Driving MRZ not detected");
+                                                }
                                                 if (mReference.bRet == 3) {
                                                     mReference.bRet = -1;
                                                     mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null, true);
