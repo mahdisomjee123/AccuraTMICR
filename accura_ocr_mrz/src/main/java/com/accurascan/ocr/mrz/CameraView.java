@@ -32,6 +32,7 @@ public class CameraView {
     private AudioManager audioManager = null;
     private OcrView ocrView = null;
     private ScannerView scannerView = null;
+    private int documentSide = -1;
 
     public CameraView(Activity context) {
         this.context = context;
@@ -177,8 +178,15 @@ public class CameraView {
                     .setView(this.cameraContainer)
                     .setCardData(countryId, cardId)
                     .setOcrCallBack(this.callback)
-                    .setStatusBarHeight(this.statusBarHeight)
-                    .init();
+                    .setStatusBarHeight(this.statusBarHeight);
+            if (this.type == RecogType.OCR) {
+                if (this.documentSide == 0) {
+                    ocrView.setFrontSide();
+                } else if (this.documentSide == 1) {
+                    ocrView.setBackSide();
+                }
+            }
+            ocrView.init();
         } else if (type == RecogType.PDF417 || type == RecogType.BARCODE) {
             scannerView = new ScannerView(context) {
                 @Override
@@ -190,8 +198,15 @@ public class CameraView {
                     .setOcrCallBack(this.callback)
                     .setView(this.cameraContainer)
                     .setCardData(countryId)
-                    .setBarcodeFormat(barcodeFormat > -1 ? barcodeFormat : Barcode.ALL_FORMATS)
-                    .init();
+                    .setBarcodeFormat(barcodeFormat > -1 ? barcodeFormat : Barcode.ALL_FORMATS);
+            if (this.type == RecogType.PDF417) {
+                if (this.documentSide == 0) {
+                    scannerView.setFrontSide();
+                } else if (this.documentSide == 1) {
+                    scannerView.setBackSide();
+                }
+            }
+            scannerView.init();
         }
     }
 
@@ -207,6 +222,37 @@ public class CameraView {
             if (!isReset) scannerView.startScan();
              else scannerView.init();
 
+    }
+
+    /**
+     * To scan front side of document
+     */
+    public CameraView setFrontSide(){
+        this.documentSide = 0;
+        if (ocrView != null) ocrView.setFrontSide();
+        if (scannerView != null) scannerView.setFrontSide();
+        return this;
+    }
+
+    /**
+     * Check back side is available or not
+     * @return
+     */
+    public boolean isBackSideAvailable(){
+        if (ocrView != null) return ocrView.isBackSide();
+        if (scannerView != null) return scannerView.isBackSide();
+        return false;
+    }
+
+    /**
+     * To scan Back side of document
+     * @return
+     */
+    public CameraView setBackSide(){
+        this.documentSide = 1;
+        if (ocrView != null) ocrView.setBackSide();
+        if (scannerView != null) scannerView.setBackSide();
+        return this;
     }
 
     /**

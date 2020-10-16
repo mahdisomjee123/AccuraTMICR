@@ -139,7 +139,7 @@ public class RecogEngine {
         this.callBack = scanListener;
         isComplete = false;
         if (recogType == RecogType.OCR) {
-            updateData("Back");
+           // updateData("Back");
         }
     }
 
@@ -232,7 +232,7 @@ public class RecogEngine {
 
     private native String recognizeData(long src, int[][] boxBoundsLTRB, String[] textElements);
 
-    private native int updateData(String s);
+    public native int updateData(String s);
 
     private native String loadScanner(Context context, AssetManager assetManager, int countryid);
 
@@ -859,16 +859,18 @@ public class RecogEngine {
                     System.out.println("done++" + isdone);
                     if (isdone) {
                         if (mapData.getCardSide().toLowerCase().contains("front")) {
-                            if (ocrData.getFrontData() != null) {
-                                isdone = false;
-//                                ocrData.getFrontimage().recycle();
-                            } else ocrData.setFrontimage(src.copy(Config.ARGB_8888, false));
+                            if (ocrData.getFrontimage() != null) {
+//                                isdone = false;
+                                ocrData.getFrontimage().recycle();
+                            }
+                            ocrData.setFrontimage(src.copy(Config.ARGB_8888, false));
                             ocrData.setFrontData(mapData);
                         } else {
-                            if (ocrData.getBackData() != null) {
-                                isdone = false;
+                            if (ocrData.getBackimage() != null) {
+//                                isdone = false;
                                 ocrData.getBackimage().recycle();
-                            } else ocrData.setBackimage(src.copy(Config.ARGB_8888, false));
+                            }
+                            ocrData.setBackimage(src.copy(Config.ARGB_8888, false));
                             ocrData.setBackData(mapData);
                         }
                     }
@@ -905,19 +907,27 @@ public class RecogEngine {
                                     mat.release();
                                 }
                             });
+                        } else if (isContinue && callBack != null) {
+//                        if (isdone && ocrData.getFrontData() != null && ocrData.getBackData() == null) {
+//                            updateData(mapData.card_side);
+//                        }
+                            callBack.onScannedSuccess(isdone, isMrzEnable && CheckMRZisRequired(mapData));
+                            src.recycle();
+                            image.recycle();
+                            mat.release();
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                    if (isContinue && callBack != null) {
-                        if (isdone && ocrData.getFrontData() != null && ocrData.getBackData() == null) {
-                            updateData(mapData.card_side);
-                        }
-                        callBack.onScannedSuccess(isdone, isMrzEnable && CheckMRZisRequired(mapData));
-                        src.recycle();
-                        image.recycle();
-                        mat.release();
-                    }
+//                    if (isContinue && callBack != null) {
+////                        if (isdone && ocrData.getFrontData() != null && ocrData.getBackData() == null) {
+////                            updateData(mapData.card_side);
+////                        }
+//                        callBack.onScannedSuccess(isdone, isMrzEnable && CheckMRZisRequired(mapData));
+//                        src.recycle();
+//                        image.recycle();
+//                        mat.release();
+//                    }
                 })
                 .addOnFailureListener(e -> {
 //                    if (detector != null) {
@@ -1120,8 +1130,10 @@ public class RecogEngine {
                             } else {
                                 image1.recycle();
 //                                image.recycle();
-                                if (scanListener != null)
+                                if (scanListener != null) {
+                                    if (ocrData != null) this.callBack.onUpdateProcess("10");
                                     scanListener.onScannedFailed("1");
+                                }
 //                                scanListener.onScannedSuccess(false, false);
                             }
 //                            try {

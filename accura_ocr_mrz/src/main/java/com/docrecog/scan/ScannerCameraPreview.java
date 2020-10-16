@@ -4,24 +4,17 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.SparseArray;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
-import com.accurascan.ocr.mrz.R;
 import com.accurascan.ocr.mrz.detector.BarcodeHelper;
 import com.accurascan.ocr.mrz.detector.MyBardCodeDetector;
 import com.accurascan.ocr.mrz.detector.MyFaceDetector;
@@ -37,7 +30,7 @@ import com.google.android.gms.vision.face.FaceDetector;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHolder.Callback */{
+abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHolder.Callback */ {
     private static final String TAG = ScannerCameraPreview.class.getSimpleName();
     private final RecogEngine recogEngine;
     private CameraSource cameraSource;
@@ -57,7 +50,18 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     private MyBardCodeDetector myBarcodedetecter;
     private FaceDetector detector;
     private MyFaceDetector myFaceDetector;
+    private int scanSide = 0; // 0 for front side and 1 for back side
+    private boolean isInitialized;
 //    private ProgressBar progressBar;
+
+
+    public boolean isInitialized() {
+        return isInitialized;
+    }
+
+    public void setInitialized(boolean initialized) {
+        isInitialized = initialized;
+    }
 
     protected abstract void onScannedSuccess(String rawResult);
 
@@ -79,6 +83,36 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         }
     }
 
+    public void setFrontSide() {
+        scanSide = 0;
+        if (isInitialized() && barcodeType == RecogType.PDF417) {
+            barcodeFormat = Barcode.PDF417;
+            initFrontCamera();
+            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, false);
+        }
+    }
+
+    public void setBackSide() {
+        scanSide = 1;
+        if (isInitialized() && barcodeType == RecogType.PDF417) {
+            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, true);
+
+            Runnable runnable = new Runnable() {
+                public void run() {
+                    addScanner(mContext);
+                }
+            };
+            new Handler().postDelayed(runnable, 950);
+        }
+    }
+
+    public boolean isBackSide() {
+        if (barcodeType == RecogType.PDF417) {
+            return true;
+        }
+        return false;
+    }
+
     protected void initializeScanner(Context context, int countryId) {
         isDone = false;
         preview = new Preview(mContext);
@@ -91,19 +125,22 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             @Override
             public void run() {
                 InitModel initModel = recogEngine.initScanner(context, countryId);
-                if (initModel != null ) {
+                if (initModel != null) {
                     if (initModel.getResponseCode() == 1) {
+                        setInitialized(true);
                         startScan();
                     } else {
+                        setInitialized(false);
                         onError(initModel.getResponseMessage());
                     }
 //                    handler.sendEmptyMessage(1);
                 } else {
+                    setInitialized(false);
                     onError("Failed");
 //                    handler.sendEmptyMessage(0);
                 }
             }
-        },100);
+        }, 100);
     }
 
     private void startScan() {
@@ -115,8 +152,13 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             isSelection = true;
         } else if (barcodeType == RecogType.PDF417) {
             barcodeFormat = Barcode.PDF417;
-            initFrontCamera();
-            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, false);
+            if (scanSide > 0) {
+                addScanner(this.mContext);
+                onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, false);
+            } else {
+                initFrontCamera();
+                onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, false);
+            }
         }
     }
 
@@ -161,7 +203,8 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                 pdf417Data.docFrontBitmap = source.copy(Bitmap.Config.ARGB_8888, true);
                                 try {
                                     if (!source.isRecycled()) source.recycle();
-                                    if (myFaceDetector.getBitmap() != null && !myFaceDetector.getBitmap().isRecycled()) myFaceDetector.getBitmap().recycle();
+                                    if (myFaceDetector.getBitmap() != null && !myFaceDetector.getBitmap().isRecycled())
+                                        myFaceDetector.getBitmap().recycle();
                                     detector.release();
                                     myFaceDetector.release();
                                 } catch (Exception e) {
@@ -172,14 +215,18 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                     @Override
                                     public void run() {
                                         cameraSource.stop();
-                                        onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, true);
-
-                                        Runnable runnable = new Runnable() {
-                                            public void run() {
-                                                addScanner(mContext);
-                                            }
-                                        };
-                                        new Handler().postDelayed(runnable, 950);
+                                        if (!isDone) {
+                                            isDone = true;
+                                            onScannedPDF417(pdf417Data);
+                                        }
+//                                        onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, true);
+//
+//                                        Runnable runnable = new Runnable() {
+//                                            public void run() {
+//                                                addScanner(mContext);
+//                                            }
+//                                        };
+//                                        new Handler().postDelayed(runnable, 950);
                                     }
                                 });
 
@@ -226,7 +273,8 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                             if (myBarcodedetecter.getBitmap() != null && !myBarcodedetecter.getBitmap().isRecycled()) {
                                 /*if (barcodeType == RecogType.BARCODE) {
                                     pdf417Data.docFrontBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
-                                } else*/ if (barcodeType == RecogType.PDF417) {
+                                } else*/
+                                if (barcodeType == RecogType.PDF417) {
                                     pdf417Data.docBackBitmap = myBarcodedetecter.getBitmap().copy(Bitmap.Config.ARGB_8888, true);
                                 }
                                 myBarcodedetecter.getBitmap().recycle();
@@ -275,7 +323,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         return null;
     }
 
-    class Preview extends SurfaceView implements SurfaceHolder.Callback{
+    class Preview extends SurfaceView implements SurfaceHolder.Callback {
         private final SurfaceHolder mHolder;
 
         public Preview(Context context) {
@@ -298,6 +346,9 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
             try {
                 if (cameraSource != null) {
+                    if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
                     cameraSource.start(holder);
                 }
             } catch (RuntimeException e) {
@@ -327,6 +378,9 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         isDone = false;
         try {
             if (cameraSource != null && mSurfaceHolder != null) {
+                if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
                 cameraSource.start(mSurfaceHolder);
             }
         } catch (IOException e) {

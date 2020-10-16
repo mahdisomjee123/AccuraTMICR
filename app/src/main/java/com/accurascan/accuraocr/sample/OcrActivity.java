@@ -47,6 +47,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     RecogType recogType;
     Dialog types_dialog;
     private String cardName;
+    private boolean isBack = false;
 
     private static class MyHandler extends Handler {
         private final WeakReference<OcrActivity> mActivity;
@@ -116,6 +117,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 .setView(linearLayout) // To add camera view
                 .setOcrCallback(this)  // To get Update and Success Call back
                 .setStatusBarHeight(statusBarHeight)  // To remove Height from Camera View if status bar visible
+                .setFrontSide()
 //                optional field
 //                .setEnableMediaPlayer(false) // false to disable sound and true to enable sound and default it is true
 //                .setCustomMediaPlayer(MediaPlayer.create(this, com.accurascan.ocr.mrz.R.raw.beep)) // To add your custom sound and Must have to enable media player
@@ -209,32 +211,46 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         Intent intent = new Intent(this, OcrResultActivity.class);
         if (result != null) {
             if (result instanceof OcrData) {
-                OcrData.setOcrResult((OcrData) result);
                 if (recogType == RecogType.OCR) {
-                    /**
-                     * @recogType is {@link com.docrecog.scan.RecogType#OCR}*/
-                    RecogType.OCR.attachTo(intent);
+                    if (isBack || !cameraView.isBackSideAvailable()) {
+                        OcrData.setOcrResult((OcrData) result);
+                        /**
+                         * @recogType is {@link RecogType#OCR}*/
+                        RecogType.OCR.attachTo(intent);
+                        startActivityForResult(intent, 101);
+
+                    } else {
+                        isBack = true;
+                        cameraView.setBackSide();
+                        cameraView.flipImage(imageFlip);
+                    }
                 } else if (recogType == RecogType.DL_PLATE) {
                     /**
-                     * @recogType is {@link com.docrecog.scan.RecogType#DL_PLATE}*/
+                     * @recogType is {@link RecogType#DL_PLATE}*/
                     RecogType.DL_PLATE.attachTo(intent);
+                    startActivityForResult(intent, 101);
                 }
-                startActivityForResult(intent, 101);
             } else if (result instanceof RecogResult) {
                 /**
-                 *  @recogType is {@link com.docrecog.scan.RecogType#MRZ}*/
+                 *  @recogType is {@link RecogType#MRZ}*/
                 RecogResult.setRecogResult((RecogResult) result);
                 RecogType.MRZ.attachTo(intent);
                 startActivityForResult(intent, 101);
             } else if (result instanceof PDF417Data) {
                 /**
-                 *  @recogType is {@link com.docrecog.scan.RecogType#PDF417}*/
-                PDF417Data.setPDF417Result((PDF417Data) result);
-                RecogType.PDF417.attachTo(intent);
-                startActivityForResult(intent, 101);
+                 *  @recogType is {@link RecogType#PDF417}*/
+                if (isBack || !cameraView.isBackSideAvailable()) {
+                    PDF417Data.setPDF417Result((PDF417Data) result);
+                    RecogType.PDF417.attachTo(intent);
+                    startActivityForResult(intent, 101);
+                } else {
+                    isBack = true;
+                    cameraView.setBackSide();
+                    cameraView.flipImage(imageFlip);
+                }
             } else if (result instanceof String) {
                 /**
-                 *  @recogType is {@link com.docrecog.scan.RecogType#BARCODE}*/
+                 *  @recogType is {@link RecogType#BARCODE}*/
                 setResultDialog((String) result);
             }
         } else Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
@@ -309,6 +325,8 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 return "Bring card near to frame.";
             case "3":
                 return "Processing...";
+            case "10":
+                return "Face not detected";
             default:
                 return s;
         }
@@ -330,7 +348,11 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 Runtime.getRuntime().gc(); // To clear garbage
                 //<editor-fold desc="Call CameraView#startOcrScan(true) To start again Camera Preview
                 //And CameraView#startOcrScan(false) To start first time">
-                if (cameraView != null) cameraView.startOcrScan(true);
+                if (cameraView != null) {
+                    isBack = false;
+                    cameraView.setFrontSide();
+                    cameraView.startOcrScan(true);
+                }
                 //</editor-fold>
             }
         }
