@@ -1,7 +1,6 @@
 package com.accurascan.ocr.mrz.detector;
 
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.accurascan.ocr.mrz.model.PDF417Data;
 
@@ -149,7 +148,6 @@ public class BarcodeHelper {
 
         /*check keys and value and set data in pdf417Data model class*/
         if (dataHashMap.containsKey(Customer_Family_Name) && !TextUtils.isEmpty(Customer_Family_Name)) {
-            Log.v("TAG", "users family name:" + dataHashMap.get(Customer_Family_Name));
             pdf417Data.lastName1 = dataHashMap.get(Customer_Family_Name).trim();
         }
         if (dataHashMap.containsKey(Customer_Last_Name) && !TextUtils.isEmpty(Customer_Last_Name)) {
@@ -239,7 +237,6 @@ public class BarcodeHelper {
         }
 
         if (dataHashMap.containsKey(Customer_Given_Name)) {
-            Log.v("TAG", "users Given name:" + dataHashMap.get(Customer_Given_Name));
             try {
                 String[] CustomerName = dataHashMap.get(Customer_Given_Name).split(" ");
                 if (CustomerName.length >= 1)
@@ -254,14 +251,12 @@ public class BarcodeHelper {
             pdf417Data.firstName = dataHashMap.get(FirstName);
         }
         if (dataHashMap.containsKey(Name_Suffix)) {
-            Log.v("TAG", "Surname name:" + dataHashMap.get(Name_Suffix));
             pdf417Data.nameSuffix = dataHashMap.get(Name_Suffix);
         }
         if (dataHashMap.containsKey(Suffix)) {
             pdf417Data.Suffix = dataHashMap.get(Suffix);
         }
         if (dataHashMap.containsKey(Street_Address_1)) {
-            Log.v("TAG", "Address line 1 :" + dataHashMap.get(Street_Address_1));
             try {
                 pdf417Data.address1 = dataHashMap.get(Street_Address_1).trim();
             } catch (Exception e) {
@@ -269,7 +264,6 @@ public class BarcodeHelper {
             }
         }
         if (dataHashMap.containsKey(Street_Address_2)) {
-            Log.v("TAG", "Address line 2 :" + dataHashMap.get(Street_Address_2));
             try {
                 pdf417Data.address2 = dataHashMap.get(Street_Address_2).trim();
             } catch (Exception e) {
@@ -287,15 +281,12 @@ public class BarcodeHelper {
 
 
         if (dataHashMap.containsKey(City)) {
-            Log.v("TAG", "City:" + dataHashMap.get(City));
             pdf417Data.city = dataHashMap.get(City).trim();
         }
         if (dataHashMap.containsKey(Postal_Code)) {
-            Log.v("TAG", "Pin Code:" + dataHashMap.get(Postal_Code));
             pdf417Data.zipcode = dataHashMap.get(Postal_Code);
         }
         if (dataHashMap.containsKey(Date_Of_Birth)) {
-            Log.v("TAG", "Birth Date    :" + dataHashMap.get(Date_Of_Birth));
             if (dataHashMap.get(Date_Of_Birth).length() > 4) {
 //                pdf417Data.birthday = dataHashMap.get(Date_Of_Birth).substring(0, 2) + "/"
 //                        + dataHashMap.get(Date_Of_Birth).substring(2, 4) + "/" + dataHashMap.get(Date_Of_Birth).substring(4);
@@ -304,7 +295,6 @@ public class BarcodeHelper {
             }
         }
         if (dataHashMap.containsKey(DateOfBirth)) {
-            Log.v("TAG", "Birth Date    :" + dataHashMap.get(DateOfBirth));
             if (dataHashMap.get(DateOfBirth).length() > 4) {
 //                pdf417Data.birthday1 = dataHashMap.get(DateOfBirth).substring(0, 2) + "/"
 //                        + dataHashMap.get(DateOfBirth).substring(2, 4) + "/" + dataHashMap.get(DateOfBirth).substring(4);
@@ -313,7 +303,6 @@ public class BarcodeHelper {
             }
         }
         if (dataHashMap.containsKey(Sex)) {
-            Log.v("TAG", "Sex:" + (dataHashMap.get(Sex).trim().equals("1") ? "Male" : "Female"));
 //            pdf417Data.sex = dataHashMap.get(Sex).trim().equals("1") ? "Male" : "Female";
             pdf417Data.sex = dataHashMap.get(Sex).trim();
         }
@@ -351,7 +340,6 @@ public class BarcodeHelper {
 
         if (dataHashMap.containsKey(Customer_Id_Number)) {
             pdf417Data.licence_number = dataHashMap.get(Customer_Id_Number).trim();
-            Log.e("TAG", "Licence Number is :" + pdf417Data.licence_number);
         }
         if (dataHashMap.containsKey(Expiration_Date) && dataHashMap.get(Expiration_Date).length() > 4) {
 //            pdf417Data.licence_expire_date = dataHashMap.get(Expiration_Date).trim();

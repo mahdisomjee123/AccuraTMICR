@@ -218,7 +218,21 @@ public class BitmapUtil {
             Bitmap bmp_org = BitmapFactory.decodeByteArray(os.toByteArray(), 0, os.toByteArray().length);
             os.close();
             Matrix matrix = new Matrix();
-            matrix.postRotate(mDisplayOrientation);
+            int rotationDegree = 0;
+            switch (mDisplayOrientation) {
+                case 1: // ROTATION_90:
+                    rotationDegree = 90;
+                    break;
+                case 2: // ROTATION_180:
+                    rotationDegree = 180;
+                    break;
+                case 3: //ROTATION_270:
+                    rotationDegree = 270;
+                    break;
+                default:
+                    break;
+            }
+            matrix.postRotate(rotationDegree);
             Bitmap bmp1 = Bitmap.createBitmap(bmp_org, 0, 0, bmp_org.getWidth(), bmp_org.getHeight(), matrix, true);
 
             if (RecogType.OCR == recogType) {

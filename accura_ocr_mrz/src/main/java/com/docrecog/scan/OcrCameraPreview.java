@@ -30,6 +30,7 @@ import com.accurascan.ocr.mrz.motiondetection.RgbMotionDetection;
 import com.accurascan.ocr.mrz.motiondetection.data.GlobalData;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
+import com.google.android.gms.common.images.Size;
 import com.google.gson.Gson;
 
 import org.json.JSONArray;
@@ -41,7 +42,6 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -67,12 +67,14 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
     private static final String TAG = OcrCameraPreview.class.getSimpleName();
 
+    private CameraSourcePreview cameraSourcePreview;
     protected Camera mCameraDevice;
     Camera.Parameters mParameters;
     int mPreviewWidth = 1280;
     int mPreviewHeight = 720;
     SurfaceHolder mSurfaceHolder;
     private int mCameraId;
+    private Size previewSize;
     private int mCameraState = PREVIEW_STOPPED;
 
     // The subset of parameters we need to update in setCameraParameters().
@@ -108,6 +110,8 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private int mDisplayRotation;
     // The value for android.hardware.Camera.setDisplayOrientation.
     private int mDisplayOrientation;
+    //
+    private int rotation;
         private final Lock _mutex = new ReentrantLock(true);
     private Thread mCameraOpenThread = new Thread(new Runnable() {
         public void run() {
@@ -126,6 +130,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private int cardId = -1;
     //    private OcrCallback ocrCallBack;
     private ViewGroup cameraContainer;
+    private int facing = 0;
 //    private boolean isSetPlayer = true;
 
     private RecogEngine recogEngine;
@@ -256,7 +261,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     if (!mReference.detection.detect(ints, size.width, size.height, RecogEngine.mT, RecogEngine.v)/*mReference.recogEngine.doCheckFrame(data, size.width, size.height) > 0*/) {
                         if (mReference.newMessage.contains(mReference.recogEngine.nM))
                             mReference.onProcessUpdate(-1, "", false);
-                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.mDisplayOrientation, mReference.rectH, mReference.rectW, mReference.recogType);
+                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType);
 
                         mReference._mutex.lock();
 
@@ -597,6 +602,11 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         return this;
     }
 
+    OcrCameraPreview setFacing(int facing){
+        this.facing = facing;
+        return this;
+    }
+
     public boolean isBackSide() {
         return isbothavailable;
     }
@@ -687,9 +697,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         }
         String[] defaultFocusModes = {"continuous-video", "auto", "continuous-picture"};
         mFocusManager = new FocusManager(defaultFocusModes);
-        mCameraId = CameraHolder.instance().getBackCameraId();
+        mCameraId = CameraHolder.instance().getCameraId(facing);
         dm = mActivity.getResources().getDisplayMetrics();
-        Preview preview = new Preview(mActivity);
+
+        // Use FrameLayout to zoom camera according to device screen
+        // Fit document with ratio in our frame
+        cameraSourcePreview = new CameraSourcePreview(this, mActivity);
 //        progressBar = new ProgressBar(mActivity, null, android.R.attr.progressBarStyleLarge);
 //        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(100, 100);
 //        lp.addRule(RelativeLayout.CENTER_IN_PARENT);
@@ -699,28 +712,29 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             if (this.cardId < 0)
                 throw new IllegalArgumentException("Card Code must have to > 0");
         }
-        if (recogType == RecogType.OCR) {
-            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            int widthMargin = -(dm.widthPixels / 10);
-            int heightMargin = -((dm.heightPixels - this.titleBarHeight) / 10);
-            params.setMargins(widthMargin, heightMargin, widthMargin, heightMargin);
-            preview.setLayoutParams(params);
+//        if (recogType == RecogType.OCR) {
+//        // zoom camera reduce blur on document
+//            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+//            int widthMargin = -(dm.widthPixels / 10);
+//            int heightMargin = -((dm.heightPixels - this.titleBarHeight) / 10);
+//            params.setMargins(widthMargin, heightMargin, widthMargin, heightMargin);
+//            preview.setLayoutParams(params);
+////            this.cameraContainer.addView(preview);
+////            this.cameraContainer.addView(progressBar, lp);
+////            doWork();
+//        } /*else {
+//            rectW = dm.widthPixels - 20;
+//            rectH = (dm.heightPixels - titleBarHeight) / 3;
 //            this.cameraContainer.addView(preview);
 //            this.cameraContainer.addView(progressBar, lp);
-//            doWork();
-        } /*else {
-            rectW = dm.widthPixels - 20;
-            rectH = (dm.heightPixels - titleBarHeight) / 3;
-            this.cameraContainer.addView(preview);
-            this.cameraContainer.addView(progressBar, lp);
-            new Thread() {
-                public void run() {
-                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, false);
-                    handler.sendEmptyMessage(1);
-                }
-            }.start();
-        }*/
-        this.cameraContainer.addView(preview);
+//            new Thread() {
+//                public void run() {
+//                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, false);
+//                    handler.sendEmptyMessage(1);
+//                }
+//            }.start();
+//        }*/
+        this.cameraContainer.addView(cameraSourcePreview);
 //        this.cameraContainer.addView(progressBar, lp);
 
         doWork();
@@ -924,6 +938,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         // Start the preview if it is not started.
         if (mCameraState == PREVIEW_STOPPED) {
             try {
+                mCameraId = CameraHolder.instance().getCameraId(facing);
                 mCameraDevice = Util.openCamera(mActivity, mCameraId);
                 initializeCapabilities();
                 startPreview();
@@ -933,7 +948,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             }
         }
 
-        if (mSurfaceHolder != null) {
+        if (cameraSourcePreview.getHolder() != null) {
             // If first time initialization is not finished, put it in the
             // message queue.
             if (!mFirstTimeInitialized) {
@@ -979,7 +994,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //		mOrientationListener = new MyOrientationEventListener(this);
 //		mOrientationListener.enable();
 
-        mCameraId = CameraHolder.instance().getBackCameraId();
+        mCameraId = CameraHolder.instance().getCameraId(facing);
 
         Util.initializeScreenBrightness(mActivity.getWindow(), mActivity.getContentResolver());
         mFirstTimeInitialized = true;
@@ -1015,7 +1030,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //                }
 
                 case TRIGER_RESTART_RECOG:
-                    if (!mPausing)
+                    if (!mPausing && mCameraDevice != null)
                         mCameraDevice.setOneShotPreviewCallback(OcrCameraPreview.this);
                     // clearNumberAreaAndResult();
                     break;
@@ -1529,6 +1544,72 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         }
     }
 
+    public void startIfReady(SurfaceHolder holder){
+        // We need to save the holder for later use, even when the mCameraDevice
+        // is null. This could happen if onResume() is invoked after this
+        // function.
+        mSurfaceHolder = holder;
+
+        // The mCameraDevice will be null if it fails to connect to the camera
+        // hardware. In this case we will show a dialog and then finish the
+        // activity, so it's OK to ignore it.
+        if (mCameraDevice == null)
+            return;
+
+        // Sometimes surfaceChanged is called after onPause or before onResume.
+        // Ignore it.
+        if (mPausing/* || cameraActivity.isFinishing()*/)
+            return;
+
+        // Set preview display if the surface is being created. Preview was
+        // already started. Also restart the preview if display rotation has
+        // changed. Sometimes this happens when the device is held in portrait
+        // and camera app is opened. Rotation animation takes some time and
+        // display rotation in onCreate may not be what we want.
+        if (mCameraState == PREVIEW_STOPPED) {
+            if (mFirstInitialized) {
+//                    initializeCapabilities();
+                startPreview();
+            }
+        } else {
+            if (Util.getDisplayRotation(mActivity) != mDisplayRotation) {
+                setDisplayOrientation();
+            }
+            if (holder.isCreating()) {
+                // Set preview display if the surface is being created and
+                // preview
+                // was already started. That means preview display was set to
+                // null
+                // and we need to set it now.
+                setPreviewDisplay(holder);
+            }
+        }
+
+        // If first time initialization is not finished, send a message to do
+        // it later. We want to finish surfaceChanged as soon as possible to let
+        // user see preview first.
+        if (!mFirstTimeInitialized) {
+            mHandler.sendEmptyMessage(FIRST_TIME_INIT);
+        }
+    }
+
+    public boolean onTouchView(View v, MotionEvent event) {
+        if (!isTouchCalled && mParameters != null) {
+            String focusMode = mParameters.getFocusMode();
+            if (focusMode == null || Camera.Parameters.FOCUS_MODE_INFINITY.equals(focusMode)) {
+                return false;
+            }
+
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                isTouchCalled = true;
+                autoFocus();
+            }
+
+        }
+
+        return true;
+    }
+
     private void startPreview() {
 
         if (mCameraDevice != null) {
@@ -1542,7 +1623,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             if (mCameraState != PREVIEW_STOPPED)
                 stopPreview();
 
-            setPreviewDisplay(mSurfaceHolder);
+            setPreviewDisplay(cameraSourcePreview.getHolder());
             setDisplayOrientation();
 
             mCameraDevice.setOneShotPreviewCallback(OcrCameraPreview.this);
@@ -1575,7 +1656,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         }
     }
 
-    private void stopPreview() {
+    public void stopPreview() {
         if (mCameraDevice == null)
             return;
         mCameraDevice.stopPreview();
@@ -1593,6 +1674,14 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         }
     }
 
+    public void restartPreview(){
+//        stopPreview();
+//        closeCamera();
+//        startPreview();
+        onPause();
+        onResume();
+    }
+
     private void setPreviewDisplay(SurfaceHolder holder) {
         try {
             if (mCameraDevice != null) {
@@ -1606,8 +1695,10 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
     private void setDisplayOrientation() {
         mDisplayRotation = Util.getDisplayRotation(mActivity);
-        mDisplayOrientation = Util.getDisplayOrientation(mDisplayRotation,
+        int[] rotationArray = Util.getDisplayOrientation(mDisplayRotation,
                 mCameraId);
+        this.rotation = rotationArray[0];
+        mDisplayOrientation = rotationArray[1];
         mCameraDevice.setDisplayOrientation(mDisplayOrientation);
     }
 
@@ -1713,6 +1804,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             }
         }
 
+        previewSize = new Size(mParameters.getPreviewSize().width, mParameters.getPreviewSize().height);
 //        mParameters.setPreviewFormat(ImageFormat.NV21);
         // Set JPEG quality.
         int jpegQuality = CameraProfile.getJpegEncodingQualityParameter(
@@ -1758,6 +1850,21 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             Util.logd(TAG, "focusMode=" + mParameters.getFocusMode());
         }
 
+    }
+
+    /**
+     * Returns the preview size that is currently in use by the underlying camera.
+     */
+    public Size getPreviewSize() {
+        return previewSize;
+    }
+
+    public int getPreviewWidth() {
+        return mPreviewWidth;
+    }
+
+    public int getPreviewHeight() {
+        return mPreviewHeight;
     }
 
     public void GetCameraResolution() {

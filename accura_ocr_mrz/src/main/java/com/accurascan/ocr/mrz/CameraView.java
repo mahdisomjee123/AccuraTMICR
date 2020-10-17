@@ -24,6 +24,7 @@ public class CameraView {
     private int countryId;
     private int cardId;
     private ViewGroup cameraContainer;
+    private int cameraFacing;
     private OcrCallback callback;
     private int statusBarHeight = 0;
     private boolean setPlayer = true;
@@ -80,6 +81,20 @@ public class CameraView {
     public CameraView setView(ViewGroup cameraContainer) {
         this.cameraContainer = cameraContainer;
         return this;
+    }
+
+    public CameraView setCameraFacing(int cameraFacing) {
+        this.cameraFacing = cameraFacing;
+        return this;
+    }
+
+    public void flipCamera(){
+        this.cameraFacing = (this.cameraFacing == 0/*FACING_BACK*/ ? 1/*FACING_FRONT*/ : 0/*FACING_BACK*/);
+        if (this.ocrView != null) {
+            this.ocrView.flipCamera(this.cameraFacing);
+        }else if (this.scannerView != null) {
+            this.scannerView.flipCamera(this.cameraFacing);
+        }
     }
 
     /**
@@ -176,6 +191,7 @@ public class CameraView {
             };
             ocrView.setRecogType(this.type)
                     .setView(this.cameraContainer)
+                    .setCameraFacing(this.cameraFacing)
                     .setCardData(countryId, cardId)
                     .setOcrCallBack(this.callback)
                     .setStatusBarHeight(this.statusBarHeight);
@@ -196,6 +212,7 @@ public class CameraView {
             };
             scannerView.setBarcodeType(this.type)
                     .setOcrCallBack(this.callback)
+                    .setCameraFacing(this.cameraFacing)
                     .setView(this.cameraContainer)
                     .setCardData(countryId)
                     .setBarcodeFormat(barcodeFormat > -1 ? barcodeFormat : Barcode.ALL_FORMATS);
@@ -220,7 +237,7 @@ public class CameraView {
         if (ocrView != null) ocrView.startOcrScan();
         if (scannerView != null)
             if (!isReset) scannerView.startScan();
-             else scannerView.init();
+//             else scannerView.init();
 
     }
 
@@ -272,7 +289,7 @@ public class CameraView {
     public void onResume() {
         if (ocrView != null) {
             ocrView.resume();
-        } else if (scannerView != null) scannerView.startScan();
+        } /*else if (scannerView != null) scannerView.startScan();*/
     }
 
     /**
@@ -281,7 +298,7 @@ public class CameraView {
     public void onPause() {
         if (ocrView != null) {
             ocrView.pause();
-        }else if (scannerView != null) scannerView.stopCamera();
+        }/*else if (scannerView != null) scannerView.stopCamera();*/
     }
 
     /**

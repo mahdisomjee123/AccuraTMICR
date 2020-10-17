@@ -115,6 +115,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         }
         cameraView.setRecogType(recogType)
                 .setView(linearLayout) // To add camera view
+                .setCameraFacing(0) // To set front or back camera.
                 .setOcrCallback(this)  // To get Update and Success Call back
                 .setStatusBarHeight(statusBarHeight)  // To remove Height from Camera View if status bar visible
                 .setFrontSide()
@@ -132,6 +133,12 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         tvScanMessage = findViewById(R.id.tv_scan_msg);
         imageFlip = findViewById(R.id.im_flip_image);
         btn_barcode_selection = findViewById(R.id.select_type);
+        View btn_flip = findViewById(R.id.btn_flip);
+        btn_flip.setOnClickListener(v -> {
+            if (cameraView!=null) {
+                cameraView.flipCamera();
+            }
+        });
     }
 
     @Override

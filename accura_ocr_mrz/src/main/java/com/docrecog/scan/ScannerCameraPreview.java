@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.hardware.Camera;
+import android.os.Build;
 import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.util.SparseArray;
@@ -20,6 +21,7 @@ import com.accurascan.ocr.mrz.detector.MyBardCodeDetector;
 import com.accurascan.ocr.mrz.detector.MyFaceDetector;
 import com.accurascan.ocr.mrz.model.InitModel;
 import com.accurascan.ocr.mrz.model.PDF417Data;
+import com.accurascan.ocr.mrz.motiondetection.data.GlobalData;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
@@ -36,6 +38,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     private CameraSource cameraSource;
     private DisplayMetrics displayMetrics;
     public Camera camera;
+    private int facing = 0;
     public int barcodeFormat = Barcode.ALL_FORMATS;
     private Context mContext;
     private PDF417Data pdf417Data;
@@ -69,11 +72,16 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
     protected abstract void onError(String s);
 
-    protected abstract void onUpdate(int s, boolean isFlip);
+    protected abstract void onUpdate(int s, String feedBackMessage, boolean isFlip);
 
     protected ScannerCameraPreview(Context context) {
         this.mContext = context;
         recogEngine = new RecogEngine();
+    }
+
+    ScannerCameraPreview setFacing(int facing){
+        this.facing = facing;
+        return this;
     }
 
     public void updateFormat(int barcodeFormat) {
@@ -88,14 +96,14 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         if (isInitialized() && barcodeType == RecogType.PDF417) {
             barcodeFormat = Barcode.PDF417;
             initFrontCamera();
-            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, false);
+            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null,false);
         }
     }
 
     public void setBackSide() {
         scanSide = 1;
         if (isInitialized() && barcodeType == RecogType.PDF417) {
-            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, true);
+            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null,true);
 
             Runnable runnable = new Runnable() {
                 public void run() {
@@ -148,28 +156,29 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         displayMetrics = this.mContext.getResources().getDisplayMetrics();
         if (barcodeType == RecogType.BARCODE) {
             addScanner(this.mContext);
-            onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, false);
+            onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, null,false);
             isSelection = true;
         } else if (barcodeType == RecogType.PDF417) {
             barcodeFormat = Barcode.PDF417;
             if (scanSide > 0) {
                 addScanner(this.mContext);
-                onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, false);
+                onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null,false);
             } else {
                 initFrontCamera();
-                onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, false);
+                onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null,false);
             }
         }
     }
 
     private void initFrontCamera() {
-
+        isDone = false;
         detector = new FaceDetector.Builder(mContext)
                 .setTrackingEnabled(false)
                 .build();
         myFaceDetector = new MyFaceDetector(detector);
 
         cameraSource = new CameraSource.Builder(mContext, myFaceDetector)
+                .setFacing(facing)
                 .setAutoFocusEnabled(true)
                 .setRequestedPreviewSize(displayMetrics.heightPixels, displayMetrics.widthPixels)
                 .build();
@@ -185,6 +194,10 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
             @Override
             public void receiveDetections(Detector.Detections<Face> detections) {
+                if (GlobalData.isPhoneInMotion()) {
+                    onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, "Keep Document Steady", false);
+                    return;
+                }
                 SparseArray<Face> faces = detections.getDetectedItems();
                 if (faces.size() > 0) {
                     Face face = faces.valueAt(0);
@@ -231,6 +244,8 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                 });
 
                             }
+                        }else {
+                            onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, "Blur Detect over Face",true);
                         }
                     }
                 }
@@ -246,10 +261,15 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
         myBarcodedetecter = new MyBardCodeDetector(barcodeDetector);
 
-        cameraSource = new CameraSource.Builder(context, myBarcodedetecter)
+        CameraSource.Builder builder = new CameraSource.Builder(context, myBarcodedetecter)
                 .setAutoFocusEnabled(true)
-                .setRequestedPreviewSize(displayMetrics.heightPixels, displayMetrics.widthPixels)
-                .build();
+                .setFacing(facing == 1? CameraSource.CAMERA_FACING_FRONT : CameraSource.CAMERA_FACING_BACK)
+                .setRequestedPreviewSize(displayMetrics.heightPixels, displayMetrics.widthPixels);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+            builder = builder.setFocusMode(
+                    Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+        }
+        cameraSource = builder.build();
 
         myBarcodedetecter.setProcessor(new Detector.Processor<Barcode>() {
             @Override
@@ -261,6 +281,10 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             public void receiveDetections(Detector.Detections<Barcode> detections) {
 
                 /*called when detect data*/
+                if (GlobalData.isPhoneInMotion()) {
+                    onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, "Keep Document Steady", false);
+                    return;
+                }
 
                 final SparseArray<Barcode> qrcode = detections.getDetectedItems();
 
@@ -280,6 +304,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                 myBarcodedetecter.getBitmap().recycle();
                             }
                             String output = qrcode.valueAt(0).rawValue;
+//                            Barcode.DriverLicense driverLicense = qrcode.valueAt(0).driverLicense;
                             if (BarcodeHelper.extractScanResult(output, pdf417Data)) {
                                 if (!isDone) {
                                     isDone = true;
@@ -406,5 +431,21 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             cameraSource.stop();
         }
 //        getHolder().removeCallback(this);
+    }
+
+    public void restartPreview(){
+        stopCameraPreview();
+        if (barcodeType == RecogType.BARCODE) {
+            addScanner(this.mContext);
+            isSelection = true;
+        } else if (barcodeType == RecogType.PDF417) {
+            barcodeFormat = Barcode.PDF417;
+            if (scanSide > 0) {
+                addScanner(this.mContext);
+            } else {
+                initFrontCamera();
+                startCameraPreview();
+            }
+        }
     }
 }
