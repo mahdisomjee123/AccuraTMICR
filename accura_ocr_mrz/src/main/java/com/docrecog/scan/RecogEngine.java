@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.PointF;
 import android.graphics.Rect;
@@ -17,6 +18,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.solver.widgets.WidgetContainer;
 
 import com.accurascan.ocr.mrz.R;
 import com.accurascan.ocr.mrz.model.ContryModel;
@@ -91,6 +93,7 @@ public class RecogEngine {
         public boolean isMRZEnable = false;
         public boolean isOCREnable = false;
         public boolean isAllBarcodeEnable = false;
+        public String message = "Success";
     }
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
@@ -100,6 +103,20 @@ public class RecogEngine {
     public static final int SCAN_TITLE_MRZ_PDF417_BACK = 5;
     public static final int SCAN_TITLE_DLPLATE = 6;
     public static final int SCAN_TITLE_DEFAULT = 0;
+
+    public static final String ACCURA_ERROR_CODE_MOTION = "0";
+    public static final String ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME = "1";
+    public static final String ACCURA_ERROR_CODE_BRING_DOCUMENT_IN_FRAME = "2";
+    public static final String ACCURA_ERROR_CODE_PROCESSING = "3";
+    public static final String ACCURA_ERROR_CODE_BLUR_DOCUMENT = "4";
+    public static final String ACCURA_ERROR_CODE_FACE_BLUR = "5";
+    public static final String ACCURA_ERROR_CODE_GLARE_DOCUMENT = "6";
+    public static final String ACCURA_ERROR_CODE_HOLOGRAM = "7";
+    public static final String ACCURA_ERROR_CODE_DARK_DOCUMENT = "8";
+    public static final String ACCURA_ERROR_CODE_PHOTO_COPY_DOCUMENT = "9";
+    public static final String ACCURA_ERROR_CODE_FACE = "10";
+    public static final String ACCURA_ERROR_CODE_MRZ = "11";
+
     private static final String TAG = "PassportRecog";
     private byte[] pDic = null;
     private int pDicLen = 0;
@@ -111,7 +128,7 @@ public class RecogEngine {
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
-    static String nM;
+//    static String nM;
     static float mT = 15;
     Boolean isMrzEnable = true;
     static float v = 5f;
@@ -126,6 +143,7 @@ public class RecogEngine {
 
     private Context con;
     private Activity activity;
+    private boolean displayDialog = true;
 
     public RecogEngine() {
 
@@ -171,7 +189,7 @@ public class RecogEngine {
      * @param blurPercentage is 0 to 100, 0 - clean document and 100 - Blurry document
      * @return 1 if success else 0
      */
-    public native int setBlurPercentage(Context context, int blurPercentage, String errorMessage);
+    private native int setBlurPercentage(Context context, int blurPercentage, String errorMessage);
 
     /**
      * Set Blur Percentage to allow blur on detected Face
@@ -180,7 +198,7 @@ public class RecogEngine {
      * @param faceBlurPercentage is 0 to 100, 0 - clean face and 100 - Blurry face
      * @return 1 if success else 0
      */
-    public native int setFaceBlurPercentage(Context context, int faceBlurPercentage, String errorMessage);
+    private native int setFaceBlurPercentage(Context context, int faceBlurPercentage, String errorMessage);
 
     /**
      * @param context
@@ -188,7 +206,7 @@ public class RecogEngine {
      * @param maxPercentage
      * @return 1 if success else 0
      */
-    public native int setGlarePercentage(Context context, int minPercentage, int maxPercentage, String errorMessage);
+    private native int setGlarePercentage(Context context, int minPercentage, int maxPercentage, String errorMessage);
 
     /**
      * Set CheckPhotoCopy to allow photocopy document or not
@@ -197,7 +215,7 @@ public class RecogEngine {
      * @param isCheckPhotoCopy if true then reject photo copy document else vice versa
      * @return 1 if success else 0
      */
-    public native int isCheckPhotoCopy(Context context, boolean isCheckPhotoCopy, String errorMessage);
+    private native int isCheckPhotoCopy(Context context, boolean isCheckPhotoCopy, String errorMessage);
 
     /**
      * set Hologram detection to allow hologram on face or not
@@ -206,7 +224,7 @@ public class RecogEngine {
      * @param isDetectHologram if true then reject hologram is on face else it is allow .
      * @return 1 if success else 0
      */
-    public native int SetHologramDetection(Context context, boolean isDetectHologram, String errorMessage);
+    private native int SetHologramDetection(Context context, boolean isDetectHologram, String errorMessage);
 
     /**
      * set light tolerance to detect light on document if low light
@@ -215,7 +233,7 @@ public class RecogEngine {
      * @param tolerance is 0 to 100, 0 - allow full dark document and 100 - allow full bright document
      * @return 1 if success else 0
      */
-    public native int setLowLightTolerance(Context context, int tolerance, String errorMessage);
+    private native int setLowLightTolerance(Context context, int tolerance, String errorMessage);
 
     /**
      * set motion threshold to detect motion on camera document
@@ -246,10 +264,39 @@ public class RecogEngine {
 
     private native int doDetectNumberPlate(String s, int[] intData, int id, int card_id);
 
-    public int setMotionData(Activity activity, int motionThreshold, @NonNull String message) {
+    public int setBlurPercentage(Context context, int blurPercentage) {
+        return setBlurPercentage(context, blurPercentage,"");
+    }
+
+    public int setFaceBlurPercentage(Context context, int faceBlurPercentage) {
+        return setFaceBlurPercentage(context, faceBlurPercentage,"");
+    }
+
+    public int setGlarePercentage(Context context, int minValue, int maxValue) {
+        return setGlarePercentage(context, minValue, maxValue,"");
+    }
+
+    public int isCheckPhotoCopy(Context context, boolean isCheckPhotoCopy) {
+        return isCheckPhotoCopy(context, isCheckPhotoCopy,"");
+    }
+
+    public int SetHologramDetection(Context context, boolean isDetectHologram) {
+        return SetHologramDetection(context, isDetectHologram,"");
+    }
+
+    public int setLowLightTolerance(Context context, int tolerance) {
+        return setLowLightTolerance(context, tolerance,"");
+    }
+
+    public int setMotionData(Activity activity, int motionThreshold) {
         mT = motionThreshold;
-        nM = message;
-        return setMotionThreshold(activity, motionThreshold, message);
+//        nM = message;
+        return setMotionThreshold(activity, motionThreshold, "");
+    }
+
+
+    public void setDialog(boolean displayDialog) {
+        this.displayDialog = displayDialog;
     }
 
     /**
@@ -278,12 +325,12 @@ public class RecogEngine {
           7 - for Ocr + MRZ + PDF417 both
          */
         this.con = context;
-
+        SDKModel sdkModel = new SDKModel();
         getAssetFile(assetNames[0], assetNames[1]);
 //        File file = loadClassifierData(context);
         int ret = loadDictionary(context, /*file != null ? file.getAbsolutePath() : */"", pDic, pDicLen, pDic1, pDicLen1, context.getAssets());
         Log.i("recogPassport", "loadDictionary: " + ret);
-        nM = "Keep Document Steady";
+//        nM = "Keep Document Steady";
         if (ret < 0) {
             String message = "";
             if (ret == -1) {
@@ -295,29 +342,23 @@ public class RecogEngine {
             } else if (ret == -4) {
                 message = "Invalid License";
             }
-            if (!(context instanceof Activity)) {
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-            } else {
-                String finalMessage = message;
-                ((Activity) context).runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
+            sdkModel.message = message;
+            if (displayDialog) {
+                if (context instanceof Activity) {
+                    ((Activity) context).runOnUiThread(() -> {
                         AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
-                        builder1.setMessage(finalMessage);
-
+                        builder1.setMessage(sdkModel.message);
                         builder1.setCancelable(true);
-
                         builder1.setPositiveButton(
                                 "OK",
                                 (dialog, id) -> dialog.cancel());
-
                         AlertDialog alert11 = builder1.create();
                         alert11.show();
-                    }
-                });
+                    });
+                } else
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
             }
         }
-        SDKModel sdkModel = new SDKModel();
         sdkModel.isMRZEnable = ret == 1 || ret == 4 || ret == 6 || ret == 7;
         sdkModel.isOCREnable = ret == 2 || ret == 4 || ret == 5 || ret == 7;
         sdkModel.isAllBarcodeEnable = ret == 3 || ret == 5 || ret == 6 || ret == 7;
@@ -498,9 +539,9 @@ public class RecogEngine {
                 if (s != null && !TextUtils.isEmpty(s)) {
                     JSONObject jsonObject = new JSONObject(s);
                     ret = jsonObject.getInt("responseCode");
-                    if (ret >= 0) {
-                        nM = jsonObject.getString("responseMessage");
-                    }
+//                    if (ret >= 0) {
+//                        nM = RecogEngine.ACCURA_ERROR_CODE_MOTION;/*jsonObject.getString("responseMessage")*/
+//                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -586,7 +627,7 @@ public class RecogEngine {
             if (frames.isSucess) {
                 frames.mat = new Mat();
                 outMat.copyTo(frames.mat);
-                this.callBack.onUpdateProcess("3"/*"Processing..."*/);
+                this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING/*"Processing..."*/);
             } else {
                 bmp.recycle();
                 frames.mat = null;
@@ -718,8 +759,13 @@ public class RecogEngine {
 
             @Override
             public void onScannedFailed(String s) {
-                if (s.equals("1") && result != null && i % 2 == 0) {
-                    doFaceDetect(1, BitmapUtil.rotateBitmap(bitmap, 180), ocrData, result, scanListener);
+                if (s.equals("1")) {
+                    if (i % 2 == 0 && result != null) {
+                        doFaceDetect(1, BitmapUtil.rotateBitmap(bitmap, 180), ocrData, result, scanListener);
+                    } else {
+                        callBack.onUpdateProcess(ACCURA_ERROR_CODE_FACE);
+                        callBack.onScannedSuccess(false, false);
+                    }
                 } else {
                     callBack.onScannedSuccess(false, false);
                 }
@@ -835,10 +881,13 @@ public class RecogEngine {
         if (detector == null) {
             detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
         }
-
-        detector.processImage(FirebaseVisionImage.fromBitmap(image))
+        int scaledWidth = 1200;
+        float ratio = scaledWidth/(float) image.getWidth();
+        int scaledHeight = (int) (image.getHeight()*ratio);
+        Bitmap scaledBitmap = Bitmap.createScaledBitmap(image, scaledWidth, scaledHeight, true);
+        detector.processImage(FirebaseVisionImage.fromBitmap(scaledBitmap))
                 .addOnSuccessListener(visionText -> {
-
+                    Utils.bitmapToMat(scaledBitmap,mat);
                     OcrData.MapData mapData = MapDataFunction(mat.getNativeObjAddr(), visionText);
 //                    if (detector != null) {
 //                        try {
@@ -1131,7 +1180,7 @@ public class RecogEngine {
                                 image1.recycle();
 //                                image.recycle();
                                 if (scanListener != null) {
-                                    if (ocrData != null) this.callBack.onUpdateProcess("10");
+                                    if (ocrData != null) this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_FACE);
                                     scanListener.onScannedFailed("1");
                                 }
 //                                scanListener.onScannedSuccess(false, false);

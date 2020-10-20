@@ -1,6 +1,7 @@
 package com.accurascan.accuraocr.sample;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -58,6 +59,15 @@ public class MainActivity extends AppCompatActivity {
                     if (activity.sdkModel.isOCREnable && activity.modelList != null) {
                         activity.setCountryLayout();
                     }
+                } else {
+                    AlertDialog.Builder builder1 = new AlertDialog.Builder(activity);
+                    builder1.setMessage(activity.responseMessage);
+                    builder1.setCancelable(true);
+                    builder1.setPositiveButton(
+                            "OK",
+                            (dialog, id) -> dialog.cancel());
+                    AlertDialog alert11 = builder1.create();
+                    alert11.show();
                 }
             }
         }
@@ -77,7 +87,9 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     // doWorkNative();
                     RecogEngine recogEngine = new RecogEngine();
+                    recogEngine.setDialog(false); // setDialog(false) To set your custom dialog for license validation
                     activity.sdkModel = recogEngine.initEngine(activity);
+                    activity.responseMessage = activity.sdkModel.message;
 
                     if (activity.sdkModel.i >= 0) {
 
@@ -85,13 +97,13 @@ public class MainActivity extends AppCompatActivity {
                         if (activity.sdkModel.isOCREnable)
                             activity.modelList = recogEngine.getCardList(activity);
 
-                        recogEngine.setBlurPercentage(activity, 50, "Blur detect in document");
-                        recogEngine.setFaceBlurPercentage(activity, 50, "Blur detected over face");
-                        recogEngine.setGlarePercentage(activity, 6, 98, "Glare detect in document");
-                        recogEngine.isCheckPhotoCopy(activity, false, "Can not accept Photo Copy Document");
-                        recogEngine.SetHologramDetection(activity, true, "Hologram Detected");
-                        recogEngine.setLowLightTolerance(activity, 30, "Low lighting detected");
-                        recogEngine.setMotionData(activity, 15, "Keep Document Steady");
+                        recogEngine.setBlurPercentage(activity, 50);
+                        recogEngine.setFaceBlurPercentage(activity, 50);
+                        recogEngine.setGlarePercentage(activity, 6, 98);
+                        recogEngine.isCheckPhotoCopy(activity, false);
+                        recogEngine.SetHologramDetection(activity, true);
+                        recogEngine.setLowLightTolerance(activity, 30);
+                        recogEngine.setMotionData(activity, 15);
 
                         activity.handler.sendEmptyMessage(1);
                     } else
@@ -114,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
     private int selectedPosition = -1;
     private View btnMrz, btnBarcode, lout_country;
     private RecogEngine.SDKModel sdkModel;
+    private String responseMessage;
 
     private void setCountryLayout() {
 //        contryList = new ArrayList<>();

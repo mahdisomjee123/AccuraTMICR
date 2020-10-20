@@ -259,7 +259,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                     int[] ints = ImageProcessing.decodeYUV420SPtoRGB(data, size.width, size.height);
                     if (!mReference.detection.detect(ints, size.width, size.height, RecogEngine.mT, RecogEngine.v)/*mReference.recogEngine.doCheckFrame(data, size.width, size.height) > 0*/) {
-                        if (mReference.newMessage.contains(mReference.recogEngine.nM))
+                        if (mReference.newMessage.contains(RecogEngine.ACCURA_ERROR_CODE_MOTION))
                             mReference.onProcessUpdate(-1, "", false);
                         bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType);
 
@@ -397,8 +397,8 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                                 } else*/
                                                 bmCard.recycle();
                                                 if (ret == -3) {
-                                                    mReference.onUpdateProcess("MRZ not detected");
-                                                } else if (ret == -10) {
+                                                    mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MRZ);
+                                                }/* else if (ret == -10) {
                                                     mReference.onUpdateProcess("Passport MRZ not detected");
                                                 } else if (ret == -11) {
                                                     mReference.onUpdateProcess("ID MRZ not detected");
@@ -406,7 +406,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                                     mReference.onUpdateProcess("Visa MRZ not detected");
                                                 } else if (ret == -13) {
                                                     mReference.onUpdateProcess("Driving MRZ not detected");
-                                                }
+                                                }*/
                                                 if (mReference.bRet == 3) {
                                                     mReference.bRet = -1;
                                                     mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null, true);
@@ -446,6 +446,14 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                     mReference.recogEngine.doRecognition(bmCard, mReference.countryId, mReference.cardId, mReference.g_recogResult);
                                 }
                             } else {
+                                if (mReference.recogType == RecogType.MRZ && mReference.g_recogResult.recType == RecogEngine.RecType.FACE && mReference.bRet > -1) {
+                                    mReference.bRet++;
+                                    if (mReference.bRet == 3) {
+                                        mReference.bRet = -1;
+                                        mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null, true);
+                                    }
+                                }
+                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_BLUR_DOCUMENT);
                                 mReference.refreshPreview();
                             }
                         } else {
@@ -514,7 +522,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         //                        }
                     } else {
                         if (mReference.fCount % 4 == 0) {
-                            mReference.onUpdateProcess(mReference.recogEngine.nM);
+                            mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MOTION);
                         }
                         mReference.fCount++;
                         mReference.refreshPreview();
@@ -1336,7 +1344,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             recogThread.start();
 //            fCount++;
         } else {
-            onUpdateProcess(recogEngine.nM);
+            onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MOTION);
             refreshPreview();
 //            fCount++;
         }
@@ -1895,23 +1903,26 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     @Override
     public void onUpdateProcess(String s) {
         if (!s.isEmpty()) {
+            if (newMessage.equals(s))
+                return;
             newMessage = s;
             onProcessUpdate(-1, s, false);
-            if (!s.contains("Process")) {
-            final Runnable runnable = () -> {
-                try {
-                    if (!s.contains("lighting"))
-                        if (newMessage.equals(s) || !s.contains("Process")) {
-                            onProcessUpdate(-1, "", false);
-                        }
-                } catch (Exception e) {
-                    e.printStackTrace();
+            if (!s.contains(RecogEngine.ACCURA_ERROR_CODE_PROCESSING)) {
+                final Runnable runnable = () -> {
+                    try {
+                        if (!s.contains(RecogEngine.ACCURA_ERROR_CODE_DARK_DOCUMENT))
+                            if (newMessage.equals(s) || !s.contains(RecogEngine.ACCURA_ERROR_CODE_PROCESSING)) {
+                                newMessage = "";
+                                onProcessUpdate(-1, "", false);
+                            }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                };
+                Runnable runnable1 = () -> new Handler().postDelayed(runnable, 1000);
+                if (mActivity != null) {
+                    mActivity.runOnUiThread(runnable1);
                 }
-            };
-            Runnable runnable1 = () -> new Handler().postDelayed(runnable, 1000);
-            if (mActivity != null) {
-                mActivity.runOnUiThread(runnable1);
-            }
             }
         }
 

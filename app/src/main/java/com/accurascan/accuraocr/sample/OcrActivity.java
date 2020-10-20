@@ -234,6 +234,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 } else if (recogType == RecogType.DL_PLATE) {
                     /**
                      * @recogType is {@link RecogType#DL_PLATE}*/
+                    OcrData.setOcrResult((OcrData) result);
                     RecogType.DL_PLATE.attachTo(intent);
                     startActivityForResult(intent, 101);
                 }
@@ -324,7 +325,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         }
     }
 
-    private String getErrorMessage(String s){
+    private String getErrorMessage_old(String s){
         switch (s){
             case "1":
                 return "Keep document in frame";
@@ -334,6 +335,37 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 return "Processing...";
             case "10":
                 return "Face not detected";
+            default:
+                return s;
+        }
+    }
+
+    private String getErrorMessage(String s) {
+        switch (s) {
+            case RecogEngine.ACCURA_ERROR_CODE_MOTION:
+                return "Keep Document Steady";
+            case RecogEngine.ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME:
+                return "Keep document in frame";
+            case RecogEngine.ACCURA_ERROR_CODE_BRING_DOCUMENT_IN_FRAME:
+                return "Bring card near to frame.";
+            case RecogEngine.ACCURA_ERROR_CODE_PROCESSING:
+                return "Processing...";
+            case RecogEngine.ACCURA_ERROR_CODE_BLUR_DOCUMENT:
+                return "Blur detect in document";
+            case RecogEngine.ACCURA_ERROR_CODE_FACE_BLUR:
+                return "Blur detected over face";
+            case RecogEngine.ACCURA_ERROR_CODE_GLARE_DOCUMENT:
+                return "Glare detect in document";
+            case RecogEngine.ACCURA_ERROR_CODE_HOLOGRAM:
+                return "Hologram Detected";
+            case RecogEngine.ACCURA_ERROR_CODE_DARK_DOCUMENT:
+                return "Low lighting detected";
+            case RecogEngine.ACCURA_ERROR_CODE_PHOTO_COPY_DOCUMENT:
+                return "Can not accept Photo Copy Document";
+            case RecogEngine.ACCURA_ERROR_CODE_FACE:
+                return "Face not detected";
+            case RecogEngine.ACCURA_ERROR_CODE_MRZ:
+                return "MRZ not detected";
             default:
                 return s;
         }
