@@ -375,7 +375,43 @@ public class Util {
 //		}
 		return maxSize;
     }
-    
+
+    /**
+     * Selects the most suitable preview size, given the desired width and height.
+     *
+     * <p>Even though we only need to find the preview size, it's necessary to find both the preview
+     * size and the picture size of the camera together, because these need to have the same aspect
+     * ratio. On some hardware, if you would only set the preview size, you will get a distorted
+     * image.But in our case we only deal with preview.
+     *
+     * @param desiredWidth  the desired width of the camera preview frames
+     * @param desiredHeight the desired height of the camera preview frames
+     * @param parameters    the Camera.Parameters to select a preview size from
+     * @return the selected preview and picture size pair
+     */
+    public static Camera.Size getPreviewSize(int desiredWidth, int desiredHeight,
+                                             Camera.Parameters parameters) {
+        Camera.Size result=null;
+
+        for (Camera.Size size : parameters.getSupportedPreviewSizes()) {
+            if (result == null) {
+                result=size;
+            }
+            if (size.width >= desiredWidth && size.height >= desiredHeight) {
+                {
+                    int resultArea=result.width * result.height;
+                    int newArea=size.width * size.height;
+
+                    if (newArea > resultArea) {
+                        result=size;
+                    }
+                }
+            }
+        }
+
+        return(result);
+    }
+
 
     public static void rectFToRect(RectF rectF, Rect rect) {
         rect.left = Math.round(rectF.left);

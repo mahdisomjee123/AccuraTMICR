@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.PointF;
 import android.graphics.Rect;
@@ -18,7 +17,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.constraintlayout.solver.widgets.WidgetContainer;
 
 import com.accurascan.ocr.mrz.R;
 import com.accurascan.ocr.mrz.model.ContryModel;
@@ -180,6 +178,8 @@ public class RecogEngine {
 
     private native String doFaceCheck(long l, float v);
 
+    private native String doCheckDocument(long l, float v);
+
     private native String loadData(Context context, int[] i);
 
     /**
@@ -254,7 +254,7 @@ public class RecogEngine {
 
     private native String loadScanner(Context context, AssetManager assetManager, int countryid);
 
-    private native String loadLicense(Context context, int countryid, int cardid);
+    private native String loadNumberPlat(Context context, int countryid, int cardid);
 
     private native int doBlurCheck(long srcMat);
 
@@ -488,9 +488,9 @@ public class RecogEngine {
      */
     // for failed -> responseCode = 0,
     // for success -> responseCode = 1
-    InitModel initLicense(Context context, int countryId, int cardId) {
+    InitModel initNumberPlat(Context context, int countryId, int cardId) {
 
-        String s = loadLicense(context, countryId, cardId);
+        String s = loadNumberPlat(context, countryId, cardId);
         try {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
@@ -506,9 +506,29 @@ public class RecogEngine {
     boolean checkValid(Bitmap bitmap) {
         Mat src = new Mat();
         Utils.bitmapToMat(bitmap, src);
-        int i = doBlurCheck(src.getNativeObjAddr());
+//        int i = doBlurCheck(src.getNativeObjAddr());
+//        return i == 0;
+        String s = doCheckDocument(src.getNativeObjAddr(), v);
+        if (s != null && !s.equals("")) {
+            src.release();
+            try {
+                JSONObject jsonObject = new JSONObject(s);
+                int ic = jsonObject.getInt("responseCode");
+                if (ic == 1) {
+                    return true;
+                } else {
+                    String message = jsonObject.getString("responseMessage");
+                    if (!message.isEmpty() && this.callBack != null) {
+                        this.callBack.onUpdateProcess(message);
+                    }
+                    return false;
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
         src.release();
-        return i == 0;
+        return false;
     }
 
     boolean checkLight(Bitmap bitmap) {

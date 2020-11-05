@@ -17,7 +17,6 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.RelativeLayout;
 
 import com.accurascan.ocr.mrz.R;
 import com.accurascan.ocr.mrz.camerautil.CameraHolder;
@@ -216,7 +215,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
                     mReference.handler.sendEmptyMessage(1);
                 } else if (mReference.recogType == RecogType.DL_PLATE) {
-                    InitModel initModel = mReference.recogEngine.initLicense(mReference.mActivity, mReference.countryId, mReference.cardId);
+                    InitModel initModel = mReference.recogEngine.initNumberPlat(mReference.mActivity, mReference.countryId, mReference.cardId);
                     if (initModel != null && initModel.getResponseCode() == 1) {
                         mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_DLPLATE, null, false);
                         mReference.handler.sendEmptyMessage(1);
@@ -261,20 +260,30 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     if (!mReference.detection.detect(ints, size.width, size.height, RecogEngine.mT, RecogEngine.v)/*mReference.recogEngine.doCheckFrame(data, size.width, size.height) > 0*/) {
                         if (mReference.newMessage.contains(RecogEngine.ACCURA_ERROR_CODE_MOTION))
                             mReference.onProcessUpdate(-1, "", false);
-                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType);
+//                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType);
+                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType, mReference.cameraSourcePreview.childXOffset, mReference.cameraSourcePreview.childYOffset, mReference.cameraSourcePreview.childWidth, mReference.cameraSourcePreview.childHeight);
 
                         mReference._mutex.lock();
 
                         if (bmCard != null && mReference.recogEngine.checkLight(bmCard)) {
                             mReference.refreshPreview();
                             bmCard.recycle();
+                            mReference._mutex.unlock(); // to restart thread
+                            return;
                         }
                         if (bmCard != null && !bmCard.isRecycled()) {
                             if (mReference.recogType == RecogType.OCR) {
-                                ImageOpencv imageOpencv = mReference.recogEngine.checkCard(bmCard);
+                                Bitmap bitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                if (bmCard.getWidth() > 650) {
+                                    int scaledWidth = 650;
+                                    float ratio = scaledWidth/(float) bmCard.getWidth();
+                                    int scaledHeight = (int) (bmCard.getHeight() * ratio);
+                                    bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+                                }
+                                ImageOpencv imageOpencv = mReference.recogEngine.checkCard(bitmap);
                                 if (imageOpencv != null) {
                                     if (imageOpencv.isSucess && imageOpencv.mat != null) {
-                                        Bitmap card = imageOpencv.getBitmap(bmCard);
+                                        Bitmap card = imageOpencv.getBitmap(bmCard, bitmap.getWidth(), bitmap.getHeight());
                                         int ret = 0;
                                         if (mReference.recogEngine.isMrzEnable) {
                                             mReference.g_recogResult.lines = "";
@@ -950,6 +959,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 mCameraDevice = Util.openCamera(mActivity, mCameraId);
                 initializeCapabilities();
                 startPreview();
+                cameraSourcePreview.requestLayout();
             } catch (Exception e) {
                 Util.showErrorAndFinish(mActivity, R.string.cannot_connect_camera);
                 return;
@@ -1791,7 +1801,9 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         //else
         {
             int requiredArea = mPreviewWidth * mPreviewHeight;
-            optimalSize = Util.getOptimalPreviewSizeByArea(mActivity, sizes, requiredArea);
+//            optimalSize = Util.getOptimalPreviewSizeByArea(mActivity, sizes, requiredArea);
+            optimalSize = Util.getPreviewSize(mPreviewWidth, mPreviewHeight, mParameters);
+
         }
 
         Camera.Size original = mParameters.getPreviewSize();
@@ -1906,26 +1918,25 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             if (newMessage.equals(s))
                 return;
             newMessage = s;
-            onProcessUpdate(-1, s, false);
-            if (!s.contains(RecogEngine.ACCURA_ERROR_CODE_PROCESSING)) {
+            // if s is equal to RecogEngine.ACCURA_ERROR_CODE_PROCESSING.concat("_clear") then remove "_clear" message on displaying
+            onProcessUpdate(-1, s.equals(RecogEngine.ACCURA_ERROR_CODE_PROCESSING.concat("_clear")) ? RecogEngine.ACCURA_ERROR_CODE_PROCESSING : s, false);
+            if (!s.equals(RecogEngine.ACCURA_ERROR_CODE_PROCESSING)) {
                 final Runnable runnable = () -> {
                     try {
-                        if (!s.contains(RecogEngine.ACCURA_ERROR_CODE_DARK_DOCUMENT))
-                            if (newMessage.equals(s) || !s.contains(RecogEngine.ACCURA_ERROR_CODE_PROCESSING)) {
-                                newMessage = "";
-                                onProcessUpdate(-1, "", false);
-                            }
+                        if (!s.equals(RecogEngine.ACCURA_ERROR_CODE_DARK_DOCUMENT)) {
+                            newMessage = "";
+                            onProcessUpdate(-1, "", false);
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 };
-                Runnable runnable1 = () -> new Handler().postDelayed(runnable, 1000);
+                Runnable runnable1 = () -> new Handler().postDelayed(runnable, 1500);
                 if (mActivity != null) {
                     mActivity.runOnUiThread(runnable1);
                 }
             }
         }
-
     }
 
     @Override

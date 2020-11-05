@@ -63,7 +63,7 @@ public class RecogResult {
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; sex = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; expirationdate = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; expirationchecksum = convchar2string(tmp);
-        len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; expirationchecksum = convchar2string(tmp);
+		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctexpirationchecksum = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; issuedate = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; otherid = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; otheridchecksum = convchar2string(tmp);
@@ -74,101 +74,56 @@ public class RecogResult {
 
         if (!sex.isEmpty()) {
             if (sex.equalsIgnoreCase("F")) {
-                sex = "Female";
+                sex = "FEMALE";
+            } else if (sex.equalsIgnoreCase("M")) {
+                sex = "MALE";
             } else {
-                sex = "Male";
+                sex = "OTHER";
             }
         }
-        try {
-            if (!birth.isEmpty()) {
-                Date parse = date.parse(birth.replace("<", ""));
-				if (parse != null) {
-					birth = "";
-					birth = newDateFormat.format(parse);
-				}
-			}
-        } catch (ParseException e) {
+        if (!birth.isEmpty()) {
+            birth = birth.substring(4)+"-"+birth.substring(2,4)+"-"+birth.substring(0,2);
         }
-        try {
-            if (!expirationdate.isEmpty()) {
-                Date parse = date.parse(expirationdate.replace("<", ""));
-				if (parse != null) {
-					expirationdate = "";
-					expirationdate = newDateFormat.format(parse);
-				}
-			}
-        } catch (ParseException e) {
+        if (!expirationdate.isEmpty()) {
+            expirationdate = expirationdate.substring(4)+"-"+expirationdate.substring(2,4)+"-"+expirationdate.substring(0,2);
         }
-        try {
-            if (!issuedate.isEmpty()) {
-                Date parse = date.parse(issuedate.replace("<", ""));
-                if (parse != null) {
-                    issuedate = "";
-                    issuedate = newDateFormat.format(parse);
-                }
-            }
-        } catch (ParseException e) {
+        if (!issuedate.isEmpty()) {
+            issuedate = issuedate.substring(4)+"-"+issuedate.substring(2,4)+"-"+issuedate.substring(0,2);
         }
-
-    }
-
-    public String GetResultString() {
-        String str = "";
-//        if (ret == 1) {
-//            str = "correct doc\n";
-//        } else {
-//            str = "incorrect doc\n";
+//        try {
+//            if (!birth.isEmpty()) {
+//                Date parse = date.parse(birth.replace("<", ""));
+//				if (parse != null) {
+//					birth = "";
+//					birth = newDateFormat.format(parse);
+//				}
+//			}
+//        } catch (ParseException e) {
 //        }
-		/*str = str + lines + "\n"
-			 + docType + "\n"
-			 + country + "\n"
-			 + surname + "\n"
-			 + givenname + "\n"
-			 + docnumber + "\n"
-			 + docchecksum + "\n"
-			 + nationality + "\n"
-			 + birth + "\n"
-			 + birthchecksum + "\n"
-			 + sex + "\n"
-			 + expirationdate + "\n"
-			 + expirationchecksum + "\n"
-			 + otherid + "\n"
-			 + otheridchecksum + "\n"
-			 + secondrowchecksum + "\n";*/
+//        try {
+//            if (!expirationdate.isEmpty()) {
+//                Date parse = date.parse(expirationdate.replace("<", ""));
+//				if (parse != null) {
+//					expirationdate = "";
+//					expirationdate = newDateFormat.format(parse);
+//				}
+//			}
+//        } catch (ParseException e) {
+//        }
+//        try {
+//            if (!issuedate.isEmpty()) {
+//                Date parse = date.parse(issuedate.replace("<", ""));
+//                if (parse != null) {
+//                    issuedate = "";
+//                    issuedate = newDateFormat.format(parse);
+//                }
+//            }
+//        } catch (ParseException e) {
+//        }
 
-        str += "Lines : " + lines + "\n"
-                + "Document Type : " + docType + "\n"
-                + "Country : " + country + "\n"
-                + "Surname : " + surname + "\n"
-                + "Given Names : " + givenname + "\n"
-                + "Document No. : " + docnumber + "\n"
-                + "Document Check Number: " + docchecksum + "\n"
-                + "Nationaltiy : " + nationality + "\n"
-                + "Birth Date : " + birth + "\n"
-                + "Birth Check Number: " + birthchecksum + "\n"
-                + "Sex : " + sex + "\n"
-                + "ExpirationDate : " + expirationdate + "\n"
-                + "Expiration Check Number: " + expirationchecksum + "\n";
-
-		if (!issuedate.isEmpty()) {
-			str += "Issue Date: " + issuedate + "\n";
-		}
-
-		if (otherid.length() > 0) {
-			str += "Other ID : " + otherid + "\n"
-					+ "Other ID Check: " + otheridchecksum + "\n";
-		}
-
-		if (!departmentnumber.isEmpty()) {
-			str += "Department Number: " + departmentnumber + "\n";
-		}
-
-//        str += "Flag : " + Integer.toString(ret) + "\n";
-
-        return str;
     }
 
-    public static int getByteLength(byte[] str, int maxLen) {
+    private static int getByteLength(byte[] str, int maxLen) {
         int i, len = 0;
         for (i = 0; i < maxLen; ++i) {
             if (str[i] == 0) {
@@ -194,9 +149,9 @@ public class RecogResult {
     private static RecogResult recogResult;
 
     public static RecogResult getRecogResult() {
-        RecogResult ocrData = recogResult;
-        recogResult = null;
-        return ocrData;
+//        RecogResult ocrData = recogResult;
+//        recogResult = null;
+        return recogResult;
     }
 
     public static void setRecogResult(RecogResult ocrResult) {

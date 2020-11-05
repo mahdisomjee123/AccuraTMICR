@@ -17,6 +17,10 @@ public class CameraSourcePreview extends FrameLayout {
     private final Context context;
     private final OcrCameraPreview ocrCameraPreview;
     private final SurfaceView surfaceView;
+    int childXOffset = 0;
+    int childYOffset = 0;
+    int childWidth = 0;
+    int childHeight = 0;
 
     public CameraSourcePreview(OcrCameraPreview ocrCameraPreview, Context context) {
         super(context);
@@ -75,6 +79,10 @@ public class CameraSourcePreview extends FrameLayout {
             childHeight = layoutHeight;
             childXOffset = (childWidth - layoutWidth) / 2;
         }
+        this.childXOffset = childXOffset;
+        this.childYOffset = childYOffset;
+        this.childWidth = childWidth;
+        this.childHeight = childHeight;
         Util.logd(TAG, "onLayout: (" + childXOffset + "," + childYOffset + ")");
         for (int i = 0; i < getChildCount(); ++i) {
             getChildAt(i).layout(
