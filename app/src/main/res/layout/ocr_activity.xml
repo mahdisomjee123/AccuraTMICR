@@ -15,12 +15,16 @@
 
     <include layout="@layout/custom_frame_layout" />
 
-    <Button
+    <ImageView
         android:id="@+id/btn_flip"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:padding="@dimen/_5dp"
         android:layout_alignParentEnd="true"
-        android:text="flip"/>
+        android:layout_margin="@dimen/_20dp"
+        android:contentDescription="Flip camera"
+        android:text="flip"
+        android:src="@drawable/flip_camera_icon"/>
 
     <com.accurascan.ocr.mrz.customview.CustomTextView
         android:id="@+id/select_type"

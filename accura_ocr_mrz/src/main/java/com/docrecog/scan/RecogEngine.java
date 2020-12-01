@@ -78,6 +78,10 @@ public class RecogEngine {
          */
         abstract void onScannedSuccess(boolean isDone, boolean isMRZRequired);
 
+        void onFaceScanned(Bitmap bitmap){
+
+        }
+
         /**
          * This is called on scanned failed.
          */
@@ -100,7 +104,7 @@ public class RecogEngine {
     public static final int SCAN_TITLE_MRZ_PDF417_FRONT = 4;
     public static final int SCAN_TITLE_MRZ_PDF417_BACK = 5;
     public static final int SCAN_TITLE_DLPLATE = 6;
-    public static final int SCAN_TITLE_DEFAULT = 0;
+    public static final int SCAN_TITLE_DEFAULT = -1;
 
     public static final String ACCURA_ERROR_CODE_MOTION = "0";
     public static final String ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME = "1";
@@ -114,6 +118,9 @@ public class RecogEngine {
     public static final String ACCURA_ERROR_CODE_PHOTO_COPY_DOCUMENT = "9";
     public static final String ACCURA_ERROR_CODE_FACE = "10";
     public static final String ACCURA_ERROR_CODE_MRZ = "11";
+    public static final String ACCURA_ERROR_CODE_PASSPORT_MRZ = "12";
+    public static final String ACCURA_ERROR_CODE_ID_MRZ = "13";
+    public static final String ACCURA_ERROR_CODE_VISA_MRZ = "14";
 
     private static final String TAG = "PassportRecog";
     private byte[] pDic = null;
@@ -663,9 +670,10 @@ public class RecogEngine {
      *
      * @param bmCard document bitmap
      * @param result {@link RecogResult} to get data
+     * @param documentType
      * @return 0 if failed and >0 if success
      */
-    int doRunData(Bitmap bmCard, int facepick, RecogResult result) {
+    int doRunData(Bitmap bmCard, int facepick, RecogResult result, MRZDocumentType documentType) {
         int ret = 1;
         //If fail, empty string.
         // both => 0
@@ -694,7 +702,10 @@ public class RecogEngine {
 //            if (facepick == 1) {
 //                faceBmp = Bitmap.createBitmap(NOR_W, NOR_H, Config.ARGB_8888);
 //            }
-        ret = doRecogBitmap(bmCard, 0, intData, faceBmp, faced, true,0);
+        if (documentType == null) {
+           documentType = MRZDocumentType.NONE;
+        }
+        ret = doRecogBitmap(bmCard, 0, intData, faceBmp, faced, true, documentType.value);
 
         if (ret > 0) {
             if (result.recType == RecType.INIT) {
@@ -775,6 +786,11 @@ public class RecogEngine {
             @Override
             public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
                 scanListener.onScannedSuccess(true, true);
+            }
+
+            @Override
+            void onFaceScanned(Bitmap bitmap) {
+                scanListener.onFaceScanned(bitmap);
             }
 
             @Override
@@ -1156,6 +1172,9 @@ public class RecogEngine {
                                                         if (ocrData.getFaceImage() != null)
                                                             ocrData.getFaceImage().recycle();
                                                         ocrData.setFaceImage(faceBitmap1.copy(Config.ARGB_8888, false));
+                                                        if (scanListener != null) {
+                                                            scanListener.onScannedSuccess(true, true);
+                                                        }
                                                     } else if (result != null) {
                                                         result.faceBitmap = faceBitmap1.copy(Config.ARGB_8888, false);
 //                                                        result.recType = RecType.FACE;
@@ -1163,14 +1182,13 @@ public class RecogEngine {
                                                         if (result.recType == RecType.MRZ) {
                                                             result.bRecDone = true;
                                                         }
-                                                    }
-                                                    if (scanListener != null) {
-                                                        scanListener.onScannedSuccess(true, true);
+                                                        if (scanListener != null) {
+                                                            scanListener.onFaceScanned(faceBitmap1.copy(Config.ARGB_8888, false));
+                                                        }
                                                     }
                                                     image1.recycle();
                                                     image.recycle();
                                                     faceBitmap1.recycle();
-                                                    // TODO Success
                                                 } else if (ic == 10) {
                                                     image1.recycle();
                                                     image.recycle();

@@ -195,7 +195,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             @Override
             public void receiveDetections(Detector.Detections<Face> detections) {
                 if (GlobalData.isPhoneInMotion()) {
-                    onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, "Keep Document Steady", false);
+                    onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, RecogEngine.ACCURA_ERROR_CODE_MOTION, false);
                     return;
                 }
                 SparseArray<Face> faces = detections.getDetectedItems();
@@ -244,8 +244,6 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                 });
 
                             }
-                        }else {
-                            onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, "Blur Detect over Face",true);
                         }
                     }
                 }
@@ -282,7 +280,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
                 /*called when detect data*/
                 if (GlobalData.isPhoneInMotion()) {
-                    onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, "Keep Document Steady", false);
+                    onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, RecogEngine.ACCURA_ERROR_CODE_MOTION, false);
                     return;
                 }
 

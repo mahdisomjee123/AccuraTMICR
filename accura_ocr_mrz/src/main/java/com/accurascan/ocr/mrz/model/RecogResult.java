@@ -1,6 +1,7 @@
 package com.accurascan.ocr.mrz.model;
 
 import android.graphics.Bitmap;
+import android.text.TextUtils;
 
 import com.docrecog.scan.RecogEngine;
 
@@ -77,18 +78,21 @@ public class RecogResult {
                 sex = "FEMALE";
             } else if (sex.equalsIgnoreCase("M")) {
                 sex = "MALE";
-            } else {
+            } else if (sex.equalsIgnoreCase("<")) {
                 sex = "OTHER";
             }
         }
-        if (!birth.isEmpty()) {
-            birth = birth.substring(4)+"-"+birth.substring(2,4)+"-"+birth.substring(0,2);
+        if (!TextUtils.isEmpty(birth)) {
+            birth = birth.replace("<", "");
+            if (birth.length() == 6) birth = birth.substring(4)+"-"+birth.substring(2,4)+"-"+birth.substring(0,2);
         }
-        if (!expirationdate.isEmpty()) {
-            expirationdate = expirationdate.substring(4)+"-"+expirationdate.substring(2,4)+"-"+expirationdate.substring(0,2);
+        if (!TextUtils.isEmpty(expirationdate)) {
+            expirationdate = expirationdate.replace("<", "");
+            if (expirationdate.length() == 6) expirationdate = expirationdate.substring(4)+"-"+expirationdate.substring(2,4)+"-"+expirationdate.substring(0,2);
         }
-        if (!issuedate.isEmpty()) {
-            issuedate = issuedate.substring(4)+"-"+issuedate.substring(2,4)+"-"+issuedate.substring(0,2);
+        if (!TextUtils.isEmpty(issuedate)) {
+            issuedate = issuedate.replace("<", "");
+            if (issuedate.length() == 6) issuedate = issuedate.substring(4)+"-"+issuedate.substring(2,4)+"-"+issuedate.substring(0,2);
         }
 //        try {
 //            if (!birth.isEmpty()) {

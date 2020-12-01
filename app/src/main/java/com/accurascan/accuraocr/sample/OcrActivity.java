@@ -30,6 +30,7 @@ import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.motiondetection.SensorsActivity;
+import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
 
@@ -48,6 +49,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     Dialog types_dialog;
     private String cardName;
     private boolean isBack = false;
+    private MRZDocumentType mrzType;
 
     private static class MyHandler extends Handler {
         private final WeakReference<OcrActivity> mActivity;
@@ -85,6 +87,11 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         init();
 
         recogType = RecogType.detachFrom(getIntent());
+        if (getIntent().hasExtra(MRZDocumentType.class.getName())) {
+            mrzType = MRZDocumentType.detachFrom(getIntent());
+        } else {
+            mrzType = MRZDocumentType.NONE;
+        }
         cardId = getIntent().getIntExtra("card_id", 0);
         countryId = getIntent().getIntExtra("country_id", 0);
         cardName = getIntent().getStringExtra("card_name");
@@ -112,6 +119,8 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         } else if (recogType == RecogType.PDF417) {
             // must have to set data RecogType.PDF417
             cameraView.setCountryId(countryId);
+        } else if (recogType == RecogType.MRZ) {
+            cameraView.setMRZDocumentType(mrzType);
         }
         cameraView.setRecogType(recogType)
                 .setView(linearLayout) // To add camera view
@@ -366,6 +375,12 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 return "Face not detected";
             case RecogEngine.ACCURA_ERROR_CODE_MRZ:
                 return "MRZ not detected";
+            case RecogEngine.ACCURA_ERROR_CODE_PASSPORT_MRZ:
+                return "Passport MRZ not detected";
+            case RecogEngine.ACCURA_ERROR_CODE_ID_MRZ:
+                return "ID card MRZ not detected";
+            case RecogEngine.ACCURA_ERROR_CODE_VISA_MRZ:
+                return "Visa MRZ not detected";
             default:
                 return s;
         }

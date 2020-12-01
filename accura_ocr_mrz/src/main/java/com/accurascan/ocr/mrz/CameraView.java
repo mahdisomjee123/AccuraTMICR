@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
+import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.OcrView;
 import com.docrecog.scan.RecogType;
 import com.docrecog.scan.ScannerView;
@@ -34,6 +35,7 @@ public class CameraView {
     private OcrView ocrView = null;
     private ScannerView scannerView = null;
     private int documentSide = -1;
+    private MRZDocumentType documentType = null;
 
     public CameraView(Activity context) {
         this.context = context;
@@ -69,6 +71,17 @@ public class CameraView {
      */
     public CameraView setCardId(int cardId) {
         this.cardId = cardId;
+        return this;
+    }
+
+    /**
+     * set document type for mrz document(as like Passport, id, visa or other)
+     *
+     * @param documentType {@link MRZDocumentType}
+     * @return
+     */
+    public CameraView setMRZDocumentType(MRZDocumentType documentType){
+        this.documentType = documentType;
         return this;
     }
 
@@ -195,6 +208,9 @@ public class CameraView {
                     .setCardData(countryId, cardId)
                     .setOcrCallBack(this.callback)
                     .setStatusBarHeight(this.statusBarHeight);
+            if (this.type == RecogType.MRZ)
+                ocrView.setMrzDocumentType(documentType != null ? documentType : MRZDocumentType.NONE);
+
             if (this.type == RecogType.OCR) {
                 if (this.documentSide == 0) {
                     ocrView.setFrontSide();

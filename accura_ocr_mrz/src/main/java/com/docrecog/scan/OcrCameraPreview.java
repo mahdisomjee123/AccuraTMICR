@@ -144,6 +144,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private boolean isValidate = false;
     private int titleBarHeight = 0;
     private RecogType recogType = null;
+    private MRZDocumentType mrzDocumentType = MRZDocumentType.NONE;
     private int mRecCnt = 0; //counter for mrz detecting
     private int bRet = 0; //counter for mrz detecting
     private int fCount = 0;
@@ -238,6 +239,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         private Camera camera;
         private Bitmap bmCard;
         private int ret;
+        private long end;
 
         public RecogThread(OcrCameraPreview activity, byte[] bytes, Camera camera) {
             reference = new WeakReference<>(activity);
@@ -288,7 +290,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                         if (mReference.recogEngine.isMrzEnable) {
                                             mReference.g_recogResult.lines = "";
 //                                            ret = mReference.recogEngine.doRunData(data, size.width, size.height, 0, mReference.mDisplayRotation, mReference.g_recogResult);
-                                            ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult);
+                                            ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType);
                                             if (ret > 0) {
                                                 mReference.checkmrz = 0;
                                             }
@@ -325,24 +327,45 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                             } else if (mReference.recogEngine.checkValid(bmCard)) {
                                 if (mReference.recogType == RecogType.MRZ) {
                                     Bitmap docBmp = bmCard.copy(Bitmap.Config.ARGB_8888, false);
-                                    if (mReference.g_recogResult.recType == RecogEngine.RecType.INIT) {
-                                        ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult);
-                                        //                            if (ret <= 0 && mRecCnt > 2) {
-
-                                        //                                if (mRecCnt % 4 == 1)
-                                        //                            faceret = recogEngine.doRunFaceDetect(bmCard, g_recogResult);
-                                        if (/*recogEngine.checkValid(bmCard) && */mReference.g_recogResult.faceBitmap == null) {
+                                    if (mReference.mrzDocumentType == MRZDocumentType.PASSPORT_MRZ || mReference.mrzDocumentType == MRZDocumentType.VISA_MRZ) {
+                                        mReference.g_recogResult.recType = RecogEngine.RecType.INIT;
+                                        long start = System.currentTimeMillis();
+                                        Runnable runnable = new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                if (end < start) {
+                                                    // Concat _clear with message to remove message after few seconds.
+                                                    mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING.concat("_clear")/*"Processing..."*/);
+                                                }
+                                            }
+                                        };
+                                        Runnable runnable1 = () -> new Handler().postDelayed(runnable, 1800);
+                                        mReference.mActivity.runOnUiThread(runnable1);
+                                        ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType);
+                                        end = System.currentTimeMillis();
+                                        if (ret == 1) {
+                                            mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING/*"Processing..."*/);
+                                            Util.logd("ocr_log", "detectFace: Call");
                                             mReference.recogEngine.doFaceDetect(mReference.mRecCnt, docBmp, null, mReference.g_recogResult, new RecogEngine.ScanListener() {
 
                                                 @Override
                                                 void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+//
+                                                }
+
+                                                @Override
+                                                void onFaceScanned(Bitmap bitmap) {
+                                                    Util.logd("ocr_log", "detectFace: Done " + (mReference.g_recogResult.faceBitmap != null));
+
                                                     if (mReference.recogType == RecogType.MRZ) {
                                                         if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && !mReference.g_recogResult.lines.equalsIgnoreCase("")) {
+                                                            mReference.g_recogResult.faceBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false);
+                                                            Util.logd(TAG, "INIT");
                                                             mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
                                                             mReference.sendInformation();
                                                         } else {
-                                                            mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
-                                                            mReference.g_recogResult.recType = RecogEngine.RecType.FACE;
+                                                            mReference.g_recogResult.recType = RecogEngine.RecType.INIT;
+                                                            mReference.g_recogResult.faceBitmap = null;
                                                             mReference.refreshPreview();
                                                         }
                                                         bmCard.recycle();
@@ -350,105 +373,156 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                                     }
                                                 }
                                             });
+                                        } else {
+                                            /*if (ret > 0 || ret == -1) {
+                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_RETRYING);
+                                            } else*/ if (ret == -10) {
+                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PASSPORT_MRZ);
+                                            } else if (ret == -11) {
+                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_ID_MRZ);
+                                            } else if (ret == -12) {
+                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_VISA_MRZ);
+                                            } /*else if (ret == -13) {
+                                                mReference.onUpdateProcess("Driving MRZ not detected");// TODO add tag or remove message
+                                            }*/ else if (ret == -3) {
+                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MRZ);
+                                            }
+                                            mReference.refreshPreview();
+                                            bmCard.recycle();
                                         }
-                                        //                            }
-
                                         mReference.mRecCnt++; //counter increases
-                                    } else if (mReference.g_recogResult.recType == RecogEngine.RecType.FACE) { //have to do mrz
-                                        ret = mReference.recogEngine.doRunData(docBmp, 0, mReference.g_recogResult);
-                                        //                                    ret = mReference.recogEngine.doRunData(data, size.width, size.height, 0, mReference.mDisplayRotation, mReference.g_recogResult);
-                                        if (mReference.bRet > -1) {
-                                            mReference.bRet++;
-                                        }
-                                        mReference.mActivity.runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                if (ret > 0) {
-                                                    mReference.mRecCnt = 0; //counter sets 0
-                                                    Bitmap docBmp = bmCard;
+                                    } else {
+                                        if (mReference.g_recogResult.recType == RecogEngine.RecType.INIT) {
+                                            ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType);
+                                            //                            if (ret <= 0 && mRecCnt > 2) {
 
-                                                    if ((mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && !mReference.g_recogResult.bRecDone) ||
-                                                            (mReference.g_recogResult.recType == RecogEngine.RecType.FACE && mReference.g_recogResult.bRecDone)) {
-                                                        if (mReference.bRet > 3 || mReference.bRet == -1) {
-                                                            mReference.g_recogResult.docBackBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-                                                        } else {
+                                            //                                if (mRecCnt % 4 == 1)
+                                            //                            faceret = recogEngine.doRunFaceDetect(bmCard, g_recogResult);
+                                            if (mReference.g_recogResult.faceBitmap == null) {
+                                                mReference.recogEngine.doFaceDetect(mReference.mRecCnt, docBmp, null, mReference.g_recogResult, new RecogEngine.ScanListener() {
+
+                                                    @Override
+                                                    void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+
+                                                    }
+
+                                                    @Override
+                                                    void onFaceScanned(Bitmap bitmap) {
+                                                        if (mReference.recogType == RecogType.MRZ) {
+                                                            if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && !mReference.g_recogResult.lines.equalsIgnoreCase("")) {
+                                                                mReference.g_recogResult.faceBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false);
+                                                                mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                                mReference.sendInformation();
+                                                            } else {
+                                                                mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                                mReference.g_recogResult.recType = RecogEngine.RecType.FACE;
+                                                                mReference.refreshPreview();
+                                                            }
+                                                            bmCard.recycle();
+                                                            docBmp.recycle();
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                            //                            }
+
+                                            mReference.mRecCnt++; //counter increases
+                                        } else if (mReference.g_recogResult.recType == RecogEngine.RecType.FACE) { //have to do mrz
+                                            ret = mReference.recogEngine.doRunData(docBmp, 0, mReference.g_recogResult, mReference.mrzDocumentType);
+                                            //                                    ret = mReference.recogEngine.doRunData(data, size.width, size.height, 0, mReference.mDisplayRotation, mReference.g_recogResult);
+                                            if (mReference.bRet > -1) {
+                                                mReference.bRet++;
+                                            }
+                                            mReference.mActivity.runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    if (ret > 0) {
+                                                        mReference.mRecCnt = 0; //counter sets 0
+                                                        Bitmap docBmp = bmCard;
+
+                                                        if ((mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && !mReference.g_recogResult.bRecDone) ||
+                                                                (mReference.g_recogResult.recType == RecogEngine.RecType.FACE && mReference.g_recogResult.bRecDone)) {
+                                                            if (mReference.bRet > 3 || mReference.bRet == -1) {
+                                                                mReference.g_recogResult.docBackBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+                                                            } else {
+                                                                mReference.g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+                                                            }
+                                                        }
+
+                                                        if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ) {
                                                             mReference.g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
                                                         }
-                                                    }
 
-                                                    if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ) {
-                                                        mReference.g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-                                                    }
+                                                        if (mReference.g_recogResult.recType == RecogEngine.RecType.BOTH ||
+                                                                mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && mReference.g_recogResult.bRecDone)
+                                                            mReference.g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
 
-                                                    if (mReference.g_recogResult.recType == RecogEngine.RecType.BOTH ||
-                                                            mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && mReference.g_recogResult.bRecDone)
-                                                        mReference.g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+                                                        docBmp.recycle();
+                                                        bmCard.recycle();
 
-                                                    docBmp.recycle();
-                                                    bmCard.recycle();
-
-                                                    if (mReference.g_recogResult.bRecDone) {
-                                                        mReference.sendInformation();
-                                                    } else {
-                                                        //                                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, true);
-                                                        mReference.refreshPreview();
-                                                    }
-                                                } else {
-                                                /*if (mRecCnt > 3 && faceret > 0) //detected only face, so need to detect mrz
-                                                {
-                                                    mRecCnt = 0; //counter sets 0
-                                                    faceret = 0;
-                                                    g_recogResult.recType = RecogEngine.RecType.FACE;
-
-                                                    Bitmap docBmp = bmCard;
-                                                    g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
-                //                                    docBmp.recycle();
-                                                } else*/
-                                                bmCard.recycle();
-                                                if (ret == -3) {
-                                                    mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MRZ);
-                                                }/* else if (ret == -10) {
-                                                    mReference.onUpdateProcess("Passport MRZ not detected");
-                                                } else if (ret == -11) {
-                                                    mReference.onUpdateProcess("ID MRZ not detected");
-                                                } else if (ret == -12) {
-                                                    mReference.onUpdateProcess("Visa MRZ not detected");
-                                                } else if (ret == -13) {
-                                                    mReference.onUpdateProcess("Driving MRZ not detected");
-                                                }*/
-                                                if (mReference.bRet == 3) {
-                                                    mReference.bRet = -1;
-                                                    mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null, true);
-                                                }
-
-                                                    if (mReference.g_recogResult.recType == RecogEngine.RecType.FACE || mReference.g_recogResult.faceBitmap != null) {
-                                                        mReference.refreshPreview();
-                                                    }
-                                                }
-                                            }
-
-                                        });
-                                    } else if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ) { //have to do face
-                                        if (mReference.g_recogResult.faceBitmap == null) {
-                                            mReference.recogEngine.doFaceDetect(mReference.mRecCnt, docBmp, null, mReference.g_recogResult, new RecogEngine.ScanListener() {
-
-                                                @Override
-                                                void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-                                                    if (mReference.recogType == RecogType.MRZ) {
-                                                        if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && mReference.g_recogResult.lines.equalsIgnoreCase("")) {
-                                                            mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                        if (mReference.g_recogResult.bRecDone) {
                                                             mReference.sendInformation();
-                                                        }
-                                                        else {
-                                                            mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
-                                                            bmCard.recycle();
-                                                            mReference.g_recogResult.recType = RecogEngine.RecType.FACE;
+                                                        } else {
+                                                            //                                    onProcessUpdate(mActivity.getResources().getString(R.string.scan_front), null, true);
                                                             mReference.refreshPreview();
                                                         }
+                                                    } else {
+                                                    /*if (mRecCnt > 3 && faceret > 0) //detected only face, so need to detect mrz
+                                                    {
+                                                        mRecCnt = 0; //counter sets 0
+                                                        faceret = 0;
+                                                        g_recogResult.recType = RecogEngine.RecType.FACE;
+
+                                                        Bitmap docBmp = bmCard;
+                                                        g_recogResult.docFrontBitmap = docBmp.copy(Bitmap.Config.ARGB_8888, false);
+                    //                                    docBmp.recycle();
+                                                    } else*/
                                                         bmCard.recycle();
+                                                        if (ret == -3) {
+                                                            mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MRZ);
+                                                        } else if (mReference.mrzDocumentType == MRZDocumentType.ID_CARD_MRZ && ret == -11) {
+                                                            mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_ID_MRZ);
+                                                        }
+                                                        if (mReference.bRet == 3) {
+                                                            mReference.bRet = -1;
+                                                            mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null, true);
+                                                        }
+
+                                                        if (mReference.g_recogResult.recType == RecogEngine.RecType.FACE || mReference.g_recogResult.faceBitmap != null) {
+                                                            mReference.refreshPreview();
+                                                        }
                                                     }
                                                 }
+
                                             });
+                                        } else if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ) { //have to do face
+                                            if (mReference.g_recogResult.faceBitmap == null) {
+                                                mReference.recogEngine.doFaceDetect(mReference.mRecCnt, docBmp, null, mReference.g_recogResult, new RecogEngine.ScanListener() {
+
+                                                    @Override
+                                                    void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+
+                                                    }
+
+                                                    @Override
+                                                    void onFaceScanned(Bitmap bitmap) {
+                                                        if (mReference.recogType == RecogType.MRZ) {
+                                                            if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && mReference.g_recogResult.lines.equalsIgnoreCase("")) {
+                                                                mReference.g_recogResult.faceBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false);
+                                                                mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                                mReference.sendInformation();
+                                                            }
+                                                            else {
+                                                                mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                                bmCard.recycle();
+                                                                mReference.g_recogResult.recType = RecogEngine.RecType.FACE;
+                                                                mReference.refreshPreview();
+                                                            }
+                                                            bmCard.recycle();
+                                                        }
+                                                    }
+                                                });
+                                            }
                                         }
                                     }
                                 } else if (mReference.recogType == RecogType.DL_PLATE) {
@@ -462,7 +536,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                         mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK, null, true);
                                     }
                                 }
-                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_BLUR_DOCUMENT);
+//                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_BLUR_DOCUMENT);
                                 mReference.refreshPreview();
                             }
                         } else {
@@ -589,6 +663,11 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     OcrCameraPreview setType(RecogType recogType) {
         this.recogType = recogType;
         return this;
+    }
+
+
+    public void setMrzDocumentType(MRZDocumentType mrzDocumentType) {
+        this.mrzDocumentType = mrzDocumentType;
     }
 
 //    /**

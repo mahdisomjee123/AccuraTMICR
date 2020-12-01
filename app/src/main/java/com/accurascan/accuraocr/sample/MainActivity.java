@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.accurascan.ocr.mrz.model.ContryModel;
 import com.accurascan.ocr.mrz.util.Util;
+import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
 
@@ -53,7 +54,12 @@ public class MainActivity extends AppCompatActivity {
                 }
                 Log.e(TAG, "handleMessage: " + msg.what);
                 if (msg.what == 1) {
-                    if (activity.sdkModel.isMRZEnable) activity.btnMrz.setVisibility(View.VISIBLE);
+                    if (activity.sdkModel.isMRZEnable) {
+                        activity.btnIdMrz.setVisibility(View.VISIBLE);
+                        activity.btnVisaMrz.setVisibility(View.VISIBLE);
+                        activity.btnPassportMrz.setVisibility(View.VISIBLE);
+                        activity.btnMrz.setVisibility(View.VISIBLE);
+                    }
                     if (activity.sdkModel.isAllBarcodeEnable)
                         activity.btnBarcode.setVisibility(View.VISIBLE);
                     if (activity.sdkModel.isOCREnable && activity.modelList != null) {
@@ -97,12 +103,12 @@ public class MainActivity extends AppCompatActivity {
                         if (activity.sdkModel.isOCREnable)
                             activity.modelList = recogEngine.getCardList(activity);
 
-                        recogEngine.setBlurPercentage(activity, 50);
+                        recogEngine.setBlurPercentage(activity, 40);
                         recogEngine.setFaceBlurPercentage(activity, 50);
-                        recogEngine.setGlarePercentage(activity, 6, 98);
+                        recogEngine.setGlarePercentage(activity, 5, 90);
                         recogEngine.isCheckPhotoCopy(activity, false);
                         recogEngine.SetHologramDetection(activity, true);
-                        recogEngine.setLowLightTolerance(activity, 30);
+                        recogEngine.setLowLightTolerance(activity, 39);
                         recogEngine.setMotionData(activity, 15);
 
                         activity.handler.sendEmptyMessage(1);
@@ -124,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Object> cardList = new ArrayList<>();
     private List<ContryModel> modelList;
     private int selectedPosition = -1;
-    private View btnMrz, btnBarcode, lout_country;
+    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBarcode, lout_country;
     private RecogEngine.SDKModel sdkModel;
     private String responseMessage;
 
@@ -148,7 +154,45 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
                 RecogType.MRZ.attachTo(intent);
+                MRZDocumentType.NONE.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.other_mrz));
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
+        });
+
+        btnPassportMrz = findViewById(R.id.lout_passport_mrz);
+        btnIdMrz = findViewById(R.id.lout_id_mrz);
+        btnVisaMrz = findViewById(R.id.lout_visa_mrz);
+        btnPassportMrz.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
+                RecogType.MRZ.attachTo(intent);
+                MRZDocumentType.PASSPORT_MRZ.attachTo(intent);
                 intent.putExtra("card_name", getResources().getString(R.string.passport_id_mrz));
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
+        });
+        btnIdMrz.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
+                RecogType.MRZ.attachTo(intent);
+                MRZDocumentType.ID_CARD_MRZ.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.id_mrz));
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
+        });
+        btnVisaMrz.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
+                RecogType.MRZ.attachTo(intent);
+                MRZDocumentType.VISA_MRZ.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.visa_mrz));
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }
