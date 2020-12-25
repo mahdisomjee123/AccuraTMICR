@@ -216,6 +216,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
     }
 
     public void onDestroy(){
+        scanCallBack = null;
         destroy();
     }
 

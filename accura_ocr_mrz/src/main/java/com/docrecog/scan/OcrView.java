@@ -216,6 +216,7 @@ public abstract class OcrView extends OcrCameraPreview {
      * call destroy method to stop camera preview
      */
     public void destroy() {
+        ocrCallBack = null;
         onDestroy();
     }
 

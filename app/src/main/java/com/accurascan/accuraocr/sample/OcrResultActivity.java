@@ -291,7 +291,8 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         addLayout("Correct Document check No.", recogResult.correctdocchecksum);
         addLayout("Country", recogResult.country);
         addLayout("Nationality", recogResult.nationality);
-        addLayout("Sex", recogResult.sex);
+        String s = (recogResult.sex.equals("M")) ? "Male" : ((recogResult.sex.equals("F")) ? "Female" : recogResult.sex);
+        addLayout("Sex", s);
         addLayout("Date of Birth", recogResult.birth);
         addLayout("Birth Check No.", recogResult.birthchecksum);
         addLayout("Correct Birth Check No.", recogResult.correctbirthchecksum);

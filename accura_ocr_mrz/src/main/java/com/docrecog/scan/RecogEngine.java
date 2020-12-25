@@ -800,10 +800,10 @@ public class RecogEngine {
                         doFaceDetect(1, BitmapUtil.rotateBitmap(bitmap, 180), ocrData, result, scanListener);
                     } else {
                         callBack.onUpdateProcess(ACCURA_ERROR_CODE_FACE);
-                        callBack.onScannedSuccess(false, false);
+                        scanListener.onScannedSuccess(false, false);
                     }
                 } else {
-                    callBack.onScannedSuccess(false, false);
+                    scanListener.onScannedSuccess(false, false);
                 }
             }
         });
@@ -820,7 +820,11 @@ public class RecogEngine {
         if (detector == null) {
             detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
         }
-        final Bitmap docBmp = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+//        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
+        int scaledWidth = 1200;
+        float ratio = scaledWidth/(float) bmCard.getWidth();
+        int scaledHeight = (int) (bmCard.getHeight()*ratio);
+        Bitmap docBmp = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
         detector.processImage(FirebaseVisionImage.fromBitmap(docBmp))
                 .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
                     @Override

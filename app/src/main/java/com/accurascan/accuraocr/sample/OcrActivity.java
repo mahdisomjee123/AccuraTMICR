@@ -224,16 +224,13 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     @Override
     public void onScannedComplete(Object result) {
         Log.e("TAG", "onScannedComplete: ");
-        Intent intent = new Intent(this, OcrResultActivity.class);
         if (result != null) {
             if (result instanceof OcrData) {
                 if (recogType == RecogType.OCR) {
                     if (isBack || !cameraView.isBackSideAvailable()) {
                         OcrData.setOcrResult((OcrData) result);
-                        /**
-                         * @recogType is {@link RecogType#OCR}*/
-                        RecogType.OCR.attachTo(intent);
-                        startActivityForResult(intent, 101);
+                        /** @recogType is {@link RecogType#OCR}*/
+                        sendDataToResultActivity(RecogType.OCR);
 
                     } else {
                         isBack = true;
@@ -241,36 +238,36 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                         cameraView.flipImage(imageFlip);
                     }
                 } else if (recogType == RecogType.DL_PLATE) {
-                    /**
-                     * @recogType is {@link RecogType#DL_PLATE}*/
+                    /** @recogType is {@link RecogType#DL_PLATE}*/
                     OcrData.setOcrResult((OcrData) result);
-                    RecogType.DL_PLATE.attachTo(intent);
-                    startActivityForResult(intent, 101);
+                    sendDataToResultActivity(RecogType.DL_PLATE);
                 }
             } else if (result instanceof RecogResult) {
-                /**
-                 *  @recogType is {@link RecogType#MRZ}*/
+                /** @recogType is {@link RecogType#MRZ}*/
                 RecogResult.setRecogResult((RecogResult) result);
-                RecogType.MRZ.attachTo(intent);
-                startActivityForResult(intent, 101);
+                sendDataToResultActivity(RecogType.MRZ);
             } else if (result instanceof PDF417Data) {
-                /**
-                 *  @recogType is {@link RecogType#PDF417}*/
+                /** @recogType is {@link RecogType#PDF417}*/
                 if (isBack || !cameraView.isBackSideAvailable()) {
                     PDF417Data.setPDF417Result((PDF417Data) result);
-                    RecogType.PDF417.attachTo(intent);
-                    startActivityForResult(intent, 101);
+                    sendDataToResultActivity(RecogType.PDF417);
                 } else {
                     isBack = true;
                     cameraView.setBackSide();
                     cameraView.flipImage(imageFlip);
                 }
             } else if (result instanceof String) {
-                /**
-                 *  @recogType is {@link RecogType#BARCODE}*/
+                /** @recogType is {@link RecogType#BARCODE}*/
                 setResultDialog((String) result);
             }
         } else Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
+    }
+
+    private void sendDataToResultActivity(RecogType recogType) {
+        if (cameraView != null) cameraView.release(true);
+        Intent intent = new Intent(this, OcrResultActivity.class);
+        recogType.attachTo(intent);
+        startActivityForResult(intent, 101);
     }
 
     /**

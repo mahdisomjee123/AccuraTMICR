@@ -1,10 +1,11 @@
 package com.accurascan.ocr.mrz.model;
 
-import com.google.gson.Gson;
+import androidx.annotation.Keep;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Keep
 public class ContryModel {
     public int country_id;
     public String country_name;
@@ -34,6 +35,7 @@ public class ContryModel {
         this.cards = cards;
     }
 
+    @Keep
     public class CardModel {
         public int card_id;
         public int card_type; // 0 - OCR , 1 - PDF417

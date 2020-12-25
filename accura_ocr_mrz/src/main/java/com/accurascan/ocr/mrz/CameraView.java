@@ -321,8 +321,10 @@ public class CameraView {
      * Call destroy method to release camera
      */
     public void onDestroy() {
-        if (mediaPlayer != null)
+        if (mediaPlayer != null) {
             mediaPlayer.release();
+            mediaPlayer = null;
+        }
         if (ocrView != null) {
             ocrView.destroy();
         } else if (scannerView != null) {
@@ -374,6 +376,12 @@ public class CameraView {
             if (audioManager != null)
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, audioManager.getStreamVolume(AudioManager.STREAM_MUSIC), 0);
             mediaPlayer.start();
+        }
+    }
+
+    public void release(boolean b) {
+        if (ocrView != null) {
+            ocrView.closeEngine(b);
         }
     }
 }

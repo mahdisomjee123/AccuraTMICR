@@ -260,8 +260,8 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                     int[] ints = ImageProcessing.decodeYUV420SPtoRGB(data, size.width, size.height);
                     if (!mReference.detection.detect(ints, size.width, size.height, RecogEngine.mT, RecogEngine.v)/*mReference.recogEngine.doCheckFrame(data, size.width, size.height) > 0*/) {
-                        if (mReference.newMessage.contains(RecogEngine.ACCURA_ERROR_CODE_MOTION))
-                            mReference.onProcessUpdate(-1, "", false);
+//                        if (mReference.newMessage.contains(RecogEngine.ACCURA_ERROR_CODE_MOTION))
+//                            mReference.onProcessUpdate(-1, "", false);
 //                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType);
                         bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType, mReference.cameraSourcePreview.childXOffset, mReference.cameraSourcePreview.childYOffset, mReference.cameraSourcePreview.childWidth, mReference.cameraSourcePreview.childHeight);
 
@@ -350,7 +350,27 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                                                 @Override
                                                 void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-//
+                                                    if (mReference.mrzDocumentType == MRZDocumentType.VISA_MRZ) {
+                                                        if (!isDone && mReference.bRet > -1) {
+                                                            mReference.bRet++;
+                                                        }
+                                                        if (mReference.recogType == RecogType.MRZ) {
+                                                            if ((mReference.bRet > 2 || mReference.bRet == -1) && mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && !mReference.g_recogResult.lines.equalsIgnoreCase("")) {
+                                                                Util.logd(TAG, "INIT");
+                                                                mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                                mReference.sendInformation();
+                                                            } else {
+                                                                mReference.onScannedSuccess(isDone, isMRZRequired);
+                                                            }
+                                                            bmCard.recycle();
+                                                            docBmp.recycle();
+                                                        }
+                                                    } else {
+                                                        mReference.onScannedSuccess(isDone, isMRZRequired);
+                                                        bmCard.recycle();
+                                                        docBmp.recycle();
+                                                    }
+
                                                 }
 
                                                 @Override
@@ -383,7 +403,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                             } else if (ret == -12) {
                                                 mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_VISA_MRZ);
                                             } /*else if (ret == -13) {
-                                                mReference.onUpdateProcess("Driving MRZ not detected");// TODO add tag or remove message
+                                                mReference.onUpdateProcess("D MRZ not detected");
                                             }*/ else if (ret == -3) {
                                                 mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MRZ);
                                             }
@@ -403,7 +423,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                                                     @Override
                                                     void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-
+                                                        mReference.onScannedSuccess(isDone, isMRZRequired);
                                                     }
 
                                                     @Override
@@ -478,10 +498,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     //                                    docBmp.recycle();
                                                     } else*/
                                                         bmCard.recycle();
-                                                        if (ret == -3) {
-                                                            mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MRZ);
-                                                        } else if (mReference.mrzDocumentType == MRZDocumentType.ID_CARD_MRZ && ret == -11) {
-                                                            mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_ID_MRZ);
+                                                        if (mReference.bRet == -1) {
+                                                            if (ret == -3) {
+                                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_MRZ);
+                                                            } else if (mReference.mrzDocumentType == MRZDocumentType.ID_CARD_MRZ && ret == -11) {
+                                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_ID_MRZ);
+                                                            }
                                                         }
                                                         if (mReference.bRet == 3) {
                                                             mReference.bRet = -1;
@@ -501,7 +523,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                                                     @Override
                                                     void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-
+                                                        mReference.onScannedSuccess(isDone, isMRZRequired);
                                                     }
 
                                                     @Override
@@ -1105,6 +1127,10 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //            mediaPlayer.release();
         stopPreview();
         recogEngine.closeEngine(1);
+    }
+
+    public void closeEngine(boolean b) {
+        recogEngine.closeEngine(b ? 0 : 1);
     }
 
     private class MainHandler extends Handler {
@@ -1990,6 +2016,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     }
 
     private String newMessage = "";
+    private int isContinue = 0;
 
     @Override
     public void onUpdateProcess(String s) {
@@ -1999,13 +2026,15 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             newMessage = s;
             // if s is equal to RecogEngine.ACCURA_ERROR_CODE_PROCESSING.concat("_clear") then remove "_clear" message on displaying
             onProcessUpdate(-1, s.equals(RecogEngine.ACCURA_ERROR_CODE_PROCESSING.concat("_clear")) ? RecogEngine.ACCURA_ERROR_CODE_PROCESSING : s, false);
-            if (!s.equals(RecogEngine.ACCURA_ERROR_CODE_PROCESSING)) {
+            if (!s.equals(RecogEngine.ACCURA_ERROR_CODE_PROCESSING) && isContinue == 0) {
+                isContinue = 1;
                 final Runnable runnable = () -> {
                     try {
-                        if (!s.equals(RecogEngine.ACCURA_ERROR_CODE_DARK_DOCUMENT)) {
+                        if (!s.equals(RecogEngine.ACCURA_ERROR_CODE_DARK_DOCUMENT) && !newMessage.equals(RecogEngine.ACCURA_ERROR_CODE_PROCESSING)) {
                             newMessage = "";
                             onProcessUpdate(-1, "", false);
                         }
+                        isContinue = 0;
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

@@ -3,6 +3,8 @@ package com.accurascan.ocr.mrz.model;
 import android.graphics.Bitmap;
 import android.text.TextUtils;
 
+import androidx.annotation.Keep;
+
 import com.docrecog.scan.RecogEngine;
 
 import java.io.UnsupportedEncodingException;
@@ -12,6 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+@Keep
 public class RecogResult {
     public String lines = "";//
     public String docType = "";//
@@ -73,15 +76,15 @@ public class RecogResult {
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; secondrowchecksum = convchar2string(tmp);
         len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctsecondrowchecksum = convchar2string(tmp);
 
-        if (!sex.isEmpty()) {
-            if (sex.equalsIgnoreCase("F")) {
-                sex = "FEMALE";
-            } else if (sex.equalsIgnoreCase("M")) {
-                sex = "MALE";
-            } else if (sex.equalsIgnoreCase("<")) {
-                sex = "OTHER";
-            }
-        }
+//        if (!sex.isEmpty()) {
+//            if (sex.equalsIgnoreCase("F")) {
+//                sex = "FEMALE";
+//            } else if (sex.equalsIgnoreCase("M")) {
+//                sex = "MALE";
+//            } else if (sex.equalsIgnoreCase("<")) {
+//                sex = "OTHER";
+//            }
+//        }
         if (!TextUtils.isEmpty(birth)) {
             birth = birth.replace("<", "");
             if (birth.length() == 6) birth = birth.substring(4)+"-"+birth.substring(2,4)+"-"+birth.substring(0,2);

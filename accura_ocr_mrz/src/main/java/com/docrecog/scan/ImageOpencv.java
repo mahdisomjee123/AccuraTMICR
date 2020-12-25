@@ -3,8 +3,11 @@ package com.docrecog.scan;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 
+import androidx.annotation.Keep;
+
 import org.opencv.core.Mat;
 
+@Keep
 public class ImageOpencv {
     public String message = "";
     public boolean isSucess = false;
