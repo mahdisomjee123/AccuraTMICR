@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.accurascan.ocr.mrz.model.ContryModel;
+import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.Util;
 import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.RecogEngine;
@@ -93,8 +94,10 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     // doWorkNative();
                     RecogEngine recogEngine = new RecogEngine();
+                    AccuraLog.enableLogs(true); // make sure to disable logs in release mode
                     recogEngine.setDialog(false); // setDialog(false) To set your custom dialog for license validation
                     activity.sdkModel = recogEngine.initEngine(activity);
+                    AccuraLog.loge(TAG, "Initialized Engine : " + activity.sdkModel.i + " -> " + activity.sdkModel.message);
                     activity.responseMessage = activity.sdkModel.message;
 
                     if (activity.sdkModel.i >= 0) {
@@ -170,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
                 RecogType.MRZ.attachTo(intent);
                 MRZDocumentType.PASSPORT_MRZ.attachTo(intent);
-                intent.putExtra("card_name", getResources().getString(R.string.passport_id_mrz));
+                intent.putExtra("card_name", getResources().getString(R.string.passport_mrz));
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }

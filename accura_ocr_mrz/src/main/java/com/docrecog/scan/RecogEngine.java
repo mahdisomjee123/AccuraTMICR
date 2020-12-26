@@ -23,6 +23,7 @@ import com.accurascan.ocr.mrz.model.ContryModel;
 import com.accurascan.ocr.mrz.model.InitModel;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.RecogResult;
+import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -419,6 +420,7 @@ public class RecogEngine {
 //        init();
         DisplayMetrics dm = context.getResources().getDisplayMetrics();
         String s = loadOCR(context, context.getAssets(), countryId, cardId, dm.widthPixels);
+        AccuraLog.loge(TAG, "lOC : "+s );
         try {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
@@ -463,7 +465,7 @@ public class RecogEngine {
     }
 
     /**
-     * Initialized ocr
+     * Initialized scanner
      *
      * @param context   is activity context
      * @param countryId is country code
@@ -474,6 +476,7 @@ public class RecogEngine {
     InitModel initScanner(Context context, int countryId) {
 
         String s = loadScanner(context, context.getAssets(), countryId);
+        AccuraLog.loge(TAG, "lSC : "+s );
         try {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
@@ -498,6 +501,7 @@ public class RecogEngine {
     InitModel initNumberPlat(Context context, int countryId, int cardId) {
 
         String s = loadNumberPlat(context, countryId, cardId);
+        AccuraLog.loge(TAG, "lNP : "+s );
         try {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
@@ -618,6 +622,7 @@ public class RecogEngine {
             if (mapResult != null && !mapResult.equals("")) {
                 JSONObject jsonObject = new JSONObject(mapResult);
                 int ic = jsonObject.getInt("responseCode");
+                AccuraLog.loge(TAG, "Detect : "+mapResult );
                 if (ic == 1) {
                     return new Gson().fromJson(jsonObject.get("data").toString(), OcrData.MapData.class);
                 } else if (ic == 10) {
@@ -628,7 +633,7 @@ public class RecogEngine {
                 }
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            AccuraLog.loge(TAG, Log.getStackTraceString(e));
         }
         return null;
 
@@ -648,6 +653,7 @@ public class RecogEngine {
         Mat outMat = new Mat();
         frames = checkDocument(clone.getNativeObjAddr(), outMat.getNativeObjAddr(), v);
         if (frames != null) {
+            AccuraLog.loge(TAG, "CCIF is-"+ frames.message);
             if (!frames.message.isEmpty() && this.callBack != null) {
                 this.callBack.onUpdateProcess(frames.message);
             }
@@ -661,6 +667,7 @@ public class RecogEngine {
             }
             return frames;
         } else {
+            AccuraLog.loge(TAG, "CCIF Data is null");
             return null;
         }
     }
@@ -706,7 +713,7 @@ public class RecogEngine {
            documentType = MRZDocumentType.NONE;
         }
         ret = doRecogBitmap(bmCard, 0, intData, faceBmp, faced, true, documentType.value);
-
+        AccuraLog.loge(TAG, "GetM - " + documentType + "," + ret);
         if (ret > 0) {
             if (result.recType == RecType.INIT) {
                 if (faced[0] == 0) {
@@ -776,7 +783,7 @@ public class RecogEngine {
      * @param scanListener   call back required to getting success or failed response
      */
     void doFaceDetect(int i, Bitmap bitmap, OcrData ocrData, RecogResult result, ScanListener scanListener) {
-
+        AccuraLog.loge(TAG, "MF Detect");
         detectFace(bitmap, ocrData, result, new ScanListener() {
             @Override
             public void onUpdateProcess(String s) {
@@ -820,6 +827,7 @@ public class RecogEngine {
         if (detector == null) {
             detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
         }
+        AccuraLog.loge(TAG, "Recognize Data");
 //        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
         int scaledWidth = 1200;
         float ratio = scaledWidth/(float) bmCard.getWidth();
@@ -849,6 +857,7 @@ public class RecogEngine {
                         docBmp.recycle();
                         if (!TextUtils.isEmpty(MlKitOcr)) {
                             int ret = doDetectNumberPlate(MlKitOcr.toString(), intData, countryId, cardId);
+                            AccuraLog.loge(TAG, "DL - " + ret);
                             if (ret > 0) {
                                 int i, k = 0, len;
                                 byte[] tmp = new byte[100];
@@ -875,7 +884,7 @@ public class RecogEngine {
                 }).addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
-
+                AccuraLog.loge(TAG, Log.getStackTraceString(e));
             }
         });
 
@@ -921,6 +930,7 @@ public class RecogEngine {
         if (detector == null) {
             detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
         }
+        AccuraLog.loge(TAG, "Recognize Data");
         int scaledWidth = 1200;
         float ratio = scaledWidth/(float) image.getWidth();
         int scaledHeight = (int) (image.getHeight()*ratio);
@@ -1072,6 +1082,7 @@ public class RecogEngine {
                 faceDetector.detectInImage(firebaseVisionImage)
                         .addOnSuccessListener(faces -> {
                             if (faces.size() > 0) {
+                                AccuraLog.loge(TAG, "onFDetect");
                                 int index = 0;
                                 int indexW = 0;
                                 int indexH = 0;
@@ -1096,6 +1107,7 @@ public class RecogEngine {
 //                                        || (rotZ > 45 && rotZ < 135 && !(rotZ > 90 - 20 && rotZ < 90 + 20))) {
 //                                if ((rotZ < -45 && rotZ >= -135) || (rotZ > 45 && rotZ < 135)) {
                                     this.callBack.onScannedSuccess(false, false);
+                                    AccuraLog.loge(TAG, "fside");
                                 } else {
                                     RectF dest = new RectF((int) bounds.left, (int) bounds.top, (int) bounds.right, (int) bounds.bottom);
 
@@ -1171,6 +1183,7 @@ public class RecogEngine {
                                             if (s != null && !s.equals("")) {
                                                 JSONObject jsonObject = new JSONObject(s);
                                                 int ic = jsonObject.getInt("responseCode");
+                                                AccuraLog.loge(TAG, "checkf" + ic);
                                                 if (ic == 1) {
                                                     if (ocrData != null) {
                                                         if (ocrData.getFaceImage() != null)
@@ -1194,6 +1207,7 @@ public class RecogEngine {
                                                     image.recycle();
                                                     faceBitmap1.recycle();
                                                 } else if (ic == 10) {
+                                                    AccuraLog.loge(TAG, "failed check: "+ic );
                                                     image1.recycle();
                                                     image.recycle();
                                                     faceBitmap1.recycle();
@@ -1212,6 +1226,7 @@ public class RecogEngine {
                                             scanListener.onScannedFailed("");
                                         }
                                     } catch (Exception e) {
+                                        AccuraLog.loge(TAG, Log.getStackTraceString(e));
                                         image1.recycle();
                                         image.recycle();
                                         Util.logd(TAG, "face  Failed");
@@ -1235,6 +1250,7 @@ public class RecogEngine {
 //                                e.printStackTrace();
 //                            }
                         }).addOnFailureListener(e -> {
+                    AccuraLog.loge(TAG, Log.getStackTraceString(e));
                     scanListener.onScannedFailed("");
 //                    try {
 //                        if (faceDetector != null) {
@@ -1250,7 +1266,10 @@ public class RecogEngine {
                 scanListener.onScannedFailed("");
             }
         } else {
-            image.recycle();
+            AccuraLog.loge(TAG, "ReleasefI");
+            if (image != null) {
+                image.recycle();
+            }
             scanListener.onScannedFailed("");
         }
     }

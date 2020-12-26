@@ -22,6 +22,7 @@ import com.accurascan.ocr.mrz.detector.MyFaceDetector;
 import com.accurascan.ocr.mrz.model.InitModel;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.motiondetection.data.GlobalData;
+import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
@@ -80,6 +81,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     }
 
     ScannerCameraPreview setFacing(int facing){
+        AccuraLog.loge(TAG, "Camera " + facing);
         this.facing = facing;
         return this;
     }
@@ -133,6 +135,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             @Override
             public void run() {
                 InitModel initModel = recogEngine.initScanner(context, countryId);
+                AccuraLog.loge(TAG, "InitializeS");
                 if (initModel != null) {
                     if (initModel.getResponseCode() == 1) {
                         setInitialized(true);
@@ -171,6 +174,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     }
 
     private void initFrontCamera() {
+        AccuraLog.loge(TAG, "Front data");
         isDone = false;
         detector = new FaceDetector.Builder(mContext)
                 .setTrackingEnabled(false)
@@ -254,6 +258,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     }
 
     private void addScanner(Context context) {
+        AccuraLog.loge(TAG, "Scanner");
         barcodeDetector = new BarcodeDetector.Builder(context)
                 .setBarcodeFormats(barcodeFormat).build();
 
@@ -358,7 +363,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         @Override
         public void surfaceCreated(SurfaceHolder holder) {
             if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                return;
+                AccuraLog.loge(TAG, "Camera Permission not granted");
             }
         }
 
@@ -370,6 +375,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             try {
                 if (cameraSource != null) {
                     if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                        AccuraLog.loge(TAG, "Camera Permission not granted");
                         return;
                     }
                     cameraSource.start(holder);
@@ -404,6 +410,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                 if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
+                AccuraLog.loge(TAG, "start Preview");
                 cameraSource.start(mSurfaceHolder);
             }
         } catch (IOException e) {
@@ -426,6 +433,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
     protected void stopCameraPreview() {
         if (cameraSource != null) {
+            AccuraLog.loge(TAG, "stop Preview");
             cameraSource.stop();
         }
 //        getHolder().removeCallback(this);

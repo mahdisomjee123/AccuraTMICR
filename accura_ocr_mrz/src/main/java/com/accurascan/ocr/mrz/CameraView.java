@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
+import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.OcrView;
 import com.docrecog.scan.RecogType;
@@ -250,6 +251,7 @@ public class CameraView {
      * to start your camera preview and ocr
      */
     public void startOcrScan(boolean isReset) {
+        AccuraLog.loge("CameraView" , "startOcrScan" + isReset);
         if (ocrView != null) ocrView.startOcrScan();
         if (scannerView != null)
             if (!isReset) scannerView.startScan();
@@ -282,6 +284,7 @@ public class CameraView {
      * @return
      */
     public CameraView setBackSide(){
+        AccuraLog.loge(CameraView.class.getSimpleName(), "Now scan backside of document");
         this.documentSide = 1;
         if (ocrView != null) ocrView.setBackSide();
         if (scannerView != null) scannerView.setBackSide();
@@ -303,6 +306,7 @@ public class CameraView {
      * Call on activity resume to restart preview
      */
     public void onResume() {
+        AccuraLog.loge(CameraView.class.getSimpleName(), "onResume()");
         if (ocrView != null) {
             ocrView.resume();
         } /*else if (scannerView != null) scannerView.startScan();*/
@@ -312,6 +316,7 @@ public class CameraView {
      * Call on activity pause to stop preview
      */
     public void onPause() {
+        AccuraLog.loge(CameraView.class.getSimpleName(), "onPause()");
         if (ocrView != null) {
             ocrView.pause();
         }/*else if (scannerView != null) scannerView.stopCamera();*/
@@ -321,6 +326,7 @@ public class CameraView {
      * Call destroy method to release camera
      */
     public void onDestroy() {
+        AccuraLog.loge(CameraView.class.getSimpleName(), "onDestroy()");
         if (mediaPlayer != null) {
             mediaPlayer.release();
             mediaPlayer = null;

@@ -460,17 +460,14 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
             try {
                 OcrData.getOcrResult().getFrontimage().recycle();
             } catch (Exception e) {
-                e.printStackTrace();
             }
             try {
                 OcrData.getOcrResult().getBackimage().recycle();
             } catch (Exception e) {
-                e.printStackTrace();
             }
             try {
                 OcrData.getOcrResult().getFaceImage().recycle();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }else if (RecogType.detachFrom(getIntent()) == RecogType.MRZ && RecogResult.getRecogResult() != null) {
             try {
@@ -478,7 +475,6 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                 RecogResult.getRecogResult().faceBitmap.recycle();
                 RecogResult.getRecogResult().docBackBitmap.recycle();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }else if (RecogType.detachFrom(getIntent()) == RecogType.PDF417 && PDF417Data.getPDF417Result() != null) {
             PDF417Data.getPDF417Result().faceBitmap.recycle();

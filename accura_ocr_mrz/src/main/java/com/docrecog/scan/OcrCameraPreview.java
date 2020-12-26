@@ -27,6 +27,7 @@ import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.motiondetection.ImageProcessing;
 import com.accurascan.ocr.mrz.motiondetection.RgbMotionDetection;
 import com.accurascan.ocr.mrz.motiondetection.data.GlobalData;
+import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
 import com.google.android.gms.common.images.Size;
@@ -157,7 +158,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            Util.logd(TAG, "handleMessage: " + msg.what);
+            AccuraLog.loge(TAG, "handleMessage: " + msg.what);
             if (msg.what == 1) {
                 init();
             } else if (msg.what == 0) {
@@ -183,6 +184,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     if (mReference.i1 == null) {
                         Log.e(TAG, "initOcr");
                         mReference.i1 = mReference.recogEngine.initOcr(mReference, mReference.mActivity, mReference.countryId, mReference.cardId);
+                        AccuraLog.loge(TAG, "InitializeOCR");
                     }
                     if (mReference.i1 != null && mReference.i1.getInitData() != null) {
                         mReference.rectH = mReference.i1.getInitData().getCameraHeight();
@@ -213,9 +215,11 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 mReference.rectW = mReference.dm.widthPixels - 20;
                 mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) / 3;
                 if (mReference.recogType == RecogType.MRZ) {
+                    AccuraLog.loge(TAG, "InitializeM");
                     mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
                     mReference.handler.sendEmptyMessage(1);
                 } else if (mReference.recogType == RecogType.DL_PLATE) {
+                    AccuraLog.loge(TAG, "InitializeDL");
                     InitModel initModel = mReference.recogEngine.initNumberPlat(mReference.mActivity, mReference.countryId, mReference.cardId);
                     if (initModel != null && initModel.getResponseCode() == 1) {
                         mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_DLPLATE, null, false);
@@ -335,6 +339,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                             public void run() {
                                                 if (end < start) {
                                                     // Concat _clear with message to remove message after few seconds.
+                                                    AccuraLog.loge(TAG, "Clear");
                                                     mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING.concat("_clear")/*"Processing..."*/);
                                                 }
                                             }
@@ -357,6 +362,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                                         if (mReference.recogType == RecogType.MRZ) {
                                                             if ((mReference.bRet > 2 || mReference.bRet == -1) && mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && !mReference.g_recogResult.lines.equalsIgnoreCase("")) {
                                                                 Util.logd(TAG, "INIT");
+                                                                AccuraLog.loge(TAG, "onVDone");
                                                                 mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
                                                                 mReference.sendInformation();
                                                             } else {
@@ -376,16 +382,18 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                                 @Override
                                                 void onFaceScanned(Bitmap bitmap) {
                                                     Util.logd("ocr_log", "detectFace: Done " + (mReference.g_recogResult.faceBitmap != null));
-
+                                                    AccuraLog.loge(TAG, "mvpDone" + ((bitmap == null)?1:0));
                                                     if (mReference.recogType == RecogType.MRZ) {
                                                         if (mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && !mReference.g_recogResult.lines.equalsIgnoreCase("")) {
                                                             mReference.g_recogResult.faceBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false);
                                                             Util.logd(TAG, "INIT");
+                                                            AccuraLog.loge(TAG, "onDone");
                                                             mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
                                                             mReference.sendInformation();
                                                         } else {
                                                             mReference.g_recogResult.recType = RecogEngine.RecType.INIT;
                                                             mReference.g_recogResult.faceBitmap = null;
+                                                            AccuraLog.loge(TAG, "onDone");
                                                             mReference.refreshPreview();
                                                         }
                                                         bmCard.recycle();
@@ -562,6 +570,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                 mReference.refreshPreview();
                             }
                         } else {
+                            AccuraLog.loge(TAG, "Retrieve Frame data");
                             mReference.refreshPreview();
                         }
 
@@ -632,9 +641,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         mReference.fCount++;
                         mReference.refreshPreview();
                     }
+                } else {
+                    AccuraLog.loge(TAG, "ReleaseR");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                AccuraLog.loge(TAG, "Thread - " + Log.getStackTraceString(e));
             } finally {
                 processing.set(false);
             }
@@ -782,6 +794,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
      * call this method to initialized camera and ocr
      */
     void start() {
+        AccuraLog.loge(TAG, "Initialize");
         if (this.recogType == null) {
             throw new NullPointerException("Must have to set recogType");
         }
@@ -865,7 +878,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
      * to start your camera preview and ocr
      */
     void startOcr() {
-
+        AccuraLog.loge(TAG, "Start Scan");
         if (!isValidate) return;
 
         mCameraPreviewThread = new Thread(new Runnable() {
@@ -1007,6 +1020,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             }
 
         }
+        AccuraLog.loge(TAG, "Init Success");
         onUpdateLayout(rectW, rectH);
 
     }
@@ -1454,6 +1468,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //                }
 //            });
 //            recogThread.start();
+            AccuraLog.loge(TAG, "Pro. Frame");
             RecogThread recogThread = new RecogThread(this, data, camera);
 
             recogThread.start();
@@ -1809,6 +1824,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         try {
             if (mCameraDevice != null) {
                 mCameraDevice.setPreviewDisplay(holder);
+                AccuraLog.loge(TAG, "Started");
             }
         } catch (Throwable ex) {
             closeCamera();
@@ -2021,6 +2037,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     @Override
     public void onUpdateProcess(String s) {
         if (!s.isEmpty()) {
+            AccuraLog.loge(TAG, "onProcessUpdate " + s);
             if (newMessage.equals(s))
                 return;
             newMessage = s;
@@ -2058,6 +2075,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 }
                 if (isbothavailable) {
                     if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
+                        AccuraLog.loge(TAG, "Ocr Done");
                         updateData();
                     } else {
                         if (checkmrz == 0) {
@@ -2067,12 +2085,15 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     }
                 } else {
                     if (checkmrz == 0) {
+                        AccuraLog.loge(TAG, "Ocr Done");
                         sendInformation();
                     }
                 }
             } else if (recogType == RecogType.MRZ) {
-                if (g_recogResult.recType == RecogEngine.RecType.MRZ && !g_recogResult.lines.equalsIgnoreCase(""))
+                if (g_recogResult.recType == RecogEngine.RecType.MRZ && !g_recogResult.lines.equalsIgnoreCase("")) {
+                    AccuraLog.loge(TAG, "MRZ Done");
                     sendInformation();
+                }
                 else {
                     g_recogResult.recType = RecogEngine.RecType.FACE;
                     refreshPreview();

@@ -30,6 +30,7 @@ import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.motiondetection.SensorsActivity;
+import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
@@ -39,6 +40,7 @@ import java.util.List;
 
 public class OcrActivity extends SensorsActivity implements OcrCallback {
 
+    private static final String TAG = OcrActivity.class.getSimpleName();
     private CameraView cameraView;
     private View viewLeft, viewRight, borderFrame;
     private TextView tvTitle, tvScanMessage, btn_barcode_selection;
@@ -84,6 +86,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         setTheme(R.style.AppThemeNoActionBar);
         requestWindowFeature(Window.FEATURE_NO_TITLE); // Hide the window title.
         setContentView(R.layout.ocr_activity);
+        AccuraLog.loge(TAG, "Start Camera Activity");
         init();
 
         recogType = RecogType.detachFrom(getIntent());
@@ -96,11 +99,16 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         countryId = getIntent().getIntExtra("country_id", 0);
         cardName = getIntent().getStringExtra("card_name");
 
+        AccuraLog.loge(TAG, "RecogType " + recogType);
+        AccuraLog.loge(TAG, "Card Id " + cardId);
+        AccuraLog.loge(TAG, "Country Id " + countryId);
+
         initCamera();
         if (recogType == RecogType.BARCODE) barcodeFormatDialog();
     }
 
     private void initCamera() {
+        AccuraLog.loge(TAG, "Initialized camera");
         //<editor-fold desc="To get status bar height">
         Rect rectangle = new Rect();
         Window window = getWindow();
@@ -169,6 +177,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
 
     @Override
     protected void onDestroy() {
+        AccuraLog.loge(TAG, "onDestroy");
         if (cameraView != null) cameraView.onDestroy();
         super.onDestroy();
         Runtime.getRuntime().gc(); // to clear garbage
@@ -187,6 +196,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
      */
     @Override
     public void onUpdateLayout(int width, int height) {
+        AccuraLog.loge(TAG, "Frame Size (wxh) : " + width + "x" +  height);
         if (cameraView != null) cameraView.startOcrScan(false);
 
         //<editor-fold desc="To set camera overlay Frame">
@@ -223,7 +233,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
      */
     @Override
     public void onScannedComplete(Object result) {
-        Log.e("TAG", "onScannedComplete: ");
+        AccuraLog.loge(TAG, "onScannedComplete: ");
         if (result != null) {
             if (result instanceof OcrData) {
                 if (recogType == RecogType.OCR) {
@@ -279,6 +289,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
      */
     @Override
     public void onProcessUpdate(int titleCode, String errorMessage, boolean isFlip) {
+        AccuraLog.loge(TAG, "onProcessUpdate :-> " + titleCode + "," + errorMessage + "," + isFlip);
         Message message;
         if (getTitleMessage(titleCode) != null) {
             /**

@@ -117,12 +117,16 @@ public class SensorsActivity extends Activity implements SensorEventListener {
 
         try {
             try {
-                sensorMgr.unregisterListener(this, sensorGrav);
+                if (sensorMgr != null) {
+                    sensorMgr.unregisterListener(this, sensorGrav);
+                }
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
             try {
-                sensorMgr.unregisterListener(this, sensorMag);
+                if (sensorMgr != null) {
+                    sensorMgr.unregisterListener(this, sensorMag);
+                }
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
