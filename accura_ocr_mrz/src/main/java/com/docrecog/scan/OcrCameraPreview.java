@@ -21,6 +21,7 @@ import android.view.WindowManager;
 import com.accurascan.ocr.mrz.R;
 import com.accurascan.ocr.mrz.camerautil.CameraHolder;
 import com.accurascan.ocr.mrz.camerautil.FocusManager;
+import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.InitModel;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.RecogResult;
@@ -136,6 +137,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private RecogEngine recogEngine;
     private OcrData ocrData;
     private RecogResult g_recogResult;
+    private CardDetails cardDetails;
     private int rectW, rectH;
     private DisplayMetrics dm;
     private boolean isbothavailable = false;
@@ -214,7 +216,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                 mReference.rectW = mReference.dm.widthPixels - 20;
                 mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) / 3;
-                if (mReference.recogType == RecogType.MRZ) {
+                if (mReference.recogType == RecogType.MRZ || mReference.recogType == RecogType.BANKCARD) {
                     AccuraLog.loge(TAG, "InitializeM");
                     mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
                     mReference.handler.sendEmptyMessage(1);
@@ -271,7 +273,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                         mReference._mutex.lock();
 
-                        if (bmCard != null && mReference.recogEngine.checkLight(bmCard)) {
+                        if (bmCard != null && mReference.recogType != RecogType.BANKCARD && mReference.recogEngine.checkLight(bmCard)) {
                             mReference.refreshPreview();
                             bmCard.recycle();
                             mReference._mutex.unlock(); // to restart thread
@@ -557,6 +559,11 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                     }
                                 } else if (mReference.recogType == RecogType.DL_PLATE) {
                                     mReference.recogEngine.doRecognition(bmCard, mReference.countryId, mReference.cardId, mReference.g_recogResult);
+                                } else if (mReference.recogType == RecogType.BANKCARD) {
+                                    if (mReference.cardDetails == null) {
+                                        mReference.cardDetails = new CardDetails();
+                                    }
+                                    mReference.recogEngine.doRecognizeCard(bmCard.copy(Bitmap.Config.ARGB_8888, false), mReference.cardDetails, mReference.recogType);
                                 }
                             } else {
                                 if (mReference.recogType == RecogType.MRZ && mReference.g_recogResult.recType == RecogEngine.RecType.FACE && mReference.bRet > -1) {
@@ -896,6 +903,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         }
         mCameraPreviewThread = null;
         isPreviewStarted = true;
+        cardDetails = new CardDetails();
         ocrData.setFrontData(null);
         ocrData.setBackData(null);
         ocrData.setMrzData(null);
@@ -923,7 +931,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     onProcessUpdate(RecogEngine.SCAN_TITLE_OCR, null, false);
                 }
             }
-        } else if (recogType == RecogType.MRZ) {
+        } else if (recogType == RecogType.MRZ || recogType == RecogType.BANKCARD) {
             onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
         } else if (recogType == RecogType.DL_PLATE) {
             onProcessUpdate(RecogEngine.SCAN_TITLE_DLPLATE, null, false);
@@ -2098,6 +2106,13 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     g_recogResult.recType = RecogEngine.RecType.FACE;
                     refreshPreview();
                 }
+            } else if (recogType == RecogType.BANKCARD) {
+                if (cardDetails.getNumber() != null) {
+                    sendInformation();
+                } else {
+                    cardDetails = null;
+                    refreshPreview();
+                }
             } else if (recogType == RecogType.DL_PLATE) {
                 if (!g_recogResult.lines.equalsIgnoreCase(""))
                     sendInformation();
@@ -2219,6 +2234,13 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             g_recogResult.recType = RecogEngine.RecType.INIT;
             g_recogResult.bRecDone = false;
             onScannedComplete(ocrData);
+        } else if (recogType == RecogType.BANKCARD){
+            onScannedComplete(cardDetails);
+            try {
+                onProcessUpdate(-1, "", false);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
     }

@@ -4,16 +4,13 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.Rect;
-import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
@@ -26,6 +23,7 @@ import com.accurascan.accuraocr.sample.adapter.BarCodeTypeListAdapter;
 import com.accurascan.ocr.mrz.CameraView;
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.BarcodeTypeSelection;
+import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.model.RecogResult;
@@ -256,6 +254,11 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 /** @recogType is {@link RecogType#MRZ}*/
                 RecogResult.setRecogResult((RecogResult) result);
                 sendDataToResultActivity(RecogType.MRZ);
+            } else if (result instanceof CardDetails) {
+                /**
+                 *  @recogType is {@link com.docrecog.scan.RecogType#MRZ}*/
+                CardDetails.setCardDetails((CardDetails) result);
+                sendDataToResultActivity(RecogType.BANKCARD);
             } else if (result instanceof PDF417Data) {
                 /** @recogType is {@link RecogType#PDF417}*/
                 if (isBack || !cameraView.isBackSideAvailable()) {
@@ -333,7 +336,10 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             case RecogEngine.SCAN_TITLE_OCR: // only for single side ocr
                 return String.format("Scan %s", cardName);
             case RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT:// for front side MRZ and PDF417
-                return "Scan Front Side of Document";
+                if (recogType == RecogType.BANKCARD) {
+                    return "Scan Bank Card";
+                } else
+                    return "Scan Front Side of Document";
             case RecogEngine.SCAN_TITLE_MRZ_PDF417_BACK: // for back side MRZ and PDF417
                 return "Now Scan Back Side of Document";
             case RecogEngine.SCAN_TITLE_DLPLATE: // for DL plate

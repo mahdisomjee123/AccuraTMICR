@@ -4,4 +4,5 @@
     <string name="id_mrz"><![CDATA[ID Card MRZ]]></string>
     <string name="visa_mrz"><![CDATA[VISA MRZ]]></string>
     <string name="other_mrz"><![CDATA[Other MRZ]]></string>
+    <string name="bank_card">Bank Card</string>
 </resources>

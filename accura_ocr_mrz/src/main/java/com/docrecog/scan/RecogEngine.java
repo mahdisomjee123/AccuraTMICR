@@ -19,6 +19,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 
 import com.accurascan.ocr.mrz.R;
+import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.ContryModel;
 import com.accurascan.ocr.mrz.model.InitModel;
 import com.accurascan.ocr.mrz.model.OcrData;
@@ -43,6 +44,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -96,6 +98,7 @@ public class RecogEngine {
         public boolean isMRZEnable = false;
         public boolean isOCREnable = false;
         public boolean isAllBarcodeEnable = false;
+        public boolean isBankCardEnable = false;
         public String message = "Success";
     }
 
@@ -172,7 +175,7 @@ public class RecogEngine {
     }
 
     //This is SDK app calling JNI method
-    private native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
+    private native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets, int[] intData);
 //    public native int loadDictionary(Context activity, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
 
     //return value: 0:fail,1:success,correct document, 2:success,incorrect document
@@ -272,6 +275,8 @@ public class RecogEngine {
 
     private native int doDetectNumberPlate(String s, int[] intData, int id, int card_id);
 
+    private native int extractData(String s, CardDetails cardDetails);
+
     public int setBlurPercentage(Context context, int blurPercentage) {
         return setBlurPercentage(context, blurPercentage,"");
     }
@@ -335,8 +340,9 @@ public class RecogEngine {
         this.con = context;
         SDKModel sdkModel = new SDKModel();
         getAssetFile(assetNames[0], assetNames[1]);
+        int[] ints = new int[5];
 //        File file = loadClassifierData(context);
-        int ret = loadDictionary(context, /*file != null ? file.getAbsolutePath() : */"", pDic, pDicLen, pDic1, pDicLen1, context.getAssets());
+        int ret = loadDictionary(context, /*file != null ? file.getAbsolutePath() : */"", pDic, pDicLen, pDic1, pDicLen1, context.getAssets(),ints);
         Log.i("recogPassport", "loadDictionary: " + ret);
 //        nM = "Keep Document Steady";
         if (ret < 0) {
@@ -366,10 +372,12 @@ public class RecogEngine {
                 } else
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
             }
+        } else {
+            sdkModel.isMRZEnable = ints[0] == 1;//isMrzEnable;//ret == 1 || ret == 4 || ret == 6 || ret == 7;
+            sdkModel.isOCREnable = ints[1] == 1;//isOcrEnable;//ret == 2 || ret == 4 || ret == 5 || ret == 7;
+            sdkModel.isAllBarcodeEnable = ints[2] == 1;//isPDFEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
+            sdkModel.isBankCardEnable = ints[3] == 1;//isBankCardEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
         }
-        sdkModel.isMRZEnable = ret == 1 || ret == 4 || ret == 6 || ret == 7;
-        sdkModel.isOCREnable = ret == 2 || ret == 4 || ret == 5 || ret == 7;
-        sdkModel.isAllBarcodeEnable = ret == 3 || ret == 5 || ret == 6 || ret == 7;
         sdkModel.i = ret;
         return sdkModel;
     }
@@ -891,6 +899,51 @@ public class RecogEngine {
     }
 
     /**
+     * To detect and recognize bank card
+     * @param bmCard       camera frame
+     * @param cardDetails
+     * @param recogType
+     */
+    public void doRecognizeCard(Bitmap bmCard, CardDetails cardDetails, RecogType recogType) {
+        if (detector == null) {
+            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+        }
+//        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
+
+        int scaledWidth = 1200;
+        float ratio = scaledWidth/(float) bmCard.getWidth();
+        int scaledHeight = (int) (bmCard.getHeight()*ratio);
+        Bitmap docBmp = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+
+        //<editor-fold desc="Convert bitmap to Gray scale">
+        if (recogType == RecogType.BANKCARD) {
+            Mat mat = new Mat();
+            Utils.bitmapToMat(docBmp, mat);
+            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
+            Utils.matToBitmap(mat,docBmp);
+            mat.release();
+        }
+        //</editor-fold>
+        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(docBmp);
+
+        detector.processImage(image).addOnSuccessListener(text -> {
+            docBmp.recycle();
+            int ret = extractData(text.getText(), cardDetails);
+//            Extractor.INSTANCE.extractData(text, bmCard, cardDetails);
+            Util.logd(TAG, "doCheckData: "+ ret + "\n" + cardDetails.toString() + text.getText());
+            if (!TextUtils.isEmpty(cardDetails.getNumber()) && !TextUtils.isEmpty(cardDetails.getExpirationDate())) {
+                cardDetails.setBitmap(bmCard);
+                this.callBack.onScannedSuccess(true,false);
+            } else {
+                bmCard.recycle();
+                this.callBack.onScannedSuccess(false, false);
+            }
+        }).addOnFailureListener(e -> {
+            this.callBack.onScannedFailed(e.getMessage());
+        });
+    }
+
+    /**
      * Call this method if document is valid after {@see checkCard(Bitmap bmp)}
      *
 //     * @param scanListener to get scanned data
@@ -955,7 +1008,7 @@ public class RecogEngine {
                     boolean isdone = result != null && result.size() != 0;
                     boolean isFinalDone = isdone;
                     boolean isContinue = true;
-                    System.out.println("done++" + isdone);
+                    Util.logd(TAG, "done - " + isdone);
                     if (isdone) {
                         if (mapData.getCardSide().toLowerCase().contains("front")) {
                             if (ocrData.getFrontimage() != null) {

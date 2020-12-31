@@ -196,7 +196,7 @@ public class CameraView {
             this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         }
 
-        if (type == RecogType.OCR || type == RecogType.MRZ || type == RecogType.DL_PLATE) {
+        if (type == RecogType.OCR || type == RecogType.MRZ || type == RecogType.DL_PLATE || type == RecogType.BANKCARD) {
             ocrView = new OcrView(context) {
                 @Override
                 public void onPlaySound() {

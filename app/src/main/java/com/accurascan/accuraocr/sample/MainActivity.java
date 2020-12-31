@@ -61,6 +61,8 @@ public class MainActivity extends AppCompatActivity {
                         activity.btnPassportMrz.setVisibility(View.VISIBLE);
                         activity.btnMrz.setVisibility(View.VISIBLE);
                     }
+                    if (activity.sdkModel.isBankCardEnable)
+                        activity.btnBank.setVisibility(View.VISIBLE);
                     if (activity.sdkModel.isAllBarcodeEnable)
                         activity.btnBarcode.setVisibility(View.VISIBLE);
                     if (activity.sdkModel.isOCREnable && activity.modelList != null) {
@@ -133,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Object> cardList = new ArrayList<>();
     private List<ContryModel> modelList;
     private int selectedPosition = -1;
-    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBarcode, lout_country;
+    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBarcode,btnBank, lout_country;
     private RecogEngine.SDKModel sdkModel;
     private String responseMessage;
 
@@ -196,6 +198,18 @@ public class MainActivity extends AppCompatActivity {
                 RecogType.MRZ.attachTo(intent);
                 MRZDocumentType.VISA_MRZ.attachTo(intent);
                 intent.putExtra("card_name", getResources().getString(R.string.visa_mrz));
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
+        });
+
+        btnBank = findViewById(R.id.lout_bank);
+        btnBank.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
+                RecogType.BANKCARD.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.bank_card));
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }
