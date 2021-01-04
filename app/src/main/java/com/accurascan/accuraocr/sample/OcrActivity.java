@@ -395,6 +395,10 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 return "ID card MRZ not detected";
             case RecogEngine.ACCURA_ERROR_CODE_VISA_MRZ:
                 return "Visa MRZ not detected";
+            case RecogEngine.ACCURA_ERROR_CODE_WRONG_SIDE:
+                return "Scanning wrong side of document";
+            case RecogEngine.ACCURA_ERROR_CODE_UPSIDE_DOWN_SIDE:
+                return "Document is upside down. Place it properly";
             default:
                 return s;
         }

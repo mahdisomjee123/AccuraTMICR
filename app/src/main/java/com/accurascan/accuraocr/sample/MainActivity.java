@@ -32,6 +32,7 @@ import com.docrecog.scan.RecogType;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -143,6 +144,12 @@ public class MainActivity extends AppCompatActivity {
 //        contryList = new ArrayList<>();
         contryList.clear();
         contryList.addAll(modelList);
+        contryList.sort(new Comparator<Object>() {
+            @Override
+            public int compare(Object o1, Object o2) {
+                return 0;
+            }
+        });
         countryAdapter.notifyDataSetChanged();
         MainActivity.this.rvCountry.setVisibility(View.VISIBLE);
         MainActivity.this.rvCards.setVisibility(View.INVISIBLE);

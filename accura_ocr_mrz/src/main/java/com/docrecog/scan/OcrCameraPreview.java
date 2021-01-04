@@ -281,27 +281,88 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         }
                         if (bmCard != null && !bmCard.isRecycled()) {
                             if (mReference.recogType == RecogType.OCR) {
-                                Bitmap bitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
-                                if (bmCard.getWidth() > 650) {
-                                    int scaledWidth = 650;
-                                    float ratio = scaledWidth/(float) bmCard.getWidth();
-                                    int scaledHeight = (int) (bmCard.getHeight() * ratio);
-                                    bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
-                                }
-                                ImageOpencv imageOpencv = mReference.recogEngine.checkCard(bitmap);
-                                if (imageOpencv != null) {
-                                    if (imageOpencv.isSucess && imageOpencv.mat != null) {
-                                        Bitmap card = imageOpencv.getBitmap(bmCard, bitmap.getWidth(), bitmap.getHeight());
-                                        int ret = 0;
-                                        if (mReference.recogEngine.isMrzEnable) {
-                                            mReference.g_recogResult.lines = "";
-//                                            ret = mReference.recogEngine.doRunData(data, size.width, size.height, 0, mReference.mDisplayRotation, mReference.g_recogResult);
-                                            ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType);
-                                            if (ret > 0) {
-                                                mReference.checkmrz = 0;
+                                if (mReference.countryId == 156 && mReference.cardId == 117) {
+                                    mReference.recogEngine.doCheckData(bmCard.copy(Bitmap.Config.ARGB_8888, false), new RecogEngine.ScanListener() {
+
+                                        @Override
+                                        void onUpdateProcess(String s) {
+                                            mReference.onUpdateProcess(s);
+                                            mReference.refreshPreview();
+                                            bmCard.recycle();
+                                        }
+
+                                        @Override
+                                        void onScannedSuccess(boolean isDone, boolean isRotate) {
+//                                        Bitmap bitmap1 = finalBitmap;
+                                            ImageOpencv imageOpencv = null;
+                                            Bitmap bitmap1 = null;
+                                            if (!isRotate) {
+                                                bitmap1 = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                if (bmCard.getWidth() > 650) {
+                                                    int scaledWidth = 650;
+                                                    float ratio = scaledWidth / (float) bmCard.getWidth();
+                                                    int scaledHeight = (int) (bmCard.getHeight() * ratio);
+                                                    bitmap1 = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+                                                }
+                                                imageOpencv = mReference.recogEngine.checkCard(bitmap1);
+                                            }
+                                            if (imageOpencv != null) {
+                                                if (imageOpencv.isSucess && imageOpencv.mat != null) {
+                                                    int ret = 0;
+                                                    if (mReference.checkmrz == 0) {
+                                                        if (mReference.scanSide > 0) {
+                                                            Bitmap card = imageOpencv.getBitmap(isRotate ? BitmapUtil.rotateBitmap(bmCard, 180) : bmCard, bitmap1.getWidth(), bitmap1.getHeight());
+                                                            AccuraLog.loge(TAG, "Data 1:" + card.getWidth() + "," + card.getHeight());
+                                                            mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData, mReference.countryId, mReference.cardId);
+                                                        } else {
+                                                            AccuraLog.loge(TAG, "Data 2:" + bmCard.getWidth() + "," + bmCard.getHeight());
+                                                            mReference.recogEngine.doRecognition(/*mReference,*/ isRotate ? BitmapUtil.rotateBitmap(bmCard, 180) : bmCard, imageOpencv.mat, mReference.ocrData, mReference.countryId, mReference.cardId);
+                                                        }
+                                                    } else {
+                                                        AccuraLog.loge(TAG, "Data 0:" + ret);
+                                                        mReference.refreshPreview();
+                                                        bitmap1.recycle();
+
+                                                    }
+                                                } else {
+                                                    mReference.refreshPreview();
+                                                    bmCard.recycle();
+                                                    bitmap1.recycle();
+                                                }
+                                            } else {
+                                                if (isRotate) {
+                                                    mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_UPSIDE_DOWN_SIDE);
+                                                }
+                                                mReference.refreshPreview();
+                                                bmCard.recycle();
+                                                if (bitmap1 != null) {
+                                                    bitmap1.recycle();
+                                                }
                                             }
                                         }
-                                        bmCard.recycle();
+                                    }, 0, mReference.scanSide);
+                                }else {
+                                    Bitmap bitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                    if (bmCard.getWidth() > 650) {
+                                        int scaledWidth = 650;
+                                        float ratio = scaledWidth / (float) bmCard.getWidth();
+                                        int scaledHeight = (int) (bmCard.getHeight() * ratio);
+                                        bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+                                    }
+                                    ImageOpencv imageOpencv = mReference.recogEngine.checkCard(bitmap);
+                                    if (imageOpencv != null) {
+                                        if (imageOpencv.isSucess && imageOpencv.mat != null) {
+                                            Bitmap card = imageOpencv.getBitmap(bmCard, bitmap.getWidth(), bitmap.getHeight());
+                                            int ret = 0;
+                                            if (mReference.recogEngine.isMrzEnable) {
+                                                mReference.g_recogResult.lines = "";
+//                                            ret = mReference.recogEngine.doRunData(data, size.width, size.height, 0, mReference.mDisplayRotation, mReference.g_recogResult);
+                                                ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType);
+                                                if (ret > 0) {
+                                                    mReference.checkmrz = 0;
+                                                }
+                                            }
+                                            bmCard.recycle();
 //                                        if (mReference.checkmrz == 0) {
                                             //                                    if (ocrData.getFaceImage() == null) {
                                             //                                        recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation, ocrData, null, new RecogEngine.ScanListener() {
@@ -312,7 +373,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                             //                                        });
                                             //                                        mRecCnt++;
                                             //                                    } else {
-                                            mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData);
+                                            mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData, mReference.countryId, mReference.cardId);
                                             //                                    }
 //                                        } else {
 //                                            if (ret == 1 || ret == 2) {
@@ -322,13 +383,14 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //                                                //                                            bmCard.recycle();
 //                                            }
 //                                        }
+                                        } else {
+                                            mReference.refreshPreview();
+                                            bmCard.recycle();
+                                        }
                                     } else {
                                         mReference.refreshPreview();
                                         bmCard.recycle();
                                     }
-                                } else {
-                                    mReference.refreshPreview();
-                                    bmCard.recycle();
                                 }
                             } else if (mReference.recogEngine.checkValid(bmCard)) {
                                 if (mReference.recogType == RecogType.MRZ) {

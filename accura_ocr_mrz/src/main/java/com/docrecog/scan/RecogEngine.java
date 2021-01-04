@@ -125,6 +125,8 @@ public class RecogEngine {
     public static final String ACCURA_ERROR_CODE_PASSPORT_MRZ = "12";
     public static final String ACCURA_ERROR_CODE_ID_MRZ = "13";
     public static final String ACCURA_ERROR_CODE_VISA_MRZ = "14";
+    public static final String ACCURA_ERROR_CODE_UPSIDE_DOWN_SIDE = "15";
+    public static final String ACCURA_ERROR_CODE_WRONG_SIDE = "16";
 
     private static final String TAG = "PassportRecog";
     private byte[] pDic = null;
@@ -260,6 +262,8 @@ public class RecogEngine {
     private native ImageOpencv checkDocument(long matInput, long matOut, float v);
 
     private native String recognizeData(long src, int[][] boxBoundsLTRB, String[] textElements);
+
+    private native String recognizeCard(String s, int r, int cB);
 
     public native int updateData(String s);
 
@@ -825,6 +829,138 @@ public class RecogEngine {
     }
 
     /**
+     * To detect qatar card is upside down or wrong documnent
+     * @param bmCard       camera frame
+     * @param scanListener
+     */
+    public void doCheckData(Bitmap bmCard, ScanListener scanListener, int i,final int cB) {
+        if (detector == null) {
+            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+        }
+//        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
+        int scaledWidth = 1200;
+        float ratio = scaledWidth/(float) bmCard.getWidth();
+        int scaledHeight = (int) (bmCard.getHeight()*ratio);
+        Bitmap docBmp = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+
+        detector.processImage(FirebaseVisionImage.fromBitmap(docBmp))
+                .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+                    @Override
+                    public void onSuccess(FirebaseVisionText text) {
+                        docBmp.recycle();
+                        Util.logd(TAG, "ocr_text -> " + i + "-> " + "\n" + text.getText());
+                        String s = recognizeCard(text.getText(),i,cB);
+
+                        if (s != null && !TextUtils.isEmpty(s)) {
+                            JSONObject jsonObject = null;
+                            try {
+                                jsonObject = new JSONObject(s);
+                                Util.logd(TAG, s);
+                                int ret = jsonObject.getInt("responseCode");
+                                if (ret >= 0) {
+                                    String message = jsonObject.getString("responseMessage");
+                                    JSONObject data = null;
+                                    if (!TextUtils.isEmpty(message) && !message.equals(ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME)) {
+                                        scanListener.onUpdateProcess(message);
+                                        return;
+                                    }
+                                    try {
+                                        data = jsonObject.getJSONObject("data");
+                                    } catch (JSONException e) {
+                                        data = null;
+                                    }
+                                    if (data != null && data.has("i1")) {
+                                        int i1 = data.getInt("i1");
+                                        if (i1 <= 0) {
+                                            Util.logd(TAG, "(wxh) -> "+(scaledWidth / 2) + "x" +  (scaledHeight / 3));
+                                            List<FirebaseVisionText.TextBlock> textBlocks = text.getTextBlocks();
+                                            for (FirebaseVisionText.TextBlock element : textBlocks) {
+//                                for (FirebaseVisionText.Line line : textBlock.getLines())
+//                                    for (FirebaseVisionText.Element element : line.getElements())
+                                                if (element == null || element.getBoundingBox() == null)
+                                                    continue;
+                                                Util.logd(TAG, "(box) -> "+(element.getBoundingBox()));
+                                                if (element.getBoundingBox().left < (scaledWidth / 2)
+                                                        && element.getBoundingBox().top < (scaledHeight / 3)
+                                                        && element.getBoundingBox().right <= (scaledWidth / 2)
+                                                        && element.getBoundingBox().bottom <= (scaledHeight / 3)) {
+                                                    String elementText = element.getText().toLowerCase();
+                                                    if ((elementText.contains("of qatar") || elementText.contains("state of")
+                                                            || element.getText().contains("State Qatar") || element.getText().contains("Qatar")
+                                                            || (elementText.contains("state") && elementText.contains("qatar")))
+                                                            || (elementText.contains("residency permit")
+                                                            || (/*elementText.contains("residency") ||*/ elementText.contains("permit")))
+                                                            || (elementText.contains("id. card") || elementText.contains("id.card") || elementText.contains("1d. card") || elementText.contains("id card"))) {
+                                                        i1++;
+                                                        break;
+                                                    } else if (elementText.contains("residency")) {
+                                                        String s1 = text.getText().toLowerCase();
+                                                        if (s1.contains("general") || (s1.contains("general") && s1.contains("director"))
+                                                                ||(s1.contains("authority") && s1.contains("signature"))) {
+                                                            if (cB <= 0) {
+                                                                scanListener.onUpdateProcess(ACCURA_ERROR_CODE_WRONG_SIDE);
+                                                            }
+                                                        }else if (cB <= 0){
+                                                            i1++;
+                                                            break;
+                                                        }
+                                                    }
+                                                } else if (element.getBoundingBox().bottom > (scaledHeight / 3)) {
+                                                    Util.logd(TAG, "(text...) -> "+(element.getText()));
+                                                    Util.logd(TAG, "(box...) -> "+(element.getBoundingBox()));
+                                                    break;
+                                                }
+                                            }
+                                            if (i1 > 0) {
+                                                // Only check for front Card validation document
+                                                if (cB > 0) {
+                                                    scanListener.onUpdateProcess(ACCURA_ERROR_CODE_WRONG_SIDE);
+                                                } else {
+                                                    scanListener.onScannedSuccess(true, i > 0/*means rotate 180*/);
+                                                }
+                                                return;
+                                            }
+                                        }
+
+                                        if (i == 0 && i1 > 0) {
+                                            if (cB > 0 && message.equals(ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME)) {
+                                                scanListener.onUpdateProcess(message);
+                                                return;
+                                            }
+                                            scanListener.onScannedSuccess(true, false);
+                                        } else/* if (i > 0)*/{
+//                                            docBmp.recycle();
+                                            if (data.has("isRotate") && data.getBoolean("isRotate") && i == 0) {
+                                                doCheckData(BitmapUtil.rotateBitmap(bmCard, 180), scanListener, 1, cB);
+                                            } else if (!TextUtils.isEmpty(message)) {
+                                                scanListener.onUpdateProcess(message);
+                                            } else {
+                                                scanListener.onScannedSuccess(true, i1 > 0);
+                                            }
+                                        } /*else {
+                                            doCheckData(BitmapUtil.rotateBitmap(docBmp, 180), scanListener, 1);
+                                        }*/
+                                    } else {
+                                        scanListener.onUpdateProcess(message);
+                                    }
+                                }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    try {
+                        AccuraLog.loge(TAG, Log.getStackTraceString(e));
+                    } catch (Exception ex) {
+                        AccuraLog.loge(TAG, e.getMessage());
+                        ex.printStackTrace();
+                    }
+                });
+    }
+
+    /**
      * To detect and recognize Driving License Plate
      * @param bmCard       camera frame
      * @param countryId    is country Id
@@ -950,8 +1086,10 @@ public class RecogEngine {
      * @param src
      * @param mat          pass met to retrieve ocr data.
      * @param ocrData      to fill data to this object
+     * @param co_id
+     * @param ca_id
      */
-    void doRecognition(/*ScanListener scanListener, */Bitmap src, Mat mat, OcrData ocrData) {
+    void doRecognition(/*ScanListener scanListener, */Bitmap src, Mat mat, OcrData ocrData, int co_id, int ca_id) {
 //        RecogEngine.this.callBack = scanListener;
 
 //        if (findFace == true && ocrData.getFaceImage() == null) {
@@ -973,13 +1111,20 @@ public class RecogEngine {
 //                e.printStackTrace();
 //            }
 //        } else {
-        detectText(src, mat, ocrData);
+        detectText(src, mat, ocrData, co_id, ca_id);
 //        }
 
     }
 
-    private void detectText(Bitmap src, Mat mat, OcrData ocrData) {
-        Bitmap image = bitmapFromMat(mat);
+    private void detectText(Bitmap src, Mat mat, OcrData ocrData, int co_id, int ca_id) {
+        Bitmap imageBitmap = bitmapFromMat(mat);
+        if (co_id == 117 && ca_id == 117) {
+            imageBitmap.recycle();
+            imageBitmap = src.copy(Config.ARGB_8888, false);
+        }
+        Log.e(TAG, "detectText: imageBitmap -> " + imageBitmap.toString() );
+        Bitmap image = imageBitmap;
+        Log.e(TAG, "detectText: image -> " + image.toString() );
         if (detector == null) {
             detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
         }
@@ -1015,7 +1160,10 @@ public class RecogEngine {
 //                                isdone = false;
                                 ocrData.getFrontimage().recycle();
                             }
-                            ocrData.setFrontimage(src.copy(Config.ARGB_8888, false));
+                            if (co_id == 117 && ca_id == 117) {
+                                ocrData.setFrontimage(bitmapFromMat(mat));
+                            } else
+                                ocrData.setFrontimage(src.copy(Config.ARGB_8888, false));
                             ocrData.setFrontData(mapData);
                         } else {
                             if (ocrData.getBackimage() != null) {
