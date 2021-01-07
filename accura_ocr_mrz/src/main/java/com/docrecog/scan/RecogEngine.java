@@ -1086,10 +1086,9 @@ public class RecogEngine {
      * @param src
      * @param mat          pass met to retrieve ocr data.
      * @param ocrData      to fill data to this object
-     * @param co_id
-     * @param ca_id
+     * @param isQIDcard    true if qatar id card
      */
-    void doRecognition(/*ScanListener scanListener, */Bitmap src, Mat mat, OcrData ocrData, int co_id, int ca_id) {
+    void doRecognition(/*ScanListener scanListener, */Bitmap src, Mat mat, OcrData ocrData, boolean isQIDcard) {
 //        RecogEngine.this.callBack = scanListener;
 
 //        if (findFace == true && ocrData.getFaceImage() == null) {
@@ -1111,14 +1110,14 @@ public class RecogEngine {
 //                e.printStackTrace();
 //            }
 //        } else {
-        detectText(src, mat, ocrData, co_id, ca_id);
+        detectText(src, mat, ocrData, isQIDcard);
 //        }
 
     }
 
-    private void detectText(Bitmap src, Mat mat, OcrData ocrData, int co_id, int ca_id) {
+    private void detectText(Bitmap src, Mat mat, OcrData ocrData, boolean isQIDcard) {
         Bitmap imageBitmap = bitmapFromMat(mat);
-        if (co_id == 117 && ca_id == 117) {
+        if (isQIDcard) {
             imageBitmap.recycle();
             imageBitmap = src.copy(Config.ARGB_8888, false);
         }
@@ -1160,7 +1159,8 @@ public class RecogEngine {
 //                                isdone = false;
                                 ocrData.getFrontimage().recycle();
                             }
-                            if (co_id == 117 && ca_id == 117) {
+                            if (isQIDcard) {
+                                Imgproc.cvtColor(mat,mat,Imgproc.COLOR_BGR2RGB);
                                 ocrData.setFrontimage(bitmapFromMat(mat));
                             } else
                                 ocrData.setFrontimage(src.copy(Config.ARGB_8888, false));

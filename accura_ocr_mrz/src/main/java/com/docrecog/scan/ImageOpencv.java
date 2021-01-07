@@ -27,7 +27,7 @@ public class ImageOpencv {
         return docBmp;
     }
 
-    public Bitmap getBitmap(Bitmap docBmp, int width, int height) {
+    public Bitmap getBitmap(Bitmap docBmp, int width, int height, boolean b) {
         try {
             String[] reststring = rect.split(",");
             if (reststring.length == 4) {
@@ -36,21 +36,21 @@ public class ImageOpencv {
                 // {{Getting ImageOpencv.rect are with black border surround to image from SDK
                 // and docBmp is without black border
                 // should update rect according to docBMP.
-//                float x = width*0.10f;
-//                float y = height*0.10f;
-//                int left = rect.left - (int) x;
-//                int top = rect.top - (int) y;
-//                int right = left + rect.width();
-//                int bottom = top + rect.height();
+                float x = width*0.10f;
+                float y = height*0.10f;
+                int left = b ? (rect.left - (int) x) : rect.left;
+                int top = b ? (rect.top - (int) y) : rect.top;
+                int right = b ? (left + rect.width()) : rect.right;
+                int bottom = b ? (top + rect.height()) : rect.bottom;
                 // }}End Crop image by remove black border
 
                 // {{Start resize rect according to original preview image
                 float scaleX = docBmp.getWidth() / (float) width;
                 float scaleY = (float) docBmp.getHeight() / (float) height;
-                rect.left = (int) (rect.left * scaleX);
-                rect.top = (int) (rect.top * scaleY);
-                rect.right = (int) (rect.right * scaleX);
-                rect.bottom = (int) (rect.bottom * scaleY);
+                rect.left = (int) (left * scaleX);
+                rect.top = (int) (top * scaleY);
+                rect.right = (int) (right * scaleX);
+                rect.bottom = (int) (bottom * scaleY);
                 // }}End resize rect according to original preview image
 
                 //{{Start Crop image by adding black border without resize rect

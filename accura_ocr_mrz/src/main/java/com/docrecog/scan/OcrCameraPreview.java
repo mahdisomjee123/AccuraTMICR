@@ -281,7 +281,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         }
                         if (bmCard != null && !bmCard.isRecycled()) {
                             if (mReference.recogType == RecogType.OCR) {
-                                if (mReference.countryId == 156 && mReference.cardId == 117) {
+                                if (mReference.countryId == 156 && mReference.cardId == 117) { // check is Qatar Id Card
                                     mReference.recogEngine.doCheckData(bmCard.copy(Bitmap.Config.ARGB_8888, false), new RecogEngine.ScanListener() {
 
                                         @Override
@@ -311,12 +311,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                                     int ret = 0;
                                                     if (mReference.checkmrz == 0) {
                                                         if (mReference.scanSide > 0) {
-                                                            Bitmap card = imageOpencv.getBitmap(isRotate ? BitmapUtil.rotateBitmap(bmCard, 180) : bmCard, bitmap1.getWidth(), bitmap1.getHeight());
+                                                            Bitmap card = imageOpencv.getBitmap(isRotate ? BitmapUtil.rotateBitmap(bmCard, 180) : bmCard, bitmap1.getWidth(), bitmap1.getHeight(), true);
                                                             AccuraLog.loge(TAG, "Data 1:" + card.getWidth() + "," + card.getHeight());
-                                                            mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData, mReference.countryId, mReference.cardId);
+                                                            mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData, true);
                                                         } else {
                                                             AccuraLog.loge(TAG, "Data 2:" + bmCard.getWidth() + "," + bmCard.getHeight());
-                                                            mReference.recogEngine.doRecognition(/*mReference,*/ isRotate ? BitmapUtil.rotateBitmap(bmCard, 180) : bmCard, imageOpencv.mat, mReference.ocrData, mReference.countryId, mReference.cardId);
+                                                            mReference.recogEngine.doRecognition(/*mReference,*/ isRotate ? BitmapUtil.rotateBitmap(bmCard, 180) : bmCard, imageOpencv.mat, mReference.ocrData, true);
                                                         }
                                                     } else {
                                                         AccuraLog.loge(TAG, "Data 0:" + ret);
@@ -352,7 +352,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                     ImageOpencv imageOpencv = mReference.recogEngine.checkCard(bitmap);
                                     if (imageOpencv != null) {
                                         if (imageOpencv.isSucess && imageOpencv.mat != null) {
-                                            Bitmap card = imageOpencv.getBitmap(bmCard, bitmap.getWidth(), bitmap.getHeight());
+                                            Bitmap card = imageOpencv.getBitmap(bmCard, bitmap.getWidth(), bitmap.getHeight(), false);
                                             int ret = 0;
                                             if (mReference.recogEngine.isMrzEnable) {
                                                 mReference.g_recogResult.lines = "";
@@ -373,7 +373,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                             //                                        });
                                             //                                        mRecCnt++;
                                             //                                    } else {
-                                            mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData, mReference.countryId, mReference.cardId);
+                                            mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData, false);
                                             //                                    }
 //                                        } else {
 //                                            if (ret == 1 || ret == 2) {
