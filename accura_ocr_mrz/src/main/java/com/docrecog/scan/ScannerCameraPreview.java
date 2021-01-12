@@ -87,10 +87,10 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     }
 
     public void updateFormat(int barcodeFormat) {
-        if (barcodeType == RecogType.BARCODE && isSelection) {
+        /*if (barcodeType == RecogType.BARCODE && isSelection) { // 20210111 remove barcode
             this.barcodeFormat = barcodeFormat;
             addScanner(this.mContext);
-        }
+        }*/
     }
 
     public void setFrontSide() {
@@ -157,11 +157,11 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     private void startScan() {
         pdf417Data = new PDF417Data();
         displayMetrics = this.mContext.getResources().getDisplayMetrics();
-        if (barcodeType == RecogType.BARCODE) {
+        /*if (barcodeType == RecogType.BARCODE) {// 20210111 remove barcode
             addScanner(this.mContext);
             onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, null,false);
             isSelection = true;
-        } else if (barcodeType == RecogType.PDF417) {
+        } else */if (barcodeType == RecogType.PDF417) {
             barcodeFormat = Barcode.PDF417;
             if (scanSide > 0) {
                 addScanner(this.mContext);
@@ -441,10 +441,10 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
     public void restartPreview(){
         stopCameraPreview();
-        if (barcodeType == RecogType.BARCODE) {
+        /*if (barcodeType == RecogType.BARCODE) {// 20210111 remove barcode
             addScanner(this.mContext);
             isSelection = true;
-        } else if (barcodeType == RecogType.PDF417) {
+        } else */if (barcodeType == RecogType.PDF417) {
             barcodeFormat = Barcode.PDF417;
             if (scanSide > 0) {
                 addScanner(this.mContext);

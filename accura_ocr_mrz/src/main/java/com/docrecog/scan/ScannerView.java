@@ -66,10 +66,10 @@ public abstract class ScannerView extends ScannerCameraPreview {
         return this;
     }
 
-    public ScannerView setBarcodeFormat(int barcodeFormat) {
-        this.barcodeFormat = barcodeFormat;
-        return this;
-    }
+//    public ScannerView setBarcodeFormat(int barcodeFormat) {// 20210111 remove barcode
+//        this.barcodeFormat = barcodeFormat;
+//        return this;
+//    }
 
     public ScannerView setCameraFacing(int cameraFacing){
         this.cameraFacing = cameraFacing;

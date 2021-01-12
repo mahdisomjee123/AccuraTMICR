@@ -30,7 +30,7 @@ public class CameraView {
     private OcrCallback callback;
     private int statusBarHeight = 0;
     private boolean setPlayer = true;
-    private int barcodeFormat = -1;
+//    private int barcodeFormat = -1; // 20210111 remove barcode
     private MediaPlayer mediaPlayer = null;
     private AudioManager audioManager = null;
     private OcrView ocrView = null;
@@ -151,17 +151,17 @@ public class CameraView {
         return this;
     }
 
-    /**
-     * Set Barcode format to scan specific barcode.
-     * Default Support All Barcode format
-     *
-     * @param barcodeFormat {@link com.accurascan.ocr.mrz.model.BarcodeTypeSelection#CODE_NAMES}
-     */
-    public void setBarcodeFormat(int barcodeFormat) {
-        if (this.barcodeFormat > -1 && scannerView != null)
-            scannerView.updateFormat(this.barcodeFormat);
-        this.barcodeFormat = barcodeFormat;
-    }
+//    /**// 20210111 remove barcode
+//     * Set Barcode format to scan specific barcode.
+//     * Default Support All Barcode format
+//     *
+//     * @param barcodeFormat {@link com.accurascan.ocr.mrz.model.BarcodeTypeSelection#CODE_NAMES}
+//     */
+//    public void setBarcodeFormat(int barcodeFormat) {
+//        if (this.barcodeFormat > -1 && scannerView != null)
+//            scannerView.updateFormat(this.barcodeFormat);
+//        this.barcodeFormat = barcodeFormat;
+//    }
 
     /**
      * call this method to initialized camera and ocr
@@ -179,9 +179,9 @@ public class CameraView {
         if (this.countryId < 0) {
             if (type == RecogType.OCR || type == RecogType.DL_PLATE || type == RecogType.PDF417) {
                 throw new IllegalArgumentException("Country Code must have to > 0");
-            } else if (type == RecogType.BARCODE) {
+            }/* else if (type == RecogType.BARCODE) { // 20210111 remove barcode
                 countryId = 0;
-            }
+            }*/
         }
         if (this.cardId < 0 || type == RecogType.DL_PLATE) {
             if (type == RecogType.OCR)
@@ -220,7 +220,7 @@ public class CameraView {
                 }
             }
             ocrView.init();
-        } else if (type == RecogType.PDF417 || type == RecogType.BARCODE) {
+        } else if (type == RecogType.PDF417/* || type == RecogType.BARCODE*/) {// 20210111 remove barcode
             scannerView = new ScannerView(context) {
                 @Override
                 public void onPlaySound() {
@@ -231,8 +231,8 @@ public class CameraView {
                     .setOcrCallBack(this.callback)
                     .setCameraFacing(this.cameraFacing)
                     .setView(this.cameraContainer)
-                    .setCardData(countryId)
-                    .setBarcodeFormat(barcodeFormat > -1 ? barcodeFormat : Barcode.ALL_FORMATS);
+                    .setCardData(countryId);
+//                    .setBarcodeFormat(barcodeFormat > -1 ? barcodeFormat : Barcode.ALL_FORMATS);// 20210111 remove barcode
             if (this.type == RecogType.PDF417) {
                 if (this.documentSide == 0) {
                     scannerView.setFrontSide();

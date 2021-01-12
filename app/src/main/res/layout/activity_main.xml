@@ -90,19 +90,6 @@
                     app:typeface="ALLER_STD_REG"
                     android:visibility="gone"/>
 
-                <com.accurascan.ocr.mrz.customview.CustomTextView
-                    android:id="@+id/lout_barcode"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="@dimen/_5dp"
-                    android:background="@drawable/btn_bg_gray"
-                    android:padding="@dimen/_15dp"
-                    android:text="Barcode"
-                    android:textColor="@color/white"
-                    android:textSize="18sp"
-                    app:typeface="ALLER_STD_REG"
-                    android:visibility="gone"/>
-
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_country"
                     android:layout_width="match_parent"

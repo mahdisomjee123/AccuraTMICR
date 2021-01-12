@@ -1,13 +1,11 @@
 package com.accurascan.ocr.mrz.model;
 
-import androidx.annotation.Keep;
-
 import com.google.android.gms.vision.barcode.Barcode;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Keep
+//@Keep // 20210111 remove barcode
 public class BarcodeTypeSelection {
     public String barcodeTitle;
     public boolean isSelected;

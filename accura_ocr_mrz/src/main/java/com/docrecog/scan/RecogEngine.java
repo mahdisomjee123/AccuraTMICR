@@ -97,7 +97,7 @@ public class RecogEngine {
         public int i;
         public boolean isMRZEnable = false;
         public boolean isOCREnable = false;
-        public boolean isAllBarcodeEnable = false;
+//        public boolean isAllBarcodeEnable = false;
         public boolean isBankCardEnable = false;
         public String message = "Success";
     }
@@ -381,7 +381,7 @@ public class RecogEngine {
         } else {
             sdkModel.isMRZEnable = ints[0] == 1;//isMrzEnable;//ret == 1 || ret == 4 || ret == 6 || ret == 7;
             sdkModel.isOCREnable = ints[1] == 1;//isOcrEnable;//ret == 2 || ret == 4 || ret == 5 || ret == 7;
-            sdkModel.isAllBarcodeEnable = ints[2] == 1;//isPDFEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
+//            sdkModel.isAllBarcodeEnable = ints[2] == 1;//isPDFEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
             sdkModel.isBankCardEnable = ints[3] == 1;//isBankCardEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
         }
         sdkModel.i = ret;

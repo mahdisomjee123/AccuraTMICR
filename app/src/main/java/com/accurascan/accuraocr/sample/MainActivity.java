@@ -64,8 +64,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if (activity.sdkModel.isBankCardEnable)
                         activity.btnBank.setVisibility(View.VISIBLE);
-                    if (activity.sdkModel.isAllBarcodeEnable)
-                        activity.btnBarcode.setVisibility(View.VISIBLE);
                     if (activity.sdkModel.isOCREnable && activity.modelList != null) {
                         activity.setCountryLayout();
                     }
@@ -136,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Object> cardList = new ArrayList<>();
     private List<ContryModel> modelList;
     private int selectedPosition = -1;
-    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBarcode,btnBank, lout_country;
+    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBank, lout_country;
     private RecogEngine.SDKModel sdkModel;
     private String responseMessage;
 
@@ -144,12 +142,6 @@ public class MainActivity extends AppCompatActivity {
 //        contryList = new ArrayList<>();
         contryList.clear();
         contryList.addAll(modelList);
-        contryList.sort(new Comparator<Object>() {
-            @Override
-            public int compare(Object o1, Object o2) {
-                return 0;
-            }
-        });
         countryAdapter.notifyDataSetChanged();
         MainActivity.this.rvCountry.setVisibility(View.VISIBLE);
         MainActivity.this.rvCards.setVisibility(View.INVISIBLE);
@@ -217,18 +209,6 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
                 RecogType.BANKCARD.attachTo(intent);
                 intent.putExtra("card_name", getResources().getString(R.string.bank_card));
-                startActivity(intent);
-                overridePendingTransition(0, 0);
-            }
-        });
-
-        btnBarcode = findViewById(R.id.lout_barcode);
-        btnBarcode.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
-                RecogType.BARCODE.attachTo(intent);
-                intent.putExtra("card_name", "Barcode");
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }

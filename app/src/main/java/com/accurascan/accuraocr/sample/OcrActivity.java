@@ -19,10 +19,8 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
-import com.accurascan.accuraocr.sample.adapter.BarCodeTypeListAdapter;
 import com.accurascan.ocr.mrz.CameraView;
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
-import com.accurascan.ocr.mrz.model.BarcodeTypeSelection;
 import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
@@ -41,7 +39,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     private static final String TAG = OcrActivity.class.getSimpleName();
     private CameraView cameraView;
     private View viewLeft, viewRight, borderFrame;
-    private TextView tvTitle, tvScanMessage, btn_barcode_selection;
+    private TextView tvTitle, tvScanMessage;
     private ImageView imageFlip;
     private int cardId;
     private int countryId;
@@ -102,7 +100,6 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         AccuraLog.loge(TAG, "Country Id " + countryId);
 
         initCamera();
-        if (recogType == RecogType.BARCODE) barcodeFormatDialog();
     }
 
     private void initCamera() {
@@ -147,7 +144,6 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         tvTitle = findViewById(R.id.tv_title);
         tvScanMessage = findViewById(R.id.tv_scan_msg);
         imageFlip = findViewById(R.id.im_flip_image);
-        btn_barcode_selection = findViewById(R.id.select_type);
         View btn_flip = findViewById(R.id.btn_flip);
         btn_flip.setOnClickListener(v -> {
             if (cameraView!=null) {
@@ -211,11 +207,6 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
 
         findViewById(R.id.ocr_frame).setVisibility(View.VISIBLE);
         //</editor-fold>
-
-        //<editor-fold desc="Barcode Selection only add for RecogType.BARCODE">
-        if (recogType == RecogType.BARCODE) btn_barcode_selection.setVisibility(View.VISIBLE);
-        else btn_barcode_selection.setVisibility(View.GONE);
-        //</editor-fold>
     }
 
     /**
@@ -226,7 +217,6 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
      *              or {@link com.docrecog.scan.RecogType#DL_PLATE}
      *  result instance of {@link RecogResult} if recog type is {@link com.docrecog.scan.RecogType#MRZ}
      *  result instance of {@link PDF417Data} if recog type is {@link com.docrecog.scan.RecogType#PDF417}
-     *  result instance of {@link String} if recog type is {@link com.docrecog.scan.RecogType#BARCODE}
      *
      */
     @Override
@@ -256,7 +246,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 sendDataToResultActivity(RecogType.MRZ);
             } else if (result instanceof CardDetails) {
                 /**
-                 *  @recogType is {@link com.docrecog.scan.RecogType#MRZ}*/
+                 *  @recogType is {@link com.docrecog.scan.RecogType#BANKCARD}*/
                 CardDetails.setCardDetails((CardDetails) result);
                 sendDataToResultActivity(RecogType.BANKCARD);
             } else if (result instanceof PDF417Data) {
@@ -269,9 +259,6 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                     cameraView.setBackSide();
                     cameraView.flipImage(imageFlip);
                 }
-            } else if (result instanceof String) {
-                /** @recogType is {@link RecogType#BARCODE}*/
-                setResultDialog((String) result);
             }
         } else Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show();
     }
@@ -348,21 +335,6 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         }
     }
 
-    private String getErrorMessage_old(String s){
-        switch (s){
-            case "1":
-                return "Keep document in frame";
-            case "2":
-                return "Bring card near to frame.";
-            case "3":
-                return "Processing...";
-            case "10":
-                return "Face not detected";
-            default:
-                return s;
-        }
-    }
-
     private String getErrorMessage(String s) {
         switch (s) {
             case RecogEngine.ACCURA_ERROR_CODE_MOTION:
@@ -428,75 +400,6 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 //</editor-fold>
             }
         }
-    }
-
-    /**
-     * If recogType is RecogType.BARCODE then display Barcode data on Dialog
-     *
-     * @param output it is the barcode data
-     */
-    private void setResultDialog(final String output) {
-        Runnable runnable = () -> {
-            AlertDialog.Builder dialog = new AlertDialog.Builder(OcrActivity.this);
-            dialog.setTitle("Barcode Result");
-            dialog.setMessage(output);
-            dialog.setCancelable(false);
-            dialog.setNegativeButton("Retry", (dialog1, which) -> {
-                if (cameraView != null) cameraView.onResume(); // Resume camera after dismiss dialog
-            });
-            dialog.setPositiveButton("Ok", (dialog1, which) -> onBackPressed());
-            try {
-                dialog.show();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        };
-        runOnUiThread(runnable);
-
-    }
-
-    /**
-     * Set Barcode selection Dialog to Scan only selected barcode format
-     * See {@link BarcodeTypeSelection} to get All Barcode format
-     * And use Array List {@link BarcodeTypeSelection#CODE_NAMES}
-     */
-    int mposition = 0;
-    private void barcodeFormatDialog() {
-        btn_barcode_selection.setOnClickListener(v -> {
-            if (cameraView != null) cameraView.onPause();
-            types_dialog.show();
-        });
-        List<BarcodeTypeSelection> CODE_NAMES = BarcodeTypeSelection.CODE_NAMES;
-        types_dialog = new Dialog(this);
-        types_dialog.setContentView(R.layout.dialog_barcode_type);
-        types_dialog.setCanceledOnTouchOutside(false);
-        types_dialog.setOnKeyListener((dialog, keyCode, event) -> {
-            if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
-                types_dialog.cancel();
-            }
-            return true;
-        });
-        types_dialog.setOnCancelListener(dialog -> {
-            if (cameraView != null) cameraView.onResume();
-        });
-
-        ListView listView = types_dialog.findViewById(R.id.typelv);
-
-        BarCodeTypeListAdapter adapter = new BarCodeTypeListAdapter(this, CODE_NAMES);
-        listView.setAdapter(adapter);
-
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            for (int i = 0; i < CODE_NAMES.size(); i++) {
-                CODE_NAMES.get(i).isSelected = i == position;
-            }
-            adapter.notifyDataSetChanged();
-            mposition = position;
-            // to set barcode selected barcode format and default scan all barcode
-            cameraView.setBarcodeFormat(CODE_NAMES.get(mposition).formatsType);
-
-            types_dialog.cancel();
-        });
-
     }
 
 }
