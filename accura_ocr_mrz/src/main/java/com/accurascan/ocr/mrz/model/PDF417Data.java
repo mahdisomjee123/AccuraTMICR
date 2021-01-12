@@ -4,6 +4,9 @@ import android.graphics.Bitmap;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import androidx.annotation.Keep;
+
+@Keep
 public class PDF417Data implements Parcelable {
 
     public String wholeDataString, fname, mname, lname, address1, address2, ResidenceAddress1, ResidenceAddress2, city, state, zipcode, birthday, birthday1,
@@ -228,9 +231,9 @@ public class PDF417Data implements Parcelable {
     private static PDF417Data pdf417Data;
 
     public static PDF417Data getPDF417Result() {
-        PDF417Data pdf417data = pdf417Data;
-        pdf417Data = null;
-        return pdf417data;
+//        PDF417Data pdf417data = pdf417Data;
+//        pdf417Data = null;
+        return pdf417Data;
     }
 
     public static void setPDF417Result(PDF417Data ocrResult) {

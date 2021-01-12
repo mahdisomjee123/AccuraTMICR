@@ -4,8 +4,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
 
+import androidx.annotation.Keep;
+
 import java.util.List;
 
+@Keep
 public class OcrData {
 
     private String cardname;
@@ -72,6 +75,7 @@ public class OcrData {
         this.mrzData = mrzData;
     }
 
+    @Keep
     public class MapData {
 
         public String card_side;
@@ -102,6 +106,7 @@ public class OcrData {
             this.ocr_data = ocr_data;
         }
 
+        @Keep
         public class ScannedData {
             //  the value 'type' used the identify the data type
             // 1 - Text Code

@@ -12,10 +12,11 @@ import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 
 public abstract class ScannerView extends ScannerCameraPreview {
-    public boolean isflashOn;
+    public boolean isflashOn = false;
     private OcrCallback scanCallBack;
     private Context context;
     private boolean isPreviewAdded = false;
+    private int cameraFacing;
 
     public ScannerView(@NonNull Context context) {
         super(context);
@@ -65,8 +66,13 @@ public abstract class ScannerView extends ScannerCameraPreview {
         return this;
     }
 
-    public ScannerView setBarcodeFormat(int barcodeFormat) {
-        this.barcodeFormat = barcodeFormat;
+//    public ScannerView setBarcodeFormat(int barcodeFormat) {// 20210111 remove barcode
+//        this.barcodeFormat = barcodeFormat;
+//        return this;
+//    }
+
+    public ScannerView setCameraFacing(int cameraFacing){
+        this.cameraFacing = cameraFacing;
         return this;
     }
 
@@ -83,6 +89,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
 //        if (this.countryCode < 0) {
 //            throw new IllegalStateException("Country Code must have to > 0");
 //        }
+        setFacing(cameraFacing);
         isPreviewAdded = false;
         initializeScanner(context, countryId);
     }
@@ -155,6 +162,12 @@ public abstract class ScannerView extends ScannerCameraPreview {
 //        });
 //    }
 
+    public void flipCamera(int i){
+        this.cameraFacing = i;
+        setFacing(this.cameraFacing);
+        restartPreview();
+    }
+
     public boolean isflashOn() {
         return isflashOn;
     }
@@ -203,11 +216,12 @@ public abstract class ScannerView extends ScannerCameraPreview {
     }
 
     public void onDestroy(){
+        scanCallBack = null;
         destroy();
     }
 
     public void stopCamera() {
-        stopCameraPreview();
+//        stopCameraPreview();
     }
 
     @Override
@@ -234,12 +248,12 @@ public abstract class ScannerView extends ScannerCameraPreview {
     }
 
     @Override
-    protected void onUpdate(int s, boolean isFlip) {
+    protected void onUpdate(int s,String feedBackMessage, boolean isFlip) {
         if (scanCallBack != null) {
             if (!isPreviewAdded) {
                 addCameraPreview(context);
             }
-            this.scanCallBack.onProcessUpdate(s, null, isFlip);
+            this.scanCallBack.onProcessUpdate(s, feedBackMessage, isFlip);
         }
     }
 

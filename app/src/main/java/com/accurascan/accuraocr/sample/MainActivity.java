@@ -1,6 +1,7 @@
 package com.accurascan.accuraocr.sample;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -23,12 +24,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.accurascan.ocr.mrz.model.ContryModel;
+import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.Util;
+import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -52,12 +56,26 @@ public class MainActivity extends AppCompatActivity {
                 }
                 Log.e(TAG, "handleMessage: " + msg.what);
                 if (msg.what == 1) {
-                    if (activity.sdkModel.isMRZEnable) activity.btnMrz.setVisibility(View.VISIBLE);
-                    if (activity.sdkModel.isAllBarcodeEnable)
-                        activity.btnBarcode.setVisibility(View.VISIBLE);
+                    if (activity.sdkModel.isMRZEnable) {
+                        activity.btnIdMrz.setVisibility(View.VISIBLE);
+                        activity.btnVisaMrz.setVisibility(View.VISIBLE);
+                        activity.btnPassportMrz.setVisibility(View.VISIBLE);
+                        activity.btnMrz.setVisibility(View.VISIBLE);
+                    }
+                    if (activity.sdkModel.isBankCardEnable)
+                        activity.btnBank.setVisibility(View.VISIBLE);
                     if (activity.sdkModel.isOCREnable && activity.modelList != null) {
                         activity.setCountryLayout();
                     }
+                } else {
+                    AlertDialog.Builder builder1 = new AlertDialog.Builder(activity);
+                    builder1.setMessage(activity.responseMessage);
+                    builder1.setCancelable(true);
+                    builder1.setPositiveButton(
+                            "OK",
+                            (dialog, id) -> dialog.cancel());
+                    AlertDialog alert11 = builder1.create();
+                    alert11.show();
                 }
             }
         }
@@ -77,7 +95,11 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     // doWorkNative();
                     RecogEngine recogEngine = new RecogEngine();
+                    AccuraLog.enableLogs(true); // make sure to disable logs in release mode
+                    recogEngine.setDialog(false); // setDialog(false) To set your custom dialog for license validation
                     activity.sdkModel = recogEngine.initEngine(activity);
+                    AccuraLog.loge(TAG, "Initialized Engine : " + activity.sdkModel.i + " -> " + activity.sdkModel.message);
+                    activity.responseMessage = activity.sdkModel.message;
 
                     if (activity.sdkModel.i >= 0) {
 
@@ -85,13 +107,13 @@ public class MainActivity extends AppCompatActivity {
                         if (activity.sdkModel.isOCREnable)
                             activity.modelList = recogEngine.getCardList(activity);
 
-                        recogEngine.setBlurPercentage(activity, 50, "Blur detect in document");
-                        recogEngine.setFaceBlurPercentage(activity, 50, "Blur detected over face");
-                        recogEngine.setGlarePercentage(activity, 6, 98, "Glare detect in document");
-                        recogEngine.isCheckPhotoCopy(activity, false, "Can not accept Photo Copy Document");
-                        recogEngine.SetHologramDetection(activity, true, "Hologram Detected");
-                        recogEngine.setLowLightTolerance(activity, 30, "Low lighting detected");
-                        recogEngine.setMotionData(activity, 15, "Keep Document Steady");
+                        recogEngine.setBlurPercentage(activity, 40);
+                        recogEngine.setFaceBlurPercentage(activity, 50);
+                        recogEngine.setGlarePercentage(activity, 5, 90);
+                        recogEngine.isCheckPhotoCopy(activity, false);
+                        recogEngine.SetHologramDetection(activity, true);
+                        recogEngine.setLowLightTolerance(activity, 39);
+                        recogEngine.setMotionData(activity, 15);
 
                         activity.handler.sendEmptyMessage(1);
                     } else
@@ -112,8 +134,9 @@ public class MainActivity extends AppCompatActivity {
     private List<Object> cardList = new ArrayList<>();
     private List<ContryModel> modelList;
     private int selectedPosition = -1;
-    private View btnMrz, btnBarcode, lout_country;
+    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBank, lout_country;
     private RecogEngine.SDKModel sdkModel;
+    private String responseMessage;
 
     private void setCountryLayout() {
 //        contryList = new ArrayList<>();
@@ -135,19 +158,57 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
                 RecogType.MRZ.attachTo(intent);
-                intent.putExtra("card_name", getResources().getString(R.string.passport_id_mrz));
+                MRZDocumentType.NONE.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.other_mrz));
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }
         });
 
-        btnBarcode = findViewById(R.id.lout_barcode);
-        btnBarcode.setOnClickListener(new View.OnClickListener() {
+        btnPassportMrz = findViewById(R.id.lout_passport_mrz);
+        btnIdMrz = findViewById(R.id.lout_id_mrz);
+        btnVisaMrz = findViewById(R.id.lout_visa_mrz);
+        btnPassportMrz.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
-                RecogType.BARCODE.attachTo(intent);
-                intent.putExtra("card_name", "Barcode");
+                RecogType.MRZ.attachTo(intent);
+                MRZDocumentType.PASSPORT_MRZ.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.passport_mrz));
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
+        });
+        btnIdMrz.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
+                RecogType.MRZ.attachTo(intent);
+                MRZDocumentType.ID_CARD_MRZ.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.id_mrz));
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
+        });
+        btnVisaMrz.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
+                RecogType.MRZ.attachTo(intent);
+                MRZDocumentType.VISA_MRZ.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.visa_mrz));
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
+        });
+
+        btnBank = findViewById(R.id.lout_bank);
+        btnBank.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
+                RecogType.BANKCARD.attachTo(intent);
+                intent.putExtra("card_name", getResources().getString(R.string.bank_card));
                 startActivity(intent);
                 overridePendingTransition(0, 0);
             }

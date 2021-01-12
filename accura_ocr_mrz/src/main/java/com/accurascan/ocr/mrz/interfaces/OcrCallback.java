@@ -24,7 +24,6 @@ public interface OcrCallback {
      *              or {@link com.docrecog.scan.RecogType#DL_PLATE}
      *  result instance of {@link RecogResult} if recog type is {@link com.docrecog.scan.RecogType#MRZ}
      *  result instance of {@link PDF417Data} if recog type is {@link com.docrecog.scan.RecogType#PDF417}
-     *  result instance of {@link String} if recog type is {@link com.docrecog.scan.RecogType#BARCODE}
      *
      */
     void onScannedComplete(Object result);

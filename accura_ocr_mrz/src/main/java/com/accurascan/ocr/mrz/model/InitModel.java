@@ -1,5 +1,8 @@
 package com.accurascan.ocr.mrz.model;
 
+import androidx.annotation.Keep;
+
+@Keep
 public class InitModel {
 
     private InitData data;
@@ -30,6 +33,7 @@ public class InitModel {
         this.responseMessage = responseMessage;
     }
 
+    @Keep
     public class InitData {
         private Integer cameraHeight;
         private Integer cameraWidth;
