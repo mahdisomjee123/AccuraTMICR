@@ -267,6 +267,8 @@ public class RecogEngine {
 
     public native int updateData(String s);
 
+    private native String loadCard(Context context, int type);
+
     private native String loadScanner(Context context, AssetManager assetManager, int countryid);
 
     private native String loadNumberPlat(Context context, int countryid, int cardid);
@@ -474,6 +476,27 @@ public class RecogEngine {
 
             faceDetector = FirebaseVision.getInstance().getVisionFaceDetector(options);
         }
+    }
+
+    /**
+     * Initialized MRZ or Bankcard
+     *
+     * @param context      is activity context
+     * @param recogType    0 for MRZ and 1 for Bankcard
+     * @return {@link InitModel}
+     */
+    protected InitModel initCard(Context context, int recogType){
+        String s = loadCard(context, recogType);
+        try {
+            if (s != null && !s.equals("")) {
+                JSONObject jsonObject = new JSONObject(s);
+                InitModel initModel = new Gson().fromJson(jsonObject.toString(), InitModel.class);
+                return initModel;
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**

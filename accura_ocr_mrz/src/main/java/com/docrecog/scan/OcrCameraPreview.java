@@ -218,8 +218,14 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) / 3;
                 if (mReference.recogType == RecogType.MRZ || mReference.recogType == RecogType.BANKCARD) {
                     AccuraLog.loge(TAG, "InitializeM");
-                    mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
-                    mReference.handler.sendEmptyMessage(1);
+                    InitModel initModel = mReference.recogEngine.initCard(mReference.mActivity, mReference.recogType == RecogType.MRZ ? 0 : 1);
+                    if (initModel != null && initModel.getResponseCode() == 1) {
+                        mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
+                        mReference.handler.sendEmptyMessage(1);
+                    } else {
+                        mReference.onError(initModel.getResponseMessage());
+                        mReference.handler.sendEmptyMessage(0);
+                    }
                 } else if (mReference.recogType == RecogType.DL_PLATE) {
                     AccuraLog.loge(TAG, "InitializeDL");
                     InitModel initModel = mReference.recogEngine.initNumberPlat(mReference.mActivity, mReference.countryId, mReference.cardId);
