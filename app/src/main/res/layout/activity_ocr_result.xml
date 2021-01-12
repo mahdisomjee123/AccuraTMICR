@@ -281,6 +281,44 @@
                         android:stretchColumns="*" />
 
                 </LinearLayout>
+                <!--bank table-->
+                <LinearLayout
+                    android:id="@+id/ly_bank_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/_8dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="@dimen/_8dp"
+                    android:background="@drawable/tab_bg"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/tab_title"
+                        android:gravity="center"
+                        android:paddingTop="@dimen/_2dp"
+                        android:paddingBottom="@dimen/_2dp"
+                        android:text="Bank Card"
+                        android:textAllCaps="true"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TableLayout
+                        android:id="@+id/bank_table_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/_2dp"
+                        android:layout_marginEnd="@dimen/_2dp"
+                        android:layout_marginBottom="4dp"
+                        android:divider="@color/tab_color"
+                        android:showDividers="middle"
+                        android:shrinkColumns="*"
+                        android:stretchColumns="*" />
+
+                </LinearLayout>
                 <!--Security Check-->
                 <LinearLayout
                     android:id="@+id/ly_security_container"

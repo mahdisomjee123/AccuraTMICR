@@ -1,6 +1,9 @@
 package com.accurascan.ocr.mrz.model;
 
 import android.graphics.Bitmap;
+import android.text.TextUtils;
+
+import androidx.annotation.Keep;
 
 import com.docrecog.scan.RecogEngine;
 
@@ -11,6 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+@Keep
 public class RecogResult {
     public String lines = "";//
     public String docType = "";//
@@ -19,17 +23,22 @@ public class RecogResult {
     public String givenname = "";//
     public String docnumber = "";//
     public String docchecksum = "";//
+    public String correctdocchecksum = "";//
     public String nationality = "";//
     public String birth = "";//
     public String birthchecksum = "";//
+    public String correctbirthchecksum = "";//
     public String sex = "";//
     public String expirationdate = "";//
     public String expirationchecksum = "";//
+    public String correctexpirationchecksum = "";//
     public String issuedate = "";//
     public String otherid = "";//
     public String otheridchecksum = "";//
+    public String correctotheridchecksum = "";//
     public String departmentnumber = "";//
     public String secondrowchecksum = "";
+    public String correctsecondrowchecksum = "";
     public int ret = 0;
     public Bitmap faceBitmap = null;
     public Bitmap docBackBitmap = null;
@@ -45,120 +54,83 @@ public class RecogResult {
         byte[] tmp = new byte[100];
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; lines = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; docType = convchar2string(tmp);
-		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; country = convchar2string(tmp);
+        len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; country = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; surname = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; givenname = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; docnumber = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; docchecksum = convchar2string(tmp);
+        len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctdocchecksum = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; nationality = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; birth = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; birthchecksum = convchar2string(tmp);
+        len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctbirthchecksum = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; sex = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; expirationdate = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; expirationchecksum = convchar2string(tmp);
+		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctexpirationchecksum = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; issuedate = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; otherid = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; otheridchecksum = convchar2string(tmp);
+        len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctotheridchecksum = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; departmentnumber = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; secondrowchecksum = convchar2string(tmp);
+        len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctsecondrowchecksum = convchar2string(tmp);
 
-        if (!sex.isEmpty()) {
-            if (sex.equalsIgnoreCase("F")) {
-                sex = "Female";
-            } else {
-                sex = "Male";
-            }
-        }
-        try {
-            if (!birth.isEmpty()) {
-                Date parse = date.parse(birth.replace("<", ""));
-				if (parse != null) {
-					birth = "";
-					birth = newDateFormat.format(parse);
-				}
-			}
-        } catch (ParseException e) {
-        }
-        try {
-            if (!expirationdate.isEmpty()) {
-                Date parse = date.parse(expirationdate.replace("<", ""));
-				if (parse != null) {
-					expirationdate = "";
-					expirationdate = newDateFormat.format(parse);
-				}
-			}
-        } catch (ParseException e) {
-        }
-        try {
-            if (!issuedate.isEmpty()) {
-                Date parse = date.parse(issuedate.replace("<", ""));
-                if (parse != null) {
-                    issuedate = "";
-                    issuedate = newDateFormat.format(parse);
-                }
-            }
-        } catch (ParseException e) {
-        }
-
-    }
-
-    public String GetResultString() {
-        String str = "";
-//        if (ret == 1) {
-//            str = "correct doc\n";
-//        } else {
-//            str = "incorrect doc\n";
+//        if (!sex.isEmpty()) {
+//            if (sex.equalsIgnoreCase("F")) {
+//                sex = "FEMALE";
+//            } else if (sex.equalsIgnoreCase("M")) {
+//                sex = "MALE";
+//            } else if (sex.equalsIgnoreCase("<")) {
+//                sex = "OTHER";
+//            }
 //        }
-		/*str = str + lines + "\n"
-			 + docType + "\n"
-			 + country + "\n"
-			 + surname + "\n"
-			 + givenname + "\n"
-			 + docnumber + "\n"
-			 + docchecksum + "\n"
-			 + nationality + "\n"
-			 + birth + "\n"
-			 + birthchecksum + "\n"
-			 + sex + "\n"
-			 + expirationdate + "\n"
-			 + expirationchecksum + "\n"
-			 + otherid + "\n"
-			 + otheridchecksum + "\n"
-			 + secondrowchecksum + "\n";*/
+        if (!TextUtils.isEmpty(birth)) {
+            birth = birth.replace("<", "");
+            if (birth.length() == 6) birth = birth.substring(4)+"-"+birth.substring(2,4)+"-"+birth.substring(0,2);
+        }
+        if (!TextUtils.isEmpty(expirationdate)) {
+            expirationdate = expirationdate.replace("<", "");
+            if (expirationdate.length() == 6) expirationdate = expirationdate.substring(4)+"-"+expirationdate.substring(2,4)+"-"+expirationdate.substring(0,2);
+        }
+        if (!TextUtils.isEmpty(issuedate)) {
+            issuedate = issuedate.replace("<", "");
+            if (issuedate.length() == 6) issuedate = issuedate.substring(4)+"-"+issuedate.substring(2,4)+"-"+issuedate.substring(0,2);
+        }
+//        try {
+//            if (!birth.isEmpty()) {
+//                Date parse = date.parse(birth.replace("<", ""));
+//				if (parse != null) {
+//					birth = "";
+//					birth = newDateFormat.format(parse);
+//				}
+//			}
+//        } catch (ParseException e) {
+//        }
+//        try {
+//            if (!expirationdate.isEmpty()) {
+//                Date parse = date.parse(expirationdate.replace("<", ""));
+//				if (parse != null) {
+//					expirationdate = "";
+//					expirationdate = newDateFormat.format(parse);
+//				}
+//			}
+//        } catch (ParseException e) {
+//        }
+//        try {
+//            if (!issuedate.isEmpty()) {
+//                Date parse = date.parse(issuedate.replace("<", ""));
+//                if (parse != null) {
+//                    issuedate = "";
+//                    issuedate = newDateFormat.format(parse);
+//                }
+//            }
+//        } catch (ParseException e) {
+//        }
 
-        str += "Lines : " + lines + "\n"
-                + "Document Type : " + docType + "\n"
-                + "Country : " + country + "\n"
-                + "Surname : " + surname + "\n"
-                + "Given Names : " + givenname + "\n"
-                + "Document No. : " + docnumber + "\n"
-                + "Document Check Number: " + docchecksum + "\n"
-                + "Nationaltiy : " + nationality + "\n"
-                + "Birth Date : " + birth + "\n"
-                + "Birth Check Number: " + birthchecksum + "\n"
-                + "Sex : " + sex + "\n"
-                + "ExpirationDate : " + expirationdate + "\n"
-                + "Expiration Check Number: " + expirationchecksum + "\n";
-
-		if (!issuedate.isEmpty()) {
-			str += "Issue Date: " + issuedate + "\n";
-		}
-
-		if (otherid.length() > 0) {
-			str += "Other ID : " + otherid + "\n"
-					+ "Other ID Check: " + otheridchecksum + "\n";
-		}
-
-		if (!departmentnumber.isEmpty()) {
-			str += "Department Number: " + departmentnumber + "\n";
-		}
-
-//        str += "Flag : " + Integer.toString(ret) + "\n";
-
-        return str;
     }
 
-    public static int getByteLength(byte[] str, int maxLen) {
+    private static int getByteLength(byte[] str, int maxLen) {
         int i, len = 0;
         for (i = 0; i < maxLen; ++i) {
             if (str[i] == 0) {
@@ -184,9 +156,9 @@ public class RecogResult {
     private static RecogResult recogResult;
 
     public static RecogResult getRecogResult() {
-        RecogResult ocrData = recogResult;
-        recogResult = null;
-        return ocrData;
+//        RecogResult ocrData = recogResult;
+//        recogResult = null;
+        return recogResult;
     }
 
     public static void setRecogResult(RecogResult ocrResult) {

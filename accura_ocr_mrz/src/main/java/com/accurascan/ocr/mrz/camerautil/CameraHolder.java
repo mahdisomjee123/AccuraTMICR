@@ -33,7 +33,7 @@ public class CameraHolder {
     private int mUsers = 0;  // number of open() - number of release()
     private int mNumberOfCameras;
     private int mCameraId = -1;  // current camera id
-    private int mBackCameraId = -1, mFrontCameraId = -1;
+    private int mBackCameraId = 0, mFrontCameraId = 1;
     private CameraInfo[] mInfo;
 
     // We store the camera parameters when we actually open the device,
@@ -193,6 +193,10 @@ public class CameraHolder {
 	public boolean isSameCameraDevice(android.hardware.Camera c){
 		return mCameraDevice == c;
 	}
+
+    public int getCameraId(int i) {
+        return i == 1 ? getFrontCameraId() : getBackCameraId();
+    }
 
     public int getBackCameraId() {
         return mBackCameraId;

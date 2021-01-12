@@ -11,6 +11,7 @@ public abstract class OcrView extends OcrCameraPreview {
     private int countryId = -1;
     private int cardId = -1;
     private ViewGroup cameraContainer;
+    private int cameraFacing;
 //    private boolean isSetPlayer = true;
 //    private MediaPlayer mediaPlayer = null;
     private int statusBarHeight = 0;
@@ -55,6 +56,11 @@ public abstract class OcrView extends OcrCameraPreview {
      */
     public OcrView setView(ViewGroup view) {
         this.cameraContainer = view;
+        return this;
+    }
+
+    public OcrView setCameraFacing(int cameraFacing){
+        this.cameraFacing = cameraFacing;
         return this;
     }
 
@@ -118,11 +124,18 @@ public abstract class OcrView extends OcrCameraPreview {
                 throw new IllegalArgumentException("Card Code must have to > 0");
             }
         }
-        setData(countryId, cardId);
-        setLayout(cameraContainer);
-        setType(recogType);
-        setHeight(statusBarHeight);
-        start();
+        setData(countryId, cardId)
+        .setLayout(cameraContainer)
+        .setType(recogType)
+        .setHeight(statusBarHeight)
+        .setFacing(cameraFacing)
+        .start();
+    }
+
+    public void flipCamera(int i){
+        this.cameraFacing = i;
+        setFacing(this.cameraFacing);
+        restartPreview();
     }
 
     /**
@@ -203,6 +216,7 @@ public abstract class OcrView extends OcrCameraPreview {
      * call destroy method to stop camera preview
      */
     public void destroy() {
+        ocrCallBack = null;
         onDestroy();
     }
 

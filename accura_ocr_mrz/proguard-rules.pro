@@ -23,13 +23,13 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
--dontwarn javax.annotation.Nullable
--dontwarn okio.**
--dontwarn javax.annotation.**
--dontwarn org.apache.poi.**
--keep class org.apache.poi.** { *; }
--keepattributes *Annotation*
--keepattributes SourceFile,LineNumberTable
--dontwarn javax.annotation.Nullable
--keep public class com.accurascan.ocr.mrz.** {*;}
--keep public class com.docrecog.scan.** {*;}
+#-dontwarn javax.annotation.Nullable
+#-dontwarn okio.**
+#-dontwarn javax.annotation.**
+#-dontwarn org.apache.poi.**
+#-keep class org.apache.poi.** { *; }
+#-keepattributes *Annotation*
+#-keepattributes SourceFile,LineNumberTable
+#-dontwarn javax.annotation.Nullable
+#-keep public class com.accurascan.ocr.mrz.** {*;}
+#-keep public class com.docrecog.scan.** {*;}

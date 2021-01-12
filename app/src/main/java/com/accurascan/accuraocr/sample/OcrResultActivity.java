@@ -12,6 +12,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.model.RecogResult;
@@ -23,11 +24,11 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
 
     private TextView tvCancel1;
 
-    TableLayout mrz_table_layout, front_table_layout, back_table_layout, security_table_layout, usdl_table_layout, pdf417_table_layout;
+    TableLayout mrz_table_layout, front_table_layout, back_table_layout, security_table_layout, usdl_table_layout, pdf417_table_layout, bank_table_layout;
 
     ImageView ivUserProfile, iv_frontside, iv_backside;
     LinearLayout ly_back, ly_front;
-    View dl_plate_lout, ly_mrz_container, ly_front_container, ly_back_container, ly_security_container, ly_pdf417_container, ly_usdl_container;
+    View dl_plate_lout, ly_mrz_container, ly_front_container, ly_back_container, ly_security_container, ly_pdf417_container, ly_usdl_container, ly_bank_container;
     OcrData.MapData Frontdata;
     OcrData.MapData Backdata;
 
@@ -41,6 +42,19 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         if (RecogType.detachFrom(getIntent()) == RecogType.OCR) {
             OcrData ocrData = OcrData.getOcrResult();
             setOcrData(ocrData);
+        } else if (RecogType.detachFrom(getIntent()) == RecogType.BANKCARD) {
+            ly_back.setVisibility(View.GONE);
+            ivUserProfile.setVisibility(View.GONE);
+
+            CardDetails cardDetails = CardDetails.getCardDetails();
+            setBankData(cardDetails);
+
+            if (cardDetails.getBitmap() != null) {
+                iv_frontside.setImageBitmap(cardDetails.getBitmap());
+            } else {
+                ly_front.setVisibility(View.GONE);
+            }
+
         } else if (RecogType.detachFrom(getIntent()) == RecogType.MRZ) {
             RecogResult g_recogResult = RecogResult.getRecogResult();
             setMRZData(g_recogResult);
@@ -119,6 +133,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         security_table_layout = findViewById(R.id.security_table_layout);
         pdf417_table_layout = findViewById(R.id.pdf417_table_layout);
         usdl_table_layout = findViewById(R.id.usdl_table_layout);
+        bank_table_layout = findViewById(R.id.bank_table_layout);
 
         dl_plate_lout = findViewById(R.id.dl_plate_lout);
         ly_mrz_container = findViewById(R.id.ly_mrz_container);
@@ -127,8 +142,10 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         ly_security_container = findViewById(R.id.ly_security_container);
         ly_pdf417_container = findViewById(R.id.ly_pdf417_container);
         ly_usdl_container = findViewById(R.id.ly_usdl_container);
+        ly_bank_container = findViewById(R.id.ly_bank_container);
 
         dl_plate_lout.setVisibility(View.GONE);
+        ly_bank_container.setVisibility(View.GONE);
     }
 
     private void setOcrData(OcrData ocrData) {
@@ -280,6 +297,26 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         setData();
     }
 
+    private void setBankData(CardDetails bankData){
+        if (bankData == null) return;
+        ly_bank_container.setVisibility(View.VISIBLE);
+//        addBankLayout("Owner", bankData.getOwner());
+        addBankLayout("Card Type", bankData.getCardType());
+        addBankLayout("Number", bankData.getNumber());
+        addBankLayout("Expiry Month", bankData.getExpirationMonth());
+        addBankLayout("Expiry Year", bankData.getExpirationYear());
+    }
+
+    private void addBankLayout(String key, String s) {
+        if (TextUtils.isEmpty(s)) return;
+        View layout1 = LayoutInflater.from(OcrResultActivity.this).inflate(R.layout.table_row, null);
+        TextView tv_key1 = layout1.findViewById(R.id.tv_key);
+        TextView tv_value1 = layout1.findViewById(R.id.tv_value);
+        tv_key1.setText(key);
+        tv_value1.setText(s);
+        bank_table_layout.addView(layout1);
+    }
+
     private void setMRZData(RecogResult recogResult) {
         ly_mrz_container.setVisibility(View.VISIBLE);
         addLayout("MRZ", recogResult.lines);
@@ -288,18 +325,24 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         addLayout("Last Name", recogResult.surname);
         addLayout("Document No.", recogResult.docnumber);
         addLayout("Document check No.", recogResult.docchecksum);
+        addLayout("Correct Document check No.", recogResult.correctdocchecksum);
         addLayout("Country", recogResult.country);
         addLayout("Nationality", recogResult.nationality);
-        addLayout("Sex", recogResult.sex);
+        String s = (recogResult.sex.equals("M")) ? "Male" : ((recogResult.sex.equals("F")) ? "Female" : recogResult.sex);
+        addLayout("Sex", s);
         addLayout("Date of Birth", recogResult.birth);
         addLayout("Birth Check No.", recogResult.birthchecksum);
+        addLayout("Correct Birth Check No.", recogResult.correctbirthchecksum);
         addLayout("Date of Expiry", recogResult.expirationdate);
         addLayout("Expiration Check No.", recogResult.expirationchecksum);
+        addLayout("Correct Expiration Check No.", recogResult.correctexpirationchecksum);
         addLayout("Date Of Issue", recogResult.issuedate);
         addLayout("Department No.", recogResult.departmentnumber);
         addLayout("Other ID", recogResult.otherid);
         addLayout("Other ID Check", recogResult.otheridchecksum);
+        addLayout("Correct Other ID Check", recogResult.correctotheridchecksum);
         addLayout("Second Row Check No.", recogResult.secondrowchecksum);
+        addLayout("Correct Second Row Check No.", recogResult.correctsecondrowchecksum);
     }
 
     private void addLayout(String key, String s) {
@@ -454,17 +497,14 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
             try {
                 OcrData.getOcrResult().getFrontimage().recycle();
             } catch (Exception e) {
-                e.printStackTrace();
             }
             try {
                 OcrData.getOcrResult().getBackimage().recycle();
             } catch (Exception e) {
-                e.printStackTrace();
             }
             try {
                 OcrData.getOcrResult().getFaceImage().recycle();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }else if (RecogType.detachFrom(getIntent()) == RecogType.MRZ && RecogResult.getRecogResult() != null) {
             try {
@@ -472,7 +512,6 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                 RecogResult.getRecogResult().faceBitmap.recycle();
                 RecogResult.getRecogResult().docBackBitmap.recycle();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }else if (RecogType.detachFrom(getIntent()) == RecogType.PDF417 && PDF417Data.getPDF417Result() != null) {
             PDF417Data.getPDF417Result().faceBitmap.recycle();

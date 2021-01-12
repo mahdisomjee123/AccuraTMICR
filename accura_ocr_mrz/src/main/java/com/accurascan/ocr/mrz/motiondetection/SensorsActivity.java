@@ -30,7 +30,7 @@ public class SensorsActivity extends Activity implements SensorEventListener {
                                                       // accelerometer data)
     private static final float mag[] = new float[3]; // Magnetic
 
-    private static final float gravThreshold = 0.5f;
+    private static final float gravThreshold = 0.3f;
     private static final float magThreshold = 1.0f;
 
     private static SensorManager sensorMgr = null;
@@ -117,12 +117,16 @@ public class SensorsActivity extends Activity implements SensorEventListener {
 
         try {
             try {
-                sensorMgr.unregisterListener(this, sensorGrav);
+                if (sensorMgr != null) {
+                    sensorMgr.unregisterListener(this, sensorGrav);
+                }
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
             try {
-                sensorMgr.unregisterListener(this, sensorMag);
+                if (sensorMgr != null) {
+                    sensorMgr.unregisterListener(this, sensorMag);
+                }
             } catch (Exception ex) {
                 ex.printStackTrace();
             }

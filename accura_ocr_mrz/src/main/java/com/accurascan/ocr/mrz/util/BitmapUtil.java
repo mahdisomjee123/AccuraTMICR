@@ -218,7 +218,21 @@ public class BitmapUtil {
             Bitmap bmp_org = BitmapFactory.decodeByteArray(os.toByteArray(), 0, os.toByteArray().length);
             os.close();
             Matrix matrix = new Matrix();
-            matrix.postRotate(mDisplayOrientation);
+            int rotationDegree = 0;
+            switch (mDisplayOrientation) {
+                case 1: // ROTATION_90:
+                    rotationDegree = 90;
+                    break;
+                case 2: // ROTATION_180:
+                    rotationDegree = 180;
+                    break;
+                case 3: //ROTATION_270:
+                    rotationDegree = 270;
+                    break;
+                default:
+                    break;
+            }
+            matrix.postRotate(rotationDegree);
             Bitmap bmp1 = Bitmap.createBitmap(bmp_org, 0, 0, bmp_org.getWidth(), bmp_org.getHeight(), matrix, true);
 
             if (RecogType.OCR == recogType) {
@@ -253,6 +267,100 @@ public class BitmapUtil {
 
 
     }
+
+    /**
+     * Decode an image into a Bitmap, and also center cropped according to croppedHeight, croppedWidth
+     * {@link Camera.PreviewCallback#onPreviewFrame(byte[] data, Camera camera)}
+     *
+     * @param data                an encoded image
+     * @param size                image size
+     * @param format              image format {@see ImageFormat} to decode image
+     * @param mDisplayOrientation camera orientation
+     * @param croppedHeight       center cropped image according to height which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData#cameraHeight} cameraHeight
+     * @param croppedWidth        center cropped image according to width which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData#cameraWidth} cameraWidth
+     * @param recogType           if recog type is {@link RecogType#OCR} then crop bitmap by scale factor else crop center image
+     * @param scaleX              camera preview zoom by scaleX
+     * @param scaleY              camera preview zoom by scaleY
+     * @param childWidth
+     * @param childHeight
+     * @return a decoded bitmap with cropped image
+     */
+    public static Bitmap getBitmapFromData(byte[] data, Camera.Size size, int format, int mDisplayOrientation, int croppedHeight, int croppedWidth, RecogType recogType, float scaleX, float scaleY, int childWidth, int childHeight) {
+
+        int width;
+        int height;
+        if (size != null) {
+            try {
+                width = size.width;
+                height = size.height;
+            } catch (Exception e) {
+                return null;
+            }
+        } else {
+            return null;
+        }
+        try {
+            Bitmap bmCard = null;
+            Bitmap bmp_org = null;
+            YuvImage temp = new YuvImage(data, format, width, height, null);
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            temp.compressToJpeg(new Rect(0, 0, temp.getWidth(), temp.getHeight()), 100, os);
+            bmp_org = BitmapFactory.decodeByteArray(os.toByteArray(), 0, os.toByteArray().length);
+            os.close();
+            Matrix matrix = new Matrix();
+            int rotationDegree = 0;
+            switch (mDisplayOrientation) {
+                case 1: // ROTATION_90:
+                    rotationDegree = 90;
+                    break;
+                case 2: // ROTATION_180:
+                    rotationDegree = 180;
+                    break;
+                case 3: //ROTATION_270:
+                    rotationDegree = 270;
+                    break;
+                default:
+                    break;
+            }
+            matrix.postRotate(rotationDegree);
+            Bitmap bmp1 = Bitmap.createBitmap(bmp_org, 0, 0, bmp_org.getWidth(), bmp_org.getHeight(), matrix, true);
+
+//            if (RecogType.OCR == recogType) {
+            DisplayMetrics dm = Resources.getSystem().getDisplayMetrics();
+            Point centerOfCanvas = new Point(dm.widthPixels / 2, dm.heightPixels / 2);
+            int left = centerOfCanvas.x - (croppedWidth / 2);
+            int top = centerOfCanvas.y - (croppedHeight / 2);
+            int right = centerOfCanvas.x + (croppedWidth / 2);
+            int bottom = centerOfCanvas.y + (croppedHeight / 2);
+            Rect frameRect = new Rect(left, top, right, bottom);
+
+            frameRect.left += scaleX;
+            frameRect.top += scaleY;
+            frameRect.right += scaleX;
+            frameRect.bottom += scaleY;
+
+            float widthScaleFactor = (float) height / (float) childWidth;
+            float heightScaleFactor = (float) (width) / (float) childHeight;
+            frameRect.left = (int) (frameRect.left * widthScaleFactor);
+            frameRect.top = (int) (frameRect.top * heightScaleFactor);
+            frameRect.right = (int) (frameRect.right * widthScaleFactor);
+            frameRect.bottom = (int) (frameRect.bottom * heightScaleFactor);
+
+            Rect finalrect = new Rect((int) (frameRect.left), (int) (frameRect.top), (int) (frameRect.right), (int) (frameRect.bottom));
+
+            bmCard = Bitmap.createBitmap(bmp1, finalrect.left, finalrect.top, finalrect.width(), finalrect.height());
+//            } else if (RecogType.MRZ == recogType) {
+//                bmCard = BitmapUtil.centerCrop(bmp1, bmp1.getWidth(), bmp1.getHeight() / 3);
+//            }
+            bmp_org.recycle();
+            bmp1.recycle();
+            return bmCard;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 
 //    @Nullable
 //    public static Bitmap getBitmap(byte[] imageInBuffer, FrameMetadata metadata) {
