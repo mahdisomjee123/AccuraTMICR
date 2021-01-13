@@ -33,3 +33,11 @@
 #-dontwarn javax.annotation.Nullable
 #-keep public class com.accurascan.ocr.mrz.** {*;}
 #-keep public class com.docrecog.scan.** {*;}
+-keep public class com.accurascan.ocr.mrz.camerautil.** {*;}
+-keep public class com.accurascan.ocr.mrz.customview.** {*;}
+-keep public class com.accurascan.ocr.mrz.detector.** {*;}
+-keep public class com.accurascan.ocr.mrz.interfaces.** {*;}
+-keep public class com.accurascan.ocr.mrz.motiondetection.** {*;}
+-keep public class com.accurascan.ocr.mrz.util.** {*;}
+-keep public class com.accurascan.ocr.mrz.CameraView {*;}
+-keep public class com.docrecog.scan.** {*;}
