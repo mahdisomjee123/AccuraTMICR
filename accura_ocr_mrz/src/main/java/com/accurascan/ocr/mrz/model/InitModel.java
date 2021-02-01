@@ -37,6 +37,7 @@ public class InitModel {
     public class InitData {
         private Integer cameraHeight;
         private Integer cameraWidth;
+        public float borderRatio;
         private String cardName;
         private Boolean isbothavailable;
         private String cardside = "";

@@ -22,10 +22,10 @@
             </intent-filter>
         </activity>
         <activity android:name=".OcrActivity"
-            android:screenOrientation="portrait"
+            android:screenOrientation="locked"
             android:clearTaskOnLaunch="true"/>
         <activity android:name="com.accurascan.accuraocr.sample.OcrResultActivity"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="locked"/>
     </application>
 
 </manifest>

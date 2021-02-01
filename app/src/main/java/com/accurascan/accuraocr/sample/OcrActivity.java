@@ -3,6 +3,7 @@ package com.accurascan.accuraocr.sample;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
@@ -78,8 +79,14 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         setTheme(R.style.AppThemeNoActionBar);
+        if (getIntent().getIntExtra("app_orientation", 1) != 0) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }
+        super.onCreate(savedInstanceState);
+
         requestWindowFeature(Window.FEATURE_NO_TITLE); // Hide the window title.
         setContentView(R.layout.ocr_activity);
         AccuraLog.loge(TAG, "Start Camera Activity");
@@ -267,6 +274,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         if (cameraView != null) cameraView.release(true);
         Intent intent = new Intent(this, OcrResultActivity.class);
         recogType.attachTo(intent);
+        intent.putExtra("app_orientation", getRequestedOrientation());
         startActivityForResult(intent, 101);
     }
 

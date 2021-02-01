@@ -1,5 +1,6 @@
 package com.accurascan.accuraocr.sample;
 
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -33,8 +34,13 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
     OcrData.MapData Backdata;
 
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         setTheme(R.style.AppThemeNoActionBar);
+        if (getIntent().getIntExtra("app_orientation", 1) != 0) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ocr_result);
 
         initUI();
@@ -228,6 +234,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
             ly_front_container.setVisibility(View.GONE);
         }
         if (Backdata != null) {
+            boolean isBackVisible = true;
             ly_back_container.setVisibility(View.VISIBLE);
             for (int i = 0; i < Backdata.getOcr_data().size(); i++) {
                 View layout = LayoutInflater.from(OcrResultActivity.this).inflate(R.layout.table_row, null);
@@ -247,11 +254,14 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                                 tv_value.setText(value);
                                 imageView.setVisibility(View.GONE);
                                 back_table_layout.addView(layout);
+                                isBackVisible = true;
                             }
                         } else {
+                            isBackVisible = false;
                             setMRZData(ocrData.getMrzData());
                         }
                     } else if (data_type == 2) {
+                        isBackVisible = true;
                         if (!value.equalsIgnoreCase("") && !value.equalsIgnoreCase(" ")) {
                             try {
                                 tv_key.setText(key + ":");
@@ -289,6 +299,10 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
             final Bitmap BackImage = ocrData.getBackimage();
             if (BackImage != null && !BackImage.isRecycled()) {
                 iv_backside.setImageBitmap(BackImage);
+            }
+            if (!isBackVisible) {
+                // hide OCR back container if Back side contains only MRZ data
+                ly_back_container.setVisibility(View.GONE);
             }
         } else {
             ly_back.setVisibility(View.GONE);
