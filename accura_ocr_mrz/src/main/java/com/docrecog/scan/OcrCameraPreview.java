@@ -189,8 +189,15 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         AccuraLog.loge(TAG, "InitializeOCR");
                     }
                     if (mReference.i1 != null && mReference.i1.getInitData() != null) {
-                        mReference.rectH = mReference.i1.getInitData().getCameraHeight();
-                        mReference.rectW = mReference.i1.getInitData().getCameraWidth();
+
+                        if (BitmapUtil.isPortraitMode(mReference.mActivity)) {
+                            mReference.rectH = mReference.i1.getInitData().getCameraHeight();
+                            mReference.rectW = mReference.i1.getInitData().getCameraWidth();
+                        } else {
+                            mReference.rectH = (int) (((mReference.dm.heightPixels-(100*mReference.dm.density)) * 5) / (float) 5.6f);
+                            mReference.rectW = (int) (mReference.rectH / mReference.i1.getInitData().borderRatio);
+                            AccuraLog.loge(TAG, "lOC : "+"\"cameraHeight\":"+mReference.rectH+",\"cameraWidth\":"+mReference.rectW );
+                        }
                         mReference.ocrData.setCardname(mReference.i1.getInitData().getCardName());
                         mReference.isbothavailable = mReference.i1.getInitData().getIsbothavailable();
                         if (mReference.isbothavailable) {
@@ -214,8 +221,15 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 }
             } else {
 
-                mReference.rectW = mReference.dm.widthPixels - 20;
-                mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) / 3;
+                if (BitmapUtil.isPortraitMode(mReference.mActivity)) {
+                    mReference.rectW = mReference.dm.widthPixels - 20;
+                    mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) / 3;
+                    Log.e(TAG, "run: frame" + mReference.dm.toString() + mReference.rectW + "x" + mReference.rectH);
+                } else {
+                    mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) - (int) (100 * mReference.dm.density);
+                    mReference.rectW = (int) (mReference.rectH / 0.69);
+                    Log.e(TAG, "run: frame" + mReference.dm.toString() + mReference.rectW + "x" + mReference.rectH);
+                }
                 if (mReference.recogType == RecogType.MRZ || mReference.recogType == RecogType.BANKCARD) {
                     AccuraLog.loge(TAG, "InitializeM");
                     InitModel initModel = mReference.recogEngine.initCard(mReference.mActivity, mReference.recogType == RecogType.MRZ ? 0 : 1);

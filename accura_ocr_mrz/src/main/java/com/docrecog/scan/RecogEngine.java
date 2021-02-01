@@ -1144,9 +1144,7 @@ public class RecogEngine {
             imageBitmap.recycle();
             imageBitmap = src.copy(Config.ARGB_8888, false);
         }
-        Log.e(TAG, "detectText: imageBitmap -> " + imageBitmap.toString() );
         Bitmap image = imageBitmap;
-        Log.e(TAG, "detectText: image -> " + image.toString() );
         if (detector == null) {
             detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
         }

@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.PDF417Data;
+import com.accurascan.ocr.mrz.util.BitmapUtil;
 
 public abstract class ScannerView extends ScannerCameraPreview {
     public boolean isflashOn = false;
@@ -99,8 +100,16 @@ public abstract class ScannerView extends ScannerCameraPreview {
 //        this.cameraContainer.addView(this);
         DisplayMetrics dm = context.getResources().getDisplayMetrics();
 
-        int W = dm.widthPixels - 20;
-        int H = (dm.heightPixels) / 3;
+        int W ;//= dm.widthPixels - 20;
+        int H ;//= (dm.heightPixels) / 3;
+
+        if (BitmapUtil.isPortraitMode(context)) {
+            W = dm.widthPixels - 20;
+            H = (dm.heightPixels) / 3;
+        } else {
+            H = (dm.heightPixels) - (int) (100 * dm.density);
+            W = (int) (H / 0.69);
+        }
         if (this.scanCallBack != null) {
             this.scanCallBack.onUpdateLayout(W, H);
         }

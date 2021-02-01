@@ -17,6 +17,7 @@ package com.accurascan.ocr.mrz.util;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -328,27 +329,57 @@ public class BitmapUtil {
 //            if (RecogType.OCR == recogType) {
             DisplayMetrics dm = Resources.getSystem().getDisplayMetrics();
             Point centerOfCanvas = new Point(dm.widthPixels / 2, dm.heightPixels / 2);
+            //get viewfinder border size and position on the screen
             int left = centerOfCanvas.x - (croppedWidth / 2);
             int top = centerOfCanvas.y - (croppedHeight / 2);
             int right = centerOfCanvas.x + (croppedWidth / 2);
             int bottom = centerOfCanvas.y + (croppedHeight / 2);
             Rect frameRect = new Rect(left, top, right, bottom);
 
-            frameRect.left += scaleX;
-            frameRect.top += scaleY;
-            frameRect.right += scaleX;
-            frameRect.bottom += scaleY;
+//            if (rotationDegree != 0) {
+                frameRect.left += scaleX;
+                frameRect.top += scaleY;
+                frameRect.right += scaleX;
+                frameRect.bottom += scaleY;
+//            } else {
+//                frameRect.left += scaleY;
+//                frameRect.top += scaleX;
+//                frameRect.right += scaleY;
+//                frameRect.bottom += scaleX;
+//            }
 
-            float widthScaleFactor = (float) height / (float) childWidth;
-            float heightScaleFactor = (float) (width) / (float) childHeight;
-            frameRect.left = (int) (frameRect.left * widthScaleFactor);
-            frameRect.top = (int) (frameRect.top * heightScaleFactor);
-            frameRect.right = (int) (frameRect.right * widthScaleFactor);
-            frameRect.bottom = (int) (frameRect.bottom * heightScaleFactor);
+            float widthScaleFactor;
+            float heightScaleFactor;
+            //calculate aspect ratio
+            if (rotationDegree != 0) {
+                widthScaleFactor = (float) height / (float) childWidth;
+                heightScaleFactor = (float) (width) / (float) childHeight;
+            } else {
+                widthScaleFactor = (float) width / (float) childWidth;
+                heightScaleFactor = (float) height / (float) childHeight;
+            }
+            //calculate position and size for cropping
+//            frameRect.left = (int) (frameRect.left * widthScaleFactor);
+//            frameRect.top = (int) (frameRect.top * heightScaleFactor);
+//            frameRect.right = (int) (frameRect.right * widthScaleFactor);
+//            frameRect.bottom = (int) (frameRect.bottom * heightScaleFactor);
+//            Rect finalrect = new Rect((int) (frameRect.left), (int) (frameRect.top), (int) (frameRect.right), (int) (frameRect.bottom));
 
-            Rect finalrect = new Rect((int) (frameRect.left), (int) (frameRect.top), (int) (frameRect.right), (int) (frameRect.bottom));
+            int cropStartX = (int) (frameRect.left * widthScaleFactor);
+            int cropStartY = (int) (frameRect.top * heightScaleFactor);
 
-            bmCard = Bitmap.createBitmap(bmp1, finalrect.left, finalrect.top, finalrect.width(), finalrect.height());
+            int cropWidthX = (int) (frameRect.width() * widthScaleFactor);
+            int cropHeightY = (int) (frameRect.height() * heightScaleFactor);
+
+            if (cropStartX + cropWidthX > bmp1.getWidth()) {
+                cropWidthX = bmp1.getWidth() - cropStartX;
+            }
+            if (cropStartY + cropHeightY > bmp1.getHeight()){
+                cropHeightY = bmp1.getHeight() - cropStartY;
+            }
+
+
+            bmCard = Bitmap.createBitmap(bmp1, cropStartX, cropStartY, cropWidthX, cropHeightY);
 //            } else if (RecogType.MRZ == recogType) {
 //                bmCard = BitmapUtil.centerCrop(bmp1, bmp1.getWidth(), bmp1.getHeight() / 3);
 //            }
@@ -521,5 +552,16 @@ public class BitmapUtil {
         }*/
         Util.logd("TAG", "new 1: " + v);
         return v;
+    }
+
+    public static boolean isPortraitMode(Context context) {
+        int orientation = context.getResources().getConfiguration().orientation;
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            return false;
+        }
+        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            return true;
+        }
+        return false;
     }
 }
