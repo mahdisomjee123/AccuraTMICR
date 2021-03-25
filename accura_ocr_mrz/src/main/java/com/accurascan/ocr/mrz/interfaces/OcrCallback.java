@@ -21,7 +21,7 @@ public interface OcrCallback {
      *
      * @param result is scanned card data
      *  result instance of {@link OcrData} if recog type is {@link com.docrecog.scan.RecogType#OCR}
-     *              or {@link com.docrecog.scan.RecogType#DL_PLATE}
+     *              or {@link com.docrecog.scan.RecogType#DL_PLATE} or {@link com.docrecog.scan.RecogType#BARCODE}
      *  result instance of {@link RecogResult} if recog type is {@link com.docrecog.scan.RecogType#MRZ}
      *  result instance of {@link PDF417Data} if recog type is {@link com.docrecog.scan.RecogType#PDF417}
      *

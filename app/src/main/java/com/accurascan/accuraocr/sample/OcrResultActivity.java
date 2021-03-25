@@ -19,19 +19,18 @@ import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.model.RecogResult;
 import com.docrecog.scan.RecogType;
 
-public class OcrResultActivity extends AppCompatActivity implements View.OnClickListener {
+public class OcrResultActivity extends AppCompatActivity {
 
     Bitmap face1;
 
-    private TextView tvCancel1;
-
-    TableLayout mrz_table_layout, front_table_layout, back_table_layout, security_table_layout, usdl_table_layout, pdf417_table_layout, bank_table_layout;
+    TableLayout mrz_table_layout, front_table_layout, back_table_layout, usdl_table_layout, pdf417_table_layout, bank_table_layout;
 
     ImageView ivUserProfile, iv_frontside, iv_backside;
     LinearLayout ly_back, ly_front;
-    View dl_plate_lout, ly_mrz_container, ly_front_container, ly_back_container, ly_security_container, ly_pdf417_container, ly_usdl_container, ly_bank_container;
+    View dl_plate_lout, ly_mrz_container, ly_front_container, ly_back_container, ly_security_container, ly_pdf417_container, ly_usdl_container, ly_bank_container, ly_barcode_container, faceImageContainer;
     OcrData.MapData Frontdata;
     OcrData.MapData Backdata;
+    private TextView tv_security;
 
     protected void onCreate(Bundle savedInstanceState) {
         setTheme(R.style.AppThemeNoActionBar);
@@ -44,13 +43,17 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         setContentView(R.layout.activity_ocr_result);
 
         initUI();
+        RecogType recogType = RecogType.detachFrom(getIntent());
 
-        if (RecogType.detachFrom(getIntent()) == RecogType.OCR) {
+        if (recogType == RecogType.OCR) {
+            // RecogType.OCR
             OcrData ocrData = OcrData.getOcrResult();
-            setOcrData(ocrData);
-        } else if (RecogType.detachFrom(getIntent()) == RecogType.BANKCARD) {
+            if (ocrData != null) {
+                setOcrData(ocrData);
+            }
+        } else if (recogType == RecogType.BANKCARD) {
             ly_back.setVisibility(View.GONE);
-            ivUserProfile.setVisibility(View.GONE);
+            faceImageContainer.setVisibility(View.GONE);
 
             CardDetails cardDetails = CardDetails.getCardDetails();
             setBankData(cardDetails);
@@ -61,43 +64,49 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                 ly_front.setVisibility(View.GONE);
             }
 
-        } else if (RecogType.detachFrom(getIntent()) == RecogType.MRZ) {
+        } else if (recogType == RecogType.MRZ) {
+            // RecogType.MRZ
             RecogResult g_recogResult = RecogResult.getRecogResult();
-            setMRZData(g_recogResult);
+            if (g_recogResult != null) {
+                setMRZData(g_recogResult);
 
-            if (g_recogResult.docFrontBitmap != null) {
-                iv_frontside.setImageBitmap(g_recogResult.docFrontBitmap);
-            } else {
-                ly_front.setVisibility(View.GONE);
-            }
+                if (g_recogResult.docFrontBitmap != null) {
+                    iv_frontside.setImageBitmap(g_recogResult.docFrontBitmap);
+                } else {
+                    ly_front.setVisibility(View.GONE);
+                }
 
-            if (g_recogResult.docBackBitmap != null) {
-                iv_backside.setImageBitmap(g_recogResult.docBackBitmap);
-            } else {
-                ly_back.setVisibility(View.GONE);
-            }
+                if (g_recogResult.docBackBitmap != null) {
+                    iv_backside.setImageBitmap(g_recogResult.docBackBitmap);
+                } else {
+                    ly_back.setVisibility(View.GONE);
+                }
 
 
-            if (g_recogResult.faceBitmap != null) {
-                face1 = g_recogResult.faceBitmap;
+                if (g_recogResult.faceBitmap != null) {
+                    face1 = g_recogResult.faceBitmap;
+                }
             }
             setData();
-        } else if (RecogType.detachFrom(getIntent()) == RecogType.DL_PLATE) {
+        } else if (recogType == RecogType.DL_PLATE) {
+            findViewById(R.id.v_divider).setVisibility(View.GONE);
             dl_plate_lout.setVisibility(View.VISIBLE);
             ly_back.setVisibility(View.GONE);
-            ly_front.setVisibility(View.GONE);
-            ivUserProfile.setVisibility(View.GONE);
+            faceImageContainer.setVisibility(View.GONE);
             OcrData ocrData = OcrData.getOcrResult();
 
-            TextView textView = findViewById(R.id.tv_value);
-            ImageView imageView = findViewById(R.id.im_doc);
-            textView.setText(ocrData.getFrontData().getOcr_data().get(0).getKey_data());
-            if (ocrData.getFrontimage() != null) {
-                imageView.setImageBitmap(ocrData.getFrontimage());
-            } else {
-                imageView.setVisibility(View.GONE);
+            if (ocrData != null) {
+                TextView textView = findViewById(R.id.tv_value);
+                textView.setText(ocrData.getFrontData().getOcr_data().get(0).getKey_data());
+                if (ocrData.getFrontimage() != null) {
+                    iv_frontside.setImageBitmap(ocrData.getFrontimage());
+                } else {
+                    iv_frontside.setVisibility(View.GONE);
+                }
             }
-        } else if (RecogType.detachFrom(getIntent()) == RecogType.PDF417) {
+
+        } else if (recogType == RecogType.PDF417 || (recogType == RecogType.BARCODE && PDF417Data.getPDF417Result() != null)) {
+            // RecogType.PDF417
             PDF417Data pdf417Data = PDF417Data.getPDF417Result();
 
             if (pdf417Data == null) return;
@@ -119,24 +128,41 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                 face1 = pdf417Data.faceBitmap;
             }
             setData();
+        } else if (recogType == RecogType.BARCODE) {
+            // RecogType.BARCODE
+            ly_barcode_container.setVisibility(View.VISIBLE);
+            ly_back.setVisibility(View.GONE);
+            faceImageContainer.setVisibility(View.GONE);
+
+            OcrData ocrData = OcrData.getOcrResult();
+
+            if (ocrData != null) {
+                TextView textView = findViewById(R.id.tv_barcode_data);
+                textView.setText(ocrData.getFrontData().getOcr_data().get(0).getKey_data());
+
+                final Bitmap frontBitmap = ocrData.getFrontimage();
+                if (frontBitmap != null && !frontBitmap.isRecycled()) iv_frontside.setImageBitmap(frontBitmap);
+                else ly_front.setVisibility(View.GONE);
+            }
         }
     }
 
     private void initUI() {
         //initialize the UI
         ivUserProfile = findViewById(R.id.ivUserProfile);
-        tvCancel1 = findViewById(R.id.tvCancel1);
-        tvCancel1.setOnClickListener(this);
+        faceImageContainer = findViewById(R.id.lyt_face_image_container);
+        faceImageContainer.setVisibility(View.GONE);
 
         ly_back = findViewById(R.id.ly_back);
         ly_front = findViewById(R.id.ly_front);
         iv_frontside = findViewById(R.id.iv_frontside);
         iv_backside = findViewById(R.id.iv_backside);
 
+        tv_security = findViewById(R.id.tv_security);
+
         mrz_table_layout = findViewById(R.id.mrz_table_layout);
         front_table_layout = findViewById(R.id.front_table_layout);
         back_table_layout = findViewById(R.id.back_table_layout);
-        security_table_layout = findViewById(R.id.security_table_layout);
         pdf417_table_layout = findViewById(R.id.pdf417_table_layout);
         usdl_table_layout = findViewById(R.id.usdl_table_layout);
         bank_table_layout = findViewById(R.id.bank_table_layout);
@@ -149,9 +175,17 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         ly_pdf417_container = findViewById(R.id.ly_pdf417_container);
         ly_usdl_container = findViewById(R.id.ly_usdl_container);
         ly_bank_container = findViewById(R.id.ly_bank_container);
+        ly_barcode_container = findViewById(R.id.ly_barcode_container);
 
+        ly_security_container.setVisibility(View.GONE);
+        ly_front_container.setVisibility(View.GONE);
+        ly_back_container.setVisibility(View.GONE);
+        ly_mrz_container.setVisibility(View.GONE);
+        ly_pdf417_container.setVisibility(View.GONE);
+        ly_usdl_container.setVisibility(View.GONE);
         dl_plate_lout.setVisibility(View.GONE);
         ly_bank_container.setVisibility(View.GONE);
+        ly_barcode_container.setVisibility(View.GONE);
     }
 
     private void setOcrData(OcrData ocrData) {
@@ -211,16 +245,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                             front_table_layout.addView(layout);
                         }
                     } else if (data_type == 3) {
-                        ly_security_container.setVisibility(View.VISIBLE);
-                        tv_key.setText("Document Verified");
-                        boolean ithas = Boolean.valueOf(value);
-                        tv_value.setVisibility(View.GONE);
-                        if (ithas) {
-                            imageView.setImageDrawable(getResources().getDrawable(R.drawable.tick));
-                        } else {
-                            imageView.setImageDrawable(getResources().getDrawable(R.drawable.close));
-                        }
-                        security_table_layout.addView(layout);
+                        updateSecurityLayout(value);
                     }
                 }
             }
@@ -257,7 +282,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
                                 isBackVisible = true;
                             }
                         } else {
-                            isBackVisible = false;
+                            if (Backdata.getOcr_data().size()==1) isBackVisible = false;
                             setMRZData(ocrData.getMrzData());
                         }
                     } else if (data_type == 2) {
@@ -281,16 +306,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
 
                         }
                     } else if (data_type == 3) {
-                        ly_security_container.setVisibility(View.VISIBLE);
-                        tv_key.setText("Document Verified");
-                        boolean ithas = Boolean.valueOf(value);
-                        tv_value.setVisibility(View.GONE);
-                        if (ithas) {
-                            imageView.setImageDrawable(getResources().getDrawable(R.drawable.tick));
-                        } else {
-                            imageView.setImageDrawable(getResources().getDrawable(R.drawable.close));
-                        }
-                        security_table_layout.addView(layout);
+                        updateSecurityLayout(value);
                     }
 
                 }
@@ -309,6 +325,18 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
             ly_back_container.setVisibility(View.GONE);
         }
         setData();
+    }
+
+    private void updateSecurityLayout(String s) {
+        boolean isVerified = Boolean.parseBoolean(s);
+        if (isVerified) {
+            tv_security.setText("YES");
+            tv_security.setTextColor(getResources().getColor(R.color.security_true));
+        } else {
+            tv_security.setTextColor(getResources().getColor(R.color.security_false));
+            tv_security.setText("NO");
+        }
+        ly_security_container.setVisibility(View.VISIBLE);
     }
 
     private void setBankData(CardDetails bankData){
@@ -354,7 +382,6 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
         addLayout("Department No.", recogResult.departmentnumber);
         addLayout("Other ID", recogResult.otherid);
         addLayout("Other ID Check", recogResult.otheridchecksum);
-        addLayout("Correct Other ID Check", recogResult.correctotheridchecksum);
         addLayout("Second Row Check No.", recogResult.secondrowchecksum);
         addLayout("Correct Second Row Check No.", recogResult.correctsecondrowchecksum);
     }
@@ -378,6 +405,7 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
             TextView tv_key417 = layout.findViewById(R.id.tv_key);
             TextView tv_value417 = layout.findViewById(R.id.tv_value);
             tv_key417.setText("PDF417");
+            tv_value417.setGravity(View.TEXT_ALIGNMENT_TEXT_START);
             tv_value417.setText(barcodeData.wholeDataString);
             pdf417_table_layout.addView(layout);
             ly_pdf417_container.setVisibility(View.VISIBLE);
@@ -483,17 +511,9 @@ public class OcrResultActivity extends AppCompatActivity implements View.OnClick
     private void setData() {
         if (face1 != null) {
             ivUserProfile.setImageBitmap(face1);
-            ivUserProfile.setVisibility(View.VISIBLE);
+            faceImageContainer.setVisibility(View.VISIBLE);
         } else {
-            ivUserProfile.setVisibility(View.GONE);
-        }
-    }
-
-    @Override
-    public void onClick(View view) {
-        int id = view.getId();
-        if (id == R.id.tvCancel1) {
-            onBackPressed();
+            faceImageContainer.setVisibility(View.GONE);
         }
     }
 

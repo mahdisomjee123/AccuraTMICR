@@ -274,7 +274,9 @@ public class BitmapUtil {
      * {@link Camera.PreviewCallback#onPreviewFrame(byte[] data, Camera camera)}
      *
      * @param data                an encoded image
-     * @param size                image size
+//     * @param size                image size
+     * @param width               camera preview width
+     * @param height              camera preview height
      * @param format              image format {@see ImageFormat} to decode image
      * @param mDisplayOrientation camera orientation
      * @param croppedHeight       center cropped image according to height which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData#cameraHeight} cameraHeight
@@ -286,20 +288,20 @@ public class BitmapUtil {
      * @param childHeight
      * @return a decoded bitmap with cropped image
      */
-    public static Bitmap getBitmapFromData(byte[] data, Camera.Size size, int format, int mDisplayOrientation, int croppedHeight, int croppedWidth, RecogType recogType, float scaleX, float scaleY, int childWidth, int childHeight) {
+    public static Bitmap getBitmapFromData(byte[] data, int width, int height, int format, int mDisplayOrientation, int croppedHeight, int croppedWidth, RecogType recogType, float scaleX, float scaleY, int childWidth, int childHeight) {
 
-        int width;
-        int height;
-        if (size != null) {
-            try {
-                width = size.width;
-                height = size.height;
-            } catch (Exception e) {
-                return null;
-            }
-        } else {
-            return null;
-        }
+//        int width;
+//        int height;
+//        if (size != null) {
+//            try {
+//                width = size.width;
+//                height = size.height;
+//            } catch (Exception e) {
+//                return null;
+//            }
+//        } else {
+//            return null;
+//        }
         try {
             Bitmap bmCard = null;
             Bitmap bmp_org = null;
@@ -387,7 +389,7 @@ public class BitmapUtil {
             bmp1.recycle();
             return bmCard;
         } catch (Exception e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             return null;
         }
     }

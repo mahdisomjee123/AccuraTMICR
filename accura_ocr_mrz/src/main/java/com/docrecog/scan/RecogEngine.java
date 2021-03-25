@@ -97,7 +97,7 @@ public class RecogEngine {
         public int i;
         public boolean isMRZEnable = false;
         public boolean isOCREnable = false;
-//        public boolean isAllBarcodeEnable = false;
+        public boolean isAllBarcodeEnable = false;
         public boolean isBankCardEnable = false;
         public String message = "Success";
     }
@@ -257,7 +257,7 @@ public class RecogEngine {
      */
     private native int setMotionThreshold(Context context, int motionThreshold, @NonNull String message);
 
-    private native String loadOCR(Context context, AssetManager assetManager, int countryid, int cardid, int widthPixels);
+    private native String loadOCR(Context context, AssetManager assetManager, int countryid, int cardid, int widthPixels, int minFrame);
 
     private native ImageOpencv checkDocument(long matInput, long matOut, float v);
 
@@ -307,7 +307,7 @@ public class RecogEngine {
         return setLowLightTolerance(context, tolerance,"");
     }
 
-    public int setMotionData(Activity activity, int motionThreshold) {
+    public int setMotionThreshold(Activity activity, int motionThreshold) {
         mT = motionThreshold;
 //        nM = message;
         return setMotionThreshold(activity, motionThreshold, "");
@@ -381,7 +381,7 @@ public class RecogEngine {
         } else {
             sdkModel.isMRZEnable = ints[0] == 1;//isMrzEnable;//ret == 1 || ret == 4 || ret == 6 || ret == 7;
             sdkModel.isOCREnable = ints[1] == 1;//isOcrEnable;//ret == 2 || ret == 4 || ret == 5 || ret == 7;
-//            sdkModel.isAllBarcodeEnable = ints[2] == 1;//isPDFEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
+            sdkModel.isAllBarcodeEnable = ints[2] == 1;//isPDFEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
             sdkModel.isBankCardEnable = ints[3] == 1;//isBankCardEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
         }
         sdkModel.i = ret;
@@ -413,11 +413,12 @@ public class RecogEngine {
      * @param context      is activity context
      * @param countryId    is country Id
      * @param cardId       is Card Id
+     * @param minFrame     To compare data between 'minFrame' and send most validation front dates of qatar ID cards.
      * @return {@link InitModel}
      */
     // for failed -> responseCode = 0,
     // for success -> responseCode = 1
-    protected InitModel initOcr(ScanListener scanListener, Context context, int countryId, int cardId) {
+    protected InitModel initOcr(ScanListener scanListener, Context context, int countryId, int cardId, int minFrame) {
         findFace = false;
         if (scanListener != null) {
             this.callBack = scanListener;
@@ -433,8 +434,7 @@ public class RecogEngine {
         isComplete = false;
 //        init();
         DisplayMetrics dm = context.getResources().getDisplayMetrics();
-        String s = loadOCR(context, context.getAssets(), countryId, cardId, dm.widthPixels);
-        AccuraLog.loge(TAG, "lOC : "+s );
+        String s = loadOCR(context, context.getAssets(), countryId, cardId, dm.widthPixels, minFrame);
         try {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
@@ -1014,8 +1014,8 @@ public class RecogEngine {
                                         continue;
                                     if (element.getBoundingBox() != null) {
                                         int heightDifference = element.getBoundingBox().bottom - element.getBoundingBox().top;
-//                                        Util.logd("ocr_log", "h, text -> " + heightDifference + "," + element.getText());
-                                        if (heightDifference > 20) {
+//                                        Util.logd("ocr_log", "12% h, text -> " + scaledHeight*0.12 + " -- " + heightDifference + "," + element.getText());
+                                        if (heightDifference >= scaledHeight*0.12) {
                                             MlKitOcr.append(element.getText());
                                         }
                                     }
@@ -1027,8 +1027,8 @@ public class RecogEngine {
                             AccuraLog.loge(TAG, "DL - " + ret);
                             if (ret > 0) {
                                 int i, k = 0, len;
-                                byte[] tmp = new byte[100];
                                 len = intData[k++];
+                                byte[] tmp = new byte[len+1];
                                 for (i = 0; i < len; ++i) tmp[i] = (byte) intData[k++];
                                 tmp[i] = 0;
                                 result.lines = RecogResult.convchar2string(tmp);

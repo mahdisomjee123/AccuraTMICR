@@ -151,6 +151,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private int mRecCnt = 0; //counter for mrz detecting
     private int bRet = 0; //counter for mrz detecting
     private int fCount = 0;
+    protected int minFrame = 3; // min frame for Qatar ID card to scan most validate front dates(Expiry and DOB)
 
     private boolean isBlurSet = false;
     private boolean isInitialized;
@@ -185,7 +186,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 try {
                     if (mReference.i1 == null) {
                         Log.e(TAG, "initOcr");
-                        mReference.i1 = mReference.recogEngine.initOcr(mReference, mReference.mActivity, mReference.countryId, mReference.cardId);
+                        mReference.i1 = mReference.recogEngine.initOcr(mReference, mReference.mActivity, mReference.countryId, mReference.cardId, mReference.minFrame);
                         AccuraLog.loge(TAG, "InitializeOCR");
                     }
                     if (mReference.i1 != null && mReference.i1.getInitData() != null) {
@@ -243,6 +244,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 } else if (mReference.recogType == RecogType.DL_PLATE) {
                     AccuraLog.loge(TAG, "InitializeDL");
                     InitModel initModel = mReference.recogEngine.initNumberPlat(mReference.mActivity, mReference.countryId, mReference.cardId);
+                    mReference.rectH = ((int) (mReference.rectH * 0.5)); // reduce Red box side for Vehicle Plate
                     if (initModel != null && initModel.getResponseCode() == 1) {
                         mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_DLPLATE, null, false);
                         mReference.handler.sendEmptyMessage(1);
@@ -289,7 +291,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //                        if (mReference.newMessage.contains(RecogEngine.ACCURA_ERROR_CODE_MOTION))
 //                            mReference.onProcessUpdate(-1, "", false);
 //                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType);
-                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType, mReference.cameraSourcePreview.childXOffset, mReference.cameraSourcePreview.childYOffset, mReference.cameraSourcePreview.childWidth, mReference.cameraSourcePreview.childHeight);
+                        bmCard = BitmapUtil.getBitmapFromData(data, size.width, size.height, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType, mReference.cameraSourcePreview.getChildXOffset(), mReference.cameraSourcePreview.getChildYOffset(), mReference.cameraSourcePreview.getChildWidth(), mReference.cameraSourcePreview.getChildHeight());
 
                         mReference._mutex.lock();
 
@@ -615,7 +617,27 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                                                     @Override
                                                     void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-                                                        mReference.onScannedSuccess(isDone, isMRZRequired);
+                                                        if (mReference.mrzDocumentType == MRZDocumentType.NONE) {
+                                                            if (!isDone && mReference.bRet > -1) {
+                                                                mReference.bRet++;
+                                                            }
+                                                            if (mReference.recogType == RecogType.MRZ) {
+                                                                if ((mReference.bRet > 2 || mReference.bRet == -1) && mReference.g_recogResult.recType == RecogEngine.RecType.MRZ && !mReference.g_recogResult.lines.equalsIgnoreCase("")) {
+                                                                    Util.logd(TAG, "INIT");
+                                                                    AccuraLog.loge(TAG, "onVDone");
+                                                                    mReference.g_recogResult.docFrontBitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+                                                                    mReference.sendInformation();
+                                                                } else {
+                                                                    mReference.onScannedSuccess(isDone, isMRZRequired);
+                                                                }
+                                                                bmCard.recycle();
+                                                                docBmp.recycle();
+                                                            }
+                                                        } else {
+                                                            mReference.onScannedSuccess(isDone, isMRZRequired);
+                                                            bmCard.recycle();
+                                                            docBmp.recycle();
+                                                        }
                                                     }
 
                                                     @Override

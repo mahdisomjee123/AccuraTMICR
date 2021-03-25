@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Parcelable;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -28,6 +29,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -73,6 +75,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if (activity.sdkModel.isBankCardEnable)
                         activity.btnBank.setVisibility(View.VISIBLE);
+                    if (activity.sdkModel.isAllBarcodeEnable)
+                        activity.btnBarcode.setVisibility(View.VISIBLE);
                     if (activity.sdkModel.isOCREnable && activity.modelList != null) {
                         activity.setCountryLayout();
                     }
@@ -117,13 +121,13 @@ public class MainActivity extends AppCompatActivity {
                         if (activity.sdkModel.isOCREnable)
                             activity.modelList = recogEngine.getCardList(activity);
 
-                        recogEngine.setBlurPercentage(activity, 40);
-                        recogEngine.setFaceBlurPercentage(activity, 50);
-                        recogEngine.setGlarePercentage(activity, 5, 90);
+                        recogEngine.setBlurPercentage(activity, 62);
+                        recogEngine.setFaceBlurPercentage(activity, 70);
+                        recogEngine.setGlarePercentage(activity, 6, 98);
                         recogEngine.isCheckPhotoCopy(activity, false);
                         recogEngine.SetHologramDetection(activity, true);
                         recogEngine.setLowLightTolerance(activity, 39);
-                        recogEngine.setMotionData(activity, 15);
+                        recogEngine.setMotionThreshold(activity, 18);
 
                         activity.handler.sendEmptyMessage(1);
                     } else
@@ -139,14 +143,24 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler = new MyHandler(this);
     private Thread nativeThread = new NativeThread(this);
     private RecyclerView rvCountry, rvCards;
+    private LinearLayoutManager lmCountry, lmCard;
     private CardListAdpter countryAdapter, cardAdapter;
     private List<Object> contryList = new ArrayList<>();
     private List<Object> cardList = new ArrayList<>();
     private List<ContryModel> modelList;
     private int selectedPosition = -1;
-    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBank, lout_country;
+    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBarcode,btnBank, lout_country;
     private RecogEngine.SDKModel sdkModel;
     private String responseMessage;
+    private final String KEY_COUNTRY_VIEW_STATE = "country_state";
+    private final String KEY_COUNTRY_SCROLL_VIEW_STATE = "country_scroll_state";
+    private final String KEY_CARD_VIEW_STATE = "card_state";
+    private final String KEY_VIEW_STATE = "view_state";
+    private final String KEY_POSITION_STATE = "position_state";
+    Parcelable listCountryState, listCardStart;
+    private boolean isCardViewVisible;
+    private int[] position;
+    private NestedScrollView scrollView;
 
     private void setCountryLayout() {
 //        contryList = new ArrayList<>();
@@ -155,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
         countryAdapter.notifyDataSetChanged();
         MainActivity.this.rvCountry.setVisibility(View.VISIBLE);
         MainActivity.this.rvCards.setVisibility(View.INVISIBLE);
+        restoreInstantState();
     }
 
     @Override
@@ -162,6 +177,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        scrollView = findViewById(R.id.scroll_view);
         btnMrz = findViewById(R.id.lout_mrz);
         btnMrz.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -186,7 +202,6 @@ public class MainActivity extends AppCompatActivity {
                 RecogType.MRZ.attachTo(intent);
                 MRZDocumentType.PASSPORT_MRZ.attachTo(intent);
                 intent.putExtra("card_name", getResources().getString(R.string.passport_mrz));
-                Log.e(TAG, "onClick: "+getRequestedOrientation() );
                 intent.putExtra("app_orientation", getRequestedOrientation());
                 startActivity(intent);
                 overridePendingTransition(0, 0);
@@ -230,14 +245,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        btnBarcode = findViewById(R.id.lout_barcode);
+        btnBarcode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OcrActivity.class);
+                RecogType.BARCODE.attachTo(intent);
+                intent.putExtra("card_name", "Barcode");
+                intent.putExtra("app_orientation", getRequestedOrientation());
+                startActivity(intent);
+                overridePendingTransition(0, 0);
+            }
+        });
+
         lout_country = findViewById(R.id.lout_country);
         rvCountry = findViewById(R.id.rv_country);
-        rvCountry.setLayoutManager(new LinearLayoutManager(this));
+        lmCountry = new LinearLayoutManager(this);
+        rvCountry.setLayoutManager(lmCountry);
         countryAdapter = new CardListAdpter(this, contryList);
         rvCountry.setAdapter(countryAdapter);
 
         rvCards = findViewById(R.id.rv_card);
-        rvCards.setLayoutManager(new LinearLayoutManager(this));
+        lmCard = new LinearLayoutManager(this);
+        rvCards.setLayoutManager(lmCard);
         cardAdapter = new CardListAdpter(this, cardList);
         rvCards.setAdapter(cardAdapter);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(this)) {
@@ -273,25 +303,11 @@ public class MainActivity extends AppCompatActivity {
             return super.onOptionsItemSelected(item);
         }
         if (item.getItemId() == R.id.item_land_port) {
-//            Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
-//            final int orientation = display.getOrientation();
-//            switch(orientation) {
-//                case Configuration.ORIENTATION_PORTRAIT:
-//                    item.setTitle("Portrait");
-//                    setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-//                    break;
-//                case Configuration.ORIENTATION_LANDSCAPE:
-//                    item.setTitle("Portrait");
-//                    setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-//                    break;
-//            }
+
             if (item.getTitle().toString().toLowerCase().equals("landscape")) {
-//                sharedPreferences.edit().putInt("app_orientation", ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE).apply();
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
                 item.setTitle("Portrait");
             } else {
-//                sharedPreferences.edit().putInt("app_orientation", ActivityInfo.SCREEN_ORIENTATION_PORTRAIT).apply();
-
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
                 item.setTitle("Landscape");
             }
@@ -342,6 +358,50 @@ public class MainActivity extends AppCompatActivity {
         if (!isFinishing()) {
             progressBar.show();
             nativeThread.start();
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putIntArray(KEY_COUNTRY_SCROLL_VIEW_STATE,
+                new int[]{ scrollView.getScrollX(), scrollView.getScrollY()});
+//        listCountryState = lmCountry.onSaveInstanceState();
+//        outState.putParcelable(KEY_COUNTRY_VIEW_STATE, listCountryState); // get current recycle view position here.
+        listCardStart = lmCard.onSaveInstanceState();
+        outState.putParcelable(KEY_CARD_VIEW_STATE, listCardStart); // get current recycle view position here.
+        outState.putBoolean(KEY_VIEW_STATE, rvCards.getVisibility() == View.VISIBLE); // get current recycle view position here.
+        outState.putInt(KEY_POSITION_STATE, selectedPosition); // get current recycle view position here.
+    }
+
+    protected void onRestoreInstanceState(Bundle state) {
+        super.onRestoreInstanceState(state);
+//        // Retrieve list state and list/item positions
+        if (state != null) {
+            position = state.getIntArray(KEY_COUNTRY_SCROLL_VIEW_STATE);
+//            listCountryState = state.getParcelable(KEY_COUNTRY_VIEW_STATE);
+            listCardStart = state.getParcelable(KEY_CARD_VIEW_STATE);
+            isCardViewVisible = state.getBoolean(KEY_VIEW_STATE);
+            selectedPosition = state.getInt(KEY_POSITION_STATE);
+        }
+    }
+
+    protected void restoreInstantState() {
+        if (contryList != null && contryList.size() > 0) {
+//            if (listCountryState != null) {
+//                lmCountry.onRestoreInstanceState(listCountryState);
+//            }
+            if(position != null)
+                scrollView.post(new Runnable() {
+                    public void run() {
+                        scrollView.scrollTo(position[0], position[1]);
+                    }
+                });
+            if (isCardViewVisible && listCardStart != null) {
+                updateCardLayout((ContryModel) contryList.get(selectedPosition));
+                lmCard.onRestoreInstanceState(listCardStart);
+            }
+
         }
     }
 

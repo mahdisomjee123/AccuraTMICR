@@ -9,6 +9,7 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
+import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 
@@ -67,10 +68,10 @@ public abstract class ScannerView extends ScannerCameraPreview {
         return this;
     }
 
-//    public ScannerView setBarcodeFormat(int barcodeFormat) {// 20210111 remove barcode
-//        this.barcodeFormat = barcodeFormat;
-//        return this;
-//    }
+    public ScannerView setBarcodeFormat(int barcodeFormat) {
+        this.barcodeFormat = barcodeFormat;
+        return this;
+    }
 
     public ScannerView setCameraFacing(int cameraFacing){
         this.cameraFacing = cameraFacing;
@@ -98,26 +99,24 @@ public abstract class ScannerView extends ScannerCameraPreview {
     private void addCameraPreview(Context context) {
 
 //        this.cameraContainer.addView(this);
-        DisplayMetrics dm = context.getResources().getDisplayMetrics();
-
-        int W ;//= dm.widthPixels - 20;
-        int H ;//= (dm.heightPixels) / 3;
-
-        if (BitmapUtil.isPortraitMode(context)) {
-            W = dm.widthPixels - 20;
-            H = (dm.heightPixels) / 3;
-        } else {
-            H = (dm.heightPixels) - (int) (100 * dm.density);
-            W = (int) (H / 0.69);
-        }
+//        DisplayMetrics dm = context.getResources().getDisplayMetrics();
+//
+//        if (BitmapUtil.isPortraitMode(context)) {
+//            cardWidth = dm.widthPixels - 20;
+//            cardHeight = (dm.heightPixels) / 3;
+//        } else {
+//            cardHeight = (dm.heightPixels) - (int) (100 * dm.density);
+//            cardWidth = (int) (cardHeight / 0.69);
+//        }
         if (this.scanCallBack != null) {
-            this.scanCallBack.onUpdateLayout(W, H);
+            this.scanCallBack.onUpdateLayout(cardWidth, cardHeight);
         }
         isPreviewAdded = true;
     }
 
-    public void startScan() {
-        startCamera();
+    public void startScan(boolean isReset) {
+        if (!isReset) startCamera();
+        else isReset(isReset);
     }
 
 //    public void flipImage(ImageView mFlipImage) {
@@ -230,14 +229,14 @@ public abstract class ScannerView extends ScannerCameraPreview {
     }
 
     public void stopCamera() {
-//        stopCameraPreview();
+        stopCameraPreview();
     }
 
     @Override
-    protected void onScannedSuccess(String rawResult) {
+    protected void onScannedSuccess(OcrData result) {
         onPlaySound();
         if (scanCallBack != null) {
-            scanCallBack.onScannedComplete(rawResult);
+            scanCallBack.onScannedComplete(result);
         }
     }
 

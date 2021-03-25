@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/white"
     android:orientation="vertical"
-    tools:context="com.accurascan.accuraocr.sample.OcrResultActivity">
+    tools:context=".OcrResultActivity">
 
     <LinearLayout
         android:id="@+id/llMain"
@@ -14,135 +14,10 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <RelativeLayout
-            android:id="@+id/dl_plate_lout"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:layout_above="@id/tv_cancel"
-                android:layout_marginTop="20dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@color/white"
-                    android:orientation="vertical"
-                    android:weightSum="2">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="vertical"
-                        android:padding="10dp"
-                        android:showDividers="middle">
-
-                        <TextView
-                            android:id="@+id/tv_key"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="start|center"
-                            android:minHeight="40dp"
-                            android:text="NumberPlate : "
-                            android:textAllCaps="true"
-                            android:textColor="@color/grey"
-                            android:textSize="16sp"
-                            android:textStyle="bold|italic" />
-
-                        <TextView
-                            android:id="@+id/tv_value"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center_vertical"
-                            android:layout_weight="1"
-                            android:gravity="start|center"
-                            android:minHeight="40dp"
-                            android:paddingStart="20dp"
-                            android:text="123456"
-                            android:textAllCaps="true"
-                            android:textColor="#000000"
-                            android:textSize="16sp"
-                            android:textStyle="normal" />
-
-                    </LinearLayout>
-                    <!--<View-->
-                    <!--android:layout_width="match_parent"-->
-                    <!--android:layout_height="1dp"-->
-                    <!--android:background="#FFCCCCCC"/>-->
-
-                </LinearLayout>
-
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="8dp"
-                    android:background="@color/white"
-                    android:elevation="2dp"
-                    app:cardCornerRadius="5dp"
-                    app:cardElevation="5dp">
-
-                    <LinearLayout
-                        android:id="@+id/ly_dl_plate_container"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@color/white"
-                        android:orientation="vertical"
-                        android:paddingBottom="10dp">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="5dp"
-                            android:gravity="center"
-                            android:paddingTop="2dp"
-                            android:paddingBottom="2dp"
-                            android:text="FRONT SIDE:"
-                            android:textAllCaps="true"
-                            android:textColor="@color/grey"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-
-                        <ImageView
-                            android:id="@+id/im_doc"
-                            android:layout_width="match_parent"
-                            android:layout_height="200dp"
-                            android:layout_centerHorizontal="true"
-                            android:layout_gravity="center_horizontal"
-                            android:layout_marginStart="5dp"
-                            android:layout_marginTop="5dp"
-                            android:layout_marginEnd="5dp"
-                            android:scaleType="fitCenter" />
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tv_cancel"
-                android:layout_width="150dp"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_centerHorizontal="true"
-                android:layout_marginBottom="20dp"
-                android:background="@drawable/round_border_rect"
-                android:gravity="center"
-                android:text="Cancel"
-                android:textColor="@color/white"
-                android:textSize="15sp"
-                android:visibility="gone" />
-
-        </RelativeLayout>
-
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_marginBottom="@dimen/_10dp"
             android:layout_weight="1">
 
             <LinearLayout
@@ -151,58 +26,117 @@
                 android:orientation="vertical">
 
                 <LinearLayout
+                    android:id="@+id/lyt_face_image_container"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
+                    android:layout_margin="@dimen/_20dp"
                     android:orientation="horizontal">
 
-                    <ImageView
-                        android:id="@+id/ivUserProfile"
-                        android:layout_width="115dp"
-                        android:layout_height="115dp"
-                        android:layout_marginTop="10dp"
-                        android:contentDescription="@string/app_name"
-                        android:src="@drawable/default_user" />
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/lyt_img_cover"
+                        android:layout_width="105dp"
+                        android:layout_height="105dp"
+                        app:cardBackgroundColor="@color/backGroundColor"
+                        app:cardCornerRadius="@dimen/_8dp"
+                        app:cardElevation="0dp">
+
+                        <ImageView
+                            android:id="@+id/ivUserProfile"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_margin="3dp"
+                            android:src="@drawable/default_user" />
+
+                    </androidx.cardview.widget.CardView>
+
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/lyt_img_cover2"
+                        android:layout_width="105dp"
+                        android:layout_height="105dp"
+                        android:layout_marginStart="10dp"
+                        android:visibility="gone"
+                        app:cardBackgroundColor="@color/backGroundColor"
+                        app:cardCornerRadius="@dimen/_8dp"
+                        app:cardElevation="0dp">
+
+                        <ImageView
+                            android:id="@+id/ivUserProfile2"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_margin="3dp"
+                            android:elevation="7dp"
+                            android:src="@drawable/default_user" />
+
+                    </androidx.cardview.widget.CardView>
 
                 </LinearLayout>
 
+                <View
+                    android:id="@+id/v_divider"
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="@dimen/_5dp"
+                    android:background="@color/backGroundColor" />
+                <!--Security Check-->
+                <LinearLayout
+                    android:id="@+id/ly_security_container"
+                    style="@style/ResultButtonLayout"
+                    android:layout_width="match_parent">
+
+                    <LinearLayout
+                        style="@style/ResultButtonSubLayout"
+                        android:layout_width="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginBottom="@dimen/_2dp"
+                        android:background="@color/white"
+                        android:padding="@dimen/_5dp">
+
+                        <ImageView
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:layout_gravity="center"
+                            android:src="@mipmap/ic_document_verified" />
+
+                        <com.accurascan.ocr.mrz.customview.CustomTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:layout_marginStart="@dimen/_10dp"
+                            android:gravity="center"
+                            android:text="DOCUMENT VERIFIED"
+                            android:textColor="@color/darkGray"
+                            android:textSize="@dimen/result_title_text" />
+
+                    </LinearLayout>
+
+                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                        android:id="@+id/tv_security"
+                        style="@style/ScoreText"
+                        android:text="Yes"
+                        android:textColor="@color/security_true"
+                        android:textStyle="bold"
+                        app:typeface="ALLER_STD" />
+                </LinearLayout>
                 <!--front table-->
                 <LinearLayout
                     android:id="@+id/ly_front_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/_8dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="@dimen/_8dp"
-                    android:background="@drawable/tab_bg"
                     android:orientation="vertical"
-                    android:visibility="gone">
+                    android:visibility="visible">
 
                     <com.accurascan.ocr.mrz.customview.CustomTextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/tab_title"
-                        android:gravity="center"
-                        android:paddingTop="@dimen/_2dp"
-                        android:paddingBottom="@dimen/_2dp"
-                        android:text="Front Side OCR:"
-                        android:textAllCaps="true"
-                        android:textColor="@color/white"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
+                        style="@style/ResultText"
+                        android:text="OCR FRONT" />
 
                     <TableLayout
                         android:id="@+id/front_table_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/_2dp"
-                        android:layout_marginEnd="@dimen/_2dp"
-                        android:layout_marginBottom="4dp"
-                        android:divider="@color/tab_color"
+                        android:divider="@color/backGroundColor"
                         android:showDividers="middle"
                         android:shrinkColumns="*"
-                        android:stretchColumns="*" >
-                    </TableLayout>
+                        android:stretchColumns="*" />
 
                 </LinearLayout>
                 <!--back table-->
@@ -210,34 +144,18 @@
                     android:id="@+id/ly_back_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/_8dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="@dimen/_8dp"
-                    android:background="@drawable/tab_bg"
                     android:orientation="vertical"
-                    android:visibility="gone">
+                    android:visibility="visible">
 
                     <com.accurascan.ocr.mrz.customview.CustomTextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/tab_title"
-                        android:gravity="center"
-                        android:paddingTop="@dimen/_2dp"
-                        android:paddingBottom="@dimen/_2dp"
-                        android:text="Back Side OCR:"
-                        android:textAllCaps="true"
-                        android:textColor="@color/white"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
+                        style="@style/ResultText"
+                        android:text="OCR BACK" />
 
                     <TableLayout
                         android:id="@+id/back_table_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/_2dp"
-                        android:layout_marginEnd="@dimen/_2dp"
-                        android:layout_marginBottom="4dp"
-                        android:divider="@color/tab_color"
+                        android:divider="@color/backGroundColor"
                         android:showDividers="middle"
                         android:shrinkColumns="*"
                         android:stretchColumns="*" />
@@ -248,34 +166,18 @@
                     android:id="@+id/ly_mrz_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/_8dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="@dimen/_8dp"
-                    android:background="@drawable/tab_bg"
                     android:orientation="vertical"
-                    android:visibility="gone">
+                    android:visibility="visible">
 
                     <com.accurascan.ocr.mrz.customview.CustomTextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/tab_title"
-                        android:gravity="center"
-                        android:paddingTop="@dimen/_2dp"
-                        android:paddingBottom="@dimen/_2dp"
-                        android:text="MRZ:"
-                        android:textAllCaps="true"
-                        android:textColor="@color/white"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
+                        style="@style/ResultText"
+                        android:text="MRZ" />
 
                     <TableLayout
                         android:id="@+id/mrz_table_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/_2dp"
-                        android:layout_marginEnd="@dimen/_2dp"
-                        android:layout_marginBottom="4dp"
-                        android:divider="@color/tab_color"
+                        android:divider="@color/backGroundColor"
                         android:showDividers="middle"
                         android:shrinkColumns="*"
                         android:stretchColumns="*" />
@@ -286,72 +188,18 @@
                     android:id="@+id/ly_bank_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/_8dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="@dimen/_8dp"
-                    android:background="@drawable/tab_bg"
                     android:orientation="vertical"
-                    android:visibility="gone">
+                    android:visibility="visible">
 
                     <com.accurascan.ocr.mrz.customview.CustomTextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/tab_title"
-                        android:gravity="center"
-                        android:paddingTop="@dimen/_2dp"
-                        android:paddingBottom="@dimen/_2dp"
-                        android:text="Bank Card"
-                        android:textAllCaps="true"
-                        android:textColor="@color/white"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
+                        style="@style/ResultText"
+                        android:text="Bank Card Data" />
 
                     <TableLayout
                         android:id="@+id/bank_table_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/_2dp"
-                        android:layout_marginEnd="@dimen/_2dp"
-                        android:layout_marginBottom="4dp"
-                        android:divider="@color/tab_color"
-                        android:showDividers="middle"
-                        android:shrinkColumns="*"
-                        android:stretchColumns="*" />
-
-                </LinearLayout>
-                <!--Security Check-->
-                <LinearLayout
-                    android:id="@+id/ly_security_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/_8dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="@dimen/_8dp"
-                    android:background="@drawable/tab_bg"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/tab_title"
-                        android:gravity="center"
-                        android:paddingTop="@dimen/_2dp"
-                        android:paddingBottom="@dimen/_2dp"
-                        android:text="Security Check:"
-                        android:textAllCaps="true"
-                        android:textColor="@color/white"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <TableLayout
-                        android:id="@+id/security_table_layout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/_2dp"
-                        android:layout_marginEnd="@dimen/_2dp"
-                        android:layout_marginBottom="4dp"
-                        android:divider="@color/tab_color"
+                        android:divider="@color/backGroundColor"
                         android:showDividers="middle"
                         android:shrinkColumns="*"
                         android:stretchColumns="*" />
@@ -362,34 +210,18 @@
                     android:id="@+id/ly_usdl_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/_8dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="@dimen/_8dp"
-                    android:background="@drawable/tab_bg"
                     android:orientation="vertical"
-                    android:visibility="gone">
+                    android:visibility="visible">
 
                     <com.accurascan.ocr.mrz.customview.CustomTextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/tab_title"
-                        android:gravity="center"
-                        android:paddingTop="@dimen/_2dp"
-                        android:paddingBottom="@dimen/_2dp"
-                        android:text="Dl Result"
-                        android:textAllCaps="true"
-                        android:textColor="@color/white"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
+                        style="@style/ResultText"
+                        android:text="@string/usa_dl_result" />
 
                     <TableLayout
                         android:id="@+id/usdl_table_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/_2dp"
-                        android:layout_marginEnd="@dimen/_2dp"
-                        android:layout_marginBottom="4dp"
-                        android:divider="@color/tab_color"
+                        android:divider="@color/backGroundColor"
                         android:showDividers="middle"
                         android:shrinkColumns="*"
                         android:stretchColumns="*" />
@@ -400,69 +232,163 @@
                     android:id="@+id/ly_pdf417_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/_8dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="@dimen/_8dp"
-                    android:background="@drawable/tab_bg"
                     android:orientation="vertical"
-                    android:visibility="gone">
+                    android:visibility="visible">
+
 
                     <com.accurascan.ocr.mrz.customview.CustomTextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/tab_title"
-                        android:gravity="center"
-                        android:paddingTop="@dimen/_2dp"
-                        android:paddingBottom="@dimen/_2dp"
-                        android:text="PDF417 Barcode"
-                        android:textAllCaps="true"
-                        android:textColor="@color/white"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
+                        style="@style/ResultText"
+                        android:text="@string/PDF417_Barcode" />
 
                     <TableLayout
                         android:id="@+id/pdf417_table_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/_2dp"
-                        android:layout_marginEnd="@dimen/_2dp"
-                        android:layout_marginBottom="4dp"
-                        android:divider="@color/tab_color"
+                        android:divider="@color/backGroundColor"
                         android:showDividers="middle"
                         android:shrinkColumns="*"
                         android:stretchColumns="*" />
 
                 </LinearLayout>
-
-                <androidx.cardview.widget.CardView
+                <!--dlplate layout-->
+                <LinearLayout
+                    android:id="@+id/dl_plate_lout"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="@dimen/_8dp"
-                    android:background="@color/white"
-                    android:elevation="@dimen/_2dp"
-                    app:cardCornerRadius="@dimen/_5dp"
-                    app:cardElevation="@dimen/_5dp">
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="20dp"
+                    android:orientation="vertical">
 
                     <LinearLayout
-                        android:id="@+id/ly_front"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="@color/white"
                         android:orientation="vertical"
-                        android:paddingBottom="@dimen/_10dp">
+                        android:weightSum="2">
 
-                        <com.accurascan.ocr.mrz.customview.CustomTextView
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="5dp"
-                            android:gravity="center"
-                            android:paddingTop="@dimen/_2dp"
-                            android:paddingBottom="@dimen/_2dp"
-                            android:text="FRONT SIDE:"
-                            android:textAllCaps="true"
-                            android:textColor="@color/tab_color"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
+                            android:gravity="center_vertical"
+                            android:orientation="vertical"
+                            android:padding="10dp"
+                            android:showDividers="middle">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="start|center"
+                                android:minHeight="40dp"
+                                android:text="Vehicle Plate : "
+                                android:textColor="@color/grey"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tv_value"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:layout_weight="1"
+                                android:gravity="start|center"
+                                android:minHeight="40dp"
+                                android:paddingStart="20dp"
+                                android:text="123456"
+                                android:textAllCaps="true"
+                                android:textColor="#000000"
+                                android:textSize="16sp"
+                                android:textStyle="normal" />
+
+                        </LinearLayout>
+                        <!--<View-->
+                        <!--android:layout_width="match_parent"-->
+                        <!--android:layout_height="1dp"-->
+                        <!--android:background="#FFCCCCCC"/>-->
+
+                    </LinearLayout>
+
+                </LinearLayout>
+                <!--Barcode layout-->
+                <LinearLayout
+                    android:id="@+id/ly_barcode_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="20dp"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@color/white"
+                        android:orientation="vertical"
+                        android:weightSum="2">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="vertical"
+                            android:padding="10dp"
+                            android:showDividers="middle">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="start|center"
+                                android:minHeight="40dp"
+                                android:text="Barcode Data : "
+                                android:textColor="@color/grey"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tv_barcode_data"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:layout_weight="1"
+                                android:gravity="start|center"
+                                android:minHeight="40dp"
+                                android:paddingStart="20dp"
+                                android:text=""
+                                android:textAllCaps="true"
+                                android:textColor="#000000"
+                                android:textSize="16sp"
+                                android:textStyle="normal" />
+
+                        </LinearLayout>
+                        <!--<View-->
+                        <!--android:layout_width="match_parent"-->
+                        <!--android:layout_height="1dp"-->
+                        <!--android:background="#FFCCCCCC"/>-->
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+
+                <LinearLayout
+                    android:id="@+id/ly_front"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/white"
+                    android:orientation="vertical">
+
+                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                        style="@style/ResultText"
+                        android:text="FRONT SIDE" />
+
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="15dp"
+                        app:cardBackgroundColor="@color/white"
+                        app:cardCornerRadius="3dp"
+                        app:cardElevation="0dp"
+                        app:cardPreventCornerOverlap="true">
 
                         <ImageView
                             android:id="@+id/iv_frontside"
@@ -470,42 +396,30 @@
                             android:layout_height="200dp"
                             android:layout_centerHorizontal="true"
                             android:layout_gravity="center_horizontal"
-                            android:layout_marginStart="5dp"
-                            android:layout_marginTop="5dp"
-                            android:layout_marginEnd="5dp"
                             android:scaleType="fitCenter" />
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                    </androidx.cardview.widget.CardView>
+                </LinearLayout>
 
-                <androidx.cardview.widget.CardView
+                <LinearLayout
+                    android:id="@+id/ly_back"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_margin="@dimen/_8dp"
                     android:background="@color/white"
-                    android:elevation="@dimen/_2dp"
-                    app:cardCornerRadius="@dimen/_5dp"
-                    app:cardElevation="@dimen/_5dp"
-                    >
+                    android:orientation="vertical"
+                    android:paddingBottom="@dimen/_10dp">
 
-                    <LinearLayout
-                        android:id="@+id/ly_back"
+                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                        style="@style/ResultText"
+                        android:text="BACK SIDE" />
+
+                    <androidx.cardview.widget.CardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_below="@+id/ly_front"
-                        android:background="@color/white"
-                        android:orientation="vertical"
-                        android:paddingBottom="@dimen/_10dp">
-
-                        <com.accurascan.ocr.mrz.customview.CustomTextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="5dp"
-                            android:gravity="center"
-                            android:text="BACK SIDE:"
-                            android:textAllCaps="true"
-                            android:textColor="@color/tab_color"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
+                        android:layout_margin="15dp"
+                        app:cardBackgroundColor="@color/white"
+                        app:cardCornerRadius="@dimen/_2dp"
+                        app:cardElevation="0dp"
+                        app:cardPreventCornerOverlap="true">
 
                         <ImageView
                             android:id="@+id/iv_backside"
@@ -513,38 +427,12 @@
                             android:layout_height="200dp"
                             android:layout_centerHorizontal="true"
                             android:layout_gravity="center_horizontal"
-                            android:layout_marginStart="5dp"
-                            android:layout_marginTop="5dp"
-                            android:layout_marginEnd="5dp"
                             android:scaleType="fitCenter" />
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                    </androidx.cardview.widget.CardView>
+                </LinearLayout>
+
             </LinearLayout>
         </ScrollView>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/_5dp"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <com.accurascan.ocr.mrz.customview.CustomTextView
-                android:id="@+id/tvCancel1"
-                android:layout_width="180dp"
-                android:layout_height="50dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginStart="5dp"
-                android:layout_marginBottom="@dimen/_5dp"
-                android:layout_weight="1"
-                android:background="@drawable/round_border_rect"
-                android:gravity="center"
-                android:text="@android:string/cancel"
-                android:textColor="@color/white"
-                android:textSize="@dimen/seventeen"
-                app:typeface="ALLER_STD_DISPLAY" />
-
-        </LinearLayout>
 
     </LinearLayout>
 </RelativeLayout>

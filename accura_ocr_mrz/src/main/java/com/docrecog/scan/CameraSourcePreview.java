@@ -2,7 +2,6 @@ package com.docrecog.scan;
 
 import android.content.Context;
 import android.content.res.Configuration;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -16,14 +15,16 @@ public class CameraSourcePreview extends FrameLayout {
     private static final String TAG = CameraSourcePreview.class.getSimpleName();
     private final Context context;
     private final OcrCameraPreview ocrCameraPreview;
+    private final ScannerCameraPreview scannerCameraPreview;
     private final SurfaceView surfaceView;
-    int childXOffset = 0;
-    int childYOffset = 0;
-    int childWidth = 0;
-    int childHeight = 0;
+    private int childXOffset = 0;
+    private int childYOffset = 0;
+    private int childWidth = 0;
+    private int childHeight = 0;
 
     public CameraSourcePreview(OcrCameraPreview ocrCameraPreview, Context context) {
         super(context);
+        this.scannerCameraPreview = null;
         this.context = context;
 
         surfaceView = new SurfaceView(context);
@@ -33,18 +34,41 @@ public class CameraSourcePreview extends FrameLayout {
         this.ocrCameraPreview = ocrCameraPreview;
     }
 
+    public CameraSourcePreview(ScannerCameraPreview scannerCameraPreview, SurfaceView surfaceView, Context context) {
+        super(context);
+        this.ocrCameraPreview = null;
+        this.context = context;
+
+        this.surfaceView = surfaceView;
+        addView(surfaceView);
+        this.scannerCameraPreview = scannerCameraPreview;
+    }
+
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
         // To Set preview for camera ratio
         // The isPreviewSet will be false then update surface view to maintain camera ratio for all device
-
-        int width = ocrCameraPreview.getPreviewWidth(), height = ocrCameraPreview.getPreviewHeight();
-        if (ocrCameraPreview.mCameraDevice != null) {
-            Size size = ocrCameraPreview.getPreviewSize();
-            if (size != null) {
-                width = (int) size.getWidth();
-                height = (int) size.getHeight();
+        int width = 0, height = 0;
+        if (ocrCameraPreview != null) {
+            width = ocrCameraPreview.getPreviewWidth();
+            height = ocrCameraPreview.getPreviewHeight();
+            if (ocrCameraPreview.mCameraDevice != null) {
+                Size size = ocrCameraPreview.getPreviewSize();
+                if (size != null) {
+                    width = (int) size.getWidth();
+                    height = (int) size.getHeight();
+                }
+            }
+        } else if (scannerCameraPreview != null) {
+            width = 1280;
+            height = 720;
+            if (scannerCameraPreview.cameraSource != null) {
+                Size size = scannerCameraPreview.cameraSource.getPreviewSize();
+                if (size != null) {
+                    width = (int) size.getWidth();
+                    height = (int) size.getHeight();
+                }
             }
         }
 
@@ -83,12 +107,31 @@ public class CameraSourcePreview extends FrameLayout {
         this.childYOffset = childYOffset;
         this.childWidth = childWidth;
         this.childHeight = childHeight;
-        Util.logd(TAG, "onLayout: (" + childXOffset + "," + childYOffset + ")");
+        if (scannerCameraPreview != null) {
+            scannerCameraPreview.setFrameParam(this.childXOffset, this.childYOffset,this.childWidth, this.childHeight);
+        }
+        Util.logd(TAG, "onLayout: (" + childXOffset + "," + childYOffset + ") - (" + childWidth + "x" + childHeight + ")");
         for (int i = 0; i < getChildCount(); ++i) {
             getChildAt(i).layout(
                     -1 * childXOffset, -1 * childYOffset,
                     childWidth - childXOffset, childHeight - childYOffset);
         }
+    }
+
+    public int getChildXOffset() {
+        return childXOffset;
+    }
+
+    public int getChildYOffset() {
+        return childYOffset;
+    }
+
+    public int getChildWidth() {
+        return childWidth;
+    }
+
+    public int getChildHeight() {
+        return childHeight;
     }
 
     public SurfaceHolder getHolder() {
