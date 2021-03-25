@@ -103,6 +103,17 @@ public abstract class OcrView extends OcrCameraPreview {
         return this;
     }
 
+    public OcrView setMinFrameForValidate(int minFrame) {
+//        if (minFrame % 2 == 0) {
+//            throw new IllegalArgumentException("Even number is not support");
+//        }
+//        if (minFrame < 3) {
+//            throw new IllegalArgumentException("minFrame is grater or equal to 3");
+//        }
+        this.minFrame = minFrame;
+        return this;
+    }
+
     /**
      * call this method to initialized camera and ocr
      */

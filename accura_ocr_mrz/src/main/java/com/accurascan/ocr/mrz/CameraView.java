@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
+import com.accurascan.ocr.mrz.model.BarcodeFormat;
 import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.OcrView;
@@ -30,13 +31,14 @@ public class CameraView {
     private OcrCallback callback;
     private int statusBarHeight = 0;
     private boolean setPlayer = true;
-//    private int barcodeFormat = -1; // 20210111 remove barcode
+    private int barcodeFormat = -1;
     private MediaPlayer mediaPlayer = null;
     private AudioManager audioManager = null;
     private OcrView ocrView = null;
     private ScannerView scannerView = null;
     private int documentSide = -1;
     private MRZDocumentType documentType = null;
+    private int minFrame = 3;
 
     public CameraView(Activity context) {
         this.context = context;
@@ -151,17 +153,28 @@ public class CameraView {
         return this;
     }
 
-//    /**// 20210111 remove barcode
-//     * Set Barcode format to scan specific barcode.
-//     * Default Support All Barcode format
-//     *
-//     * @param barcodeFormat {@link com.accurascan.ocr.mrz.model.BarcodeTypeSelection#CODE_NAMES}
-//     */
-//    public void setBarcodeFormat(int barcodeFormat) {
-//        if (this.barcodeFormat > -1 && scannerView != null)
-//            scannerView.updateFormat(this.barcodeFormat);
-//        this.barcodeFormat = barcodeFormat;
-//    }
+    /**
+     * Set Barcode format to scan specific barcode.
+     * Default Support All Barcode format
+     *
+     * @param barcodeFormat {@link BarcodeFormat}
+     */
+    public void setBarcodeFormat(int barcodeFormat) {
+        this.barcodeFormat = barcodeFormat;
+        if (this.barcodeFormat > -1 && scannerView != null)
+            scannerView.updateFormat(this.barcodeFormat);
+    }
+
+    public CameraView setMinFrameForValidate(int minFrame) {
+//        if (minFrame % 2 == 0) {
+//            throw new IllegalArgumentException("Even number is not support");
+//        }
+//        if (minFrame < 3) {
+//            throw new IllegalArgumentException("minFrame is grater or equal to 3");
+//        }
+        this.minFrame = minFrame;
+        return this;
+    }
 
     /**
      * call this method to initialized camera and ocr
@@ -179,9 +192,9 @@ public class CameraView {
         if (this.countryId < 0) {
             if (type == RecogType.OCR || type == RecogType.DL_PLATE || type == RecogType.PDF417) {
                 throw new IllegalArgumentException("Country Code must have to > 0");
-            }/* else if (type == RecogType.BARCODE) { // 20210111 remove barcode
+            } else if (type == RecogType.BARCODE) {
                 countryId = 0;
-            }*/
+            }
         }
         if (this.cardId < 0 || type == RecogType.DL_PLATE) {
             if (type == RecogType.OCR)
@@ -213,6 +226,13 @@ public class CameraView {
                 ocrView.setMrzDocumentType(documentType != null ? documentType : MRZDocumentType.NONE);
 
             if (this.type == RecogType.OCR) {
+                if (minFrame % 2 == 0) {
+                    throw new IllegalArgumentException("MinFrame is not support Even number");
+                }
+                if (minFrame < 3) {
+                    throw new IllegalArgumentException("Must have to set minFrame is grater or equal to 3");
+                }
+                ocrView.setMinFrameForValidate(this.minFrame);
                 if (this.documentSide == 0) {
                     ocrView.setFrontSide();
                 } else if (this.documentSide == 1) {
@@ -220,7 +240,7 @@ public class CameraView {
                 }
             }
             ocrView.init();
-        } else if (type == RecogType.PDF417/* || type == RecogType.BARCODE*/) {// 20210111 remove barcode
+        } else if (type == RecogType.PDF417 || type == RecogType.BARCODE) {
             scannerView = new ScannerView(context) {
                 @Override
                 public void onPlaySound() {
@@ -231,8 +251,8 @@ public class CameraView {
                     .setOcrCallBack(this.callback)
                     .setCameraFacing(this.cameraFacing)
                     .setView(this.cameraContainer)
-                    .setCardData(countryId);
-//                    .setBarcodeFormat(barcodeFormat > -1 ? barcodeFormat : Barcode.ALL_FORMATS);// 20210111 remove barcode
+                    .setCardData(countryId)
+                    .setBarcodeFormat(barcodeFormat > -1 ? barcodeFormat : Barcode.ALL_FORMATS);
             if (this.type == RecogType.PDF417) {
                 if (this.documentSide == 0) {
                     scannerView.setFrontSide();
@@ -251,11 +271,11 @@ public class CameraView {
      * to start your camera preview and ocr
      */
     public void startOcrScan(boolean isReset) {
-        AccuraLog.loge("CameraView" , "startOcrScan" + isReset);
+        AccuraLog.loge("CameraView" , "startOcrScan " + isReset);
         if (ocrView != null) ocrView.startOcrScan();
         if (scannerView != null)
-            if (!isReset) scannerView.startScan();
-//             else scannerView.init();
+            /*if (!isReset) scannerView.startScan();
+             else */scannerView.startScan(isReset); // to restart scan
 
     }
 
@@ -300,6 +320,16 @@ public class CameraView {
         if (ocrView != null) {
             ocrView.onFocusUpdate(hasFocus);
         }
+    }
+
+    public void startCamera() {
+        if (ocrView != null) ocrView.restartPreview();
+        else if (scannerView != null) scannerView.startCamera();
+    }
+
+    public void stopCamera() {
+        if (ocrView != null) ocrView.stopPreview();
+        if (scannerView != null) scannerView.stopCamera();
     }
 
     /**

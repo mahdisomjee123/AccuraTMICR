@@ -15,7 +15,7 @@ public class CustomTextView extends TextView {
      * Permissible values ​​for the "typeface" attribute.
      */
     private final static int ALLER_STD = 0;
-    private final static int ALLER_STD_BOLD = 1;
+    private final static int ALLER_STD_BOLD_ITALIC = 1;
     private final static int ALLER_STD_ITALIC = 2;
     private final static int ALLER_STD_LIGHT = 3;
     private final static int ALLER_STD_LIGHT_ITALIC = 4;
@@ -122,7 +122,7 @@ public class CustomTextView extends TextView {
             case ALLER_STD:
                 typeface = Typeface.createFromAsset(context.getAssets(), "font/Aller_Std.ttf");
                 break;
-            case ALLER_STD_BOLD:
+            case ALLER_STD_BOLD_ITALIC:
                 typeface = Typeface.createFromAsset(context.getAssets(), "font/Aller_Std_BdIt.ttf");
                 break;
             case ALLER_STD_ITALIC:

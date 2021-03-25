@@ -5,4 +5,12 @@
     <string name="visa_mrz"><![CDATA[VISA MRZ]]></string>
     <string name="other_mrz"><![CDATA[Other MRZ]]></string>
     <string name="bank_card">Bank Card</string>
+
+
+    <string name="usa_dl_result">USA DL Result</string>
+    <string name="PDF417_Barcode">PDF417 Barcode</string>
+
+    <dimen name="text_title_size">17sp</dimen>
+    <dimen name="text_title_left">15dp</dimen>
+    <dimen name="result_title_text">17sp</dimen>
 </resources>
