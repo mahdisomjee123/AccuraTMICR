@@ -9,6 +9,7 @@ import android.widget.TextView;
 
 import com.accurascan.ocr.mrz.R;
 
+@androidx.annotation.Keep
 public class CustomTextView extends TextView {
 
     /*

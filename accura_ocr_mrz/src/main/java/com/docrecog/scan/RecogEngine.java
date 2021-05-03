@@ -65,6 +65,7 @@ public class RecogEngine {
         }
     }
 
+    @androidx.annotation.Keep
     abstract static class ScanListener {
         /**
          * This is called to get scanned processed message.
@@ -93,6 +94,7 @@ public class RecogEngine {
 
     }
 
+    @androidx.annotation.Keep
     public class SDKModel {
         public int i;
         public boolean isMRZEnable = false;
@@ -282,6 +284,8 @@ public class RecogEngine {
     private native int doDetectNumberPlate(String s, int[] intData, int id, int card_id);
 
     private native int extractData(String s, CardDetails cardDetails);
+
+    public native String getSDKVersion();
 
     public int setBlurPercentage(Context context, int blurPercentage) {
         return setBlurPercentage(context, blurPercentage,"");

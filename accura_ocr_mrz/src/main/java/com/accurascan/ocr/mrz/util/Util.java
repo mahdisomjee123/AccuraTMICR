@@ -42,6 +42,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 
+import androidx.annotation.Keep;
 import androidx.core.app.ActivityCompat;
 
 import com.accurascan.ocr.mrz.BuildConfig;
@@ -443,8 +444,8 @@ public class Util {
             win.setAttributes(winParams);
         }
     }
- 
 
+    @Keep
     public static void showErrorAndFinish(final Activity activity, int msgId) {
         DialogInterface.OnClickListener buttonListener =
                 new DialogInterface.OnClickListener() {
@@ -462,6 +463,7 @@ public class Util {
                 .show();
     }
 
+    @Keep
 	public static String getCurTimeString()
 	{
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
@@ -470,7 +472,7 @@ public class Util {
 		return currentDateandTime;
 	}
 
-
+    @Keep
     static void requestRuntimePermissions(Activity activity) {
         List<String> allNeededPermissions = new ArrayList<>();
         for (String permission : getRequiredPermissions(activity)) {
@@ -485,6 +487,7 @@ public class Util {
         }
     }
 
+    @Keep
     public static boolean isPermissionsGranted(Context context) {
         String permission = Manifest.permission.CAMERA;
 //        for (String permission : getRequiredPermissions(context)) {
@@ -495,6 +498,7 @@ public class Util {
         return true;
     }
 
+    @Keep
     private static String[] getRequiredPermissions(Context context) {
         try {
             PackageInfo info =
