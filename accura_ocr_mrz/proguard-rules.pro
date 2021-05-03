@@ -23,21 +23,22 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
-#-dontwarn javax.annotation.Nullable
-#-dontwarn okio.**
-#-dontwarn javax.annotation.**
-#-dontwarn org.apache.poi.**
-#-keep class org.apache.poi.** { *; }
-#-keepattributes *Annotation*
-#-keepattributes SourceFile,LineNumberTable
-#-dontwarn javax.annotation.Nullable
-#-keep public class com.accurascan.ocr.mrz.** {*;}
-#-keep public class com.docrecog.scan.** {*;}
--keep public class com.accurascan.ocr.mrz.camerautil.** {*;}
--keep public class com.accurascan.ocr.mrz.customview.** {*;}
--keep public class com.accurascan.ocr.mrz.detector.** {*;}
--keep public class com.accurascan.ocr.mrz.interfaces.** {*;}
--keep public class com.accurascan.ocr.mrz.motiondetection.** {*;}
--keep public class com.accurascan.ocr.mrz.util.** {*;}
--keep public class com.accurascan.ocr.mrz.CameraView {*;}
--keep public class com.docrecog.scan.** {*;}
+-dontwarn javax.annotation.Nullable
+-dontwarn javax.annotation.**
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+-keep public class com.accurascan.ocr.mrz.motiondetection.data.GlobalData
+-keep public class com.docrecog.scan.RecogEngine{
+    public static final <fields>;
+    native <methods>;
+    public int setBlurPercentage(...);
+    public int setFaceBlurPercentage(...);
+    public int setGlarePercentage(...);
+    public int isCheckPhotoCopy(...);
+    public int SetHologramDetection(...);
+    public int setLowLightTolerance(...);
+    public int setMotionThreshold(...);
+    public void setDialog(...);
+    initEngine(...);
+    getCardList(...);
+}

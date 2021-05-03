@@ -20,6 +20,7 @@ import com.docrecog.scan.RecogType;
 import com.docrecog.scan.ScannerView;
 import com.google.android.gms.vision.barcode.Barcode;
 
+@androidx.annotation.Keep
 public class CameraView {
 
     private final Activity context;

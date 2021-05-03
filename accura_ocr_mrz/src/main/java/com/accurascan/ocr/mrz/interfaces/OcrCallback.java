@@ -4,6 +4,7 @@ import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
 import com.accurascan.ocr.mrz.model.RecogResult;
 
+@androidx.annotation.Keep
 public interface OcrCallback {
 
     /**

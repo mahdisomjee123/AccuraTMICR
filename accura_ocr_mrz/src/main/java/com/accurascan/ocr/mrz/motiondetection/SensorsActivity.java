@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * motion.
  *
  */
+@androidx.annotation.Keep
 public class SensorsActivity extends Activity implements SensorEventListener {
 
     private static final String TAG = "SensorsActivity";

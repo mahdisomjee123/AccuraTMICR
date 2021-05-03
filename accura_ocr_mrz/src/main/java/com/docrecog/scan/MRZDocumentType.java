@@ -2,6 +2,7 @@ package com.docrecog.scan;
 
 import android.content.Intent;
 
+@androidx.annotation.Keep
 public enum MRZDocumentType {
     NONE(0), PASSPORT_MRZ(1), ID_CARD_MRZ(2), VISA_MRZ(3);
 
