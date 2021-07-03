@@ -26,8 +26,6 @@ import java.nio.ByteBuffer;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-//import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
-
 /**
  * Manages the camera and allows UI updates on top of it (e.g. overlaying extra Graphics). This
  * receives preview frames from the camera at a specified rate, sends those frames to detector as

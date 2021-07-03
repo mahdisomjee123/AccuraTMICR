@@ -28,6 +28,14 @@
 -keepattributes *Annotation*
 -keepattributes SourceFile,LineNumberTable
 -keep public class com.accurascan.ocr.mrz.motiondetection.data.GlobalData
+-keep public class com.docrecog.scan.ImageOpencv{
+    <fields>;
+}
+-keep public class com.accurascan.ocr.mrz.util.AccuraLog{
+    isLogEnable();
+    enableLogs(...);
+    loge(...);
+}
 -keep public class com.docrecog.scan.RecogEngine{
     public static final <fields>;
     native <methods>;

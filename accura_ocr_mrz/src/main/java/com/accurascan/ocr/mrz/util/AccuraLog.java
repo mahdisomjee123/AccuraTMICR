@@ -2,9 +2,6 @@ package com.accurascan.ocr.mrz.util;
 
 import android.util.Log;
 
-import androidx.annotation.Keep;
-
-@Keep
 public class AccuraLog {
     private static boolean DEBUG = false;
 

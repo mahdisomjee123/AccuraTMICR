@@ -3,6 +3,7 @@ package com.docrecog.scan;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Point;
 import android.hardware.Camera;
 import android.media.CameraProfile;
 import android.os.Build;
@@ -291,7 +292,17 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //                        if (mReference.newMessage.contains(RecogEngine.ACCURA_ERROR_CODE_MOTION))
 //                            mReference.onProcessUpdate(-1, "", false);
 //                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType);
-                        bmCard = BitmapUtil.getBitmapFromData(data, size.width, size.height, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType, mReference.cameraSourcePreview.getChildXOffset(), mReference.cameraSourcePreview.getChildYOffset(), mReference.cameraSourcePreview.getChildWidth(), mReference.cameraSourcePreview.getChildHeight());
+                        Point centerPoint = null;
+                        if (mReference.cameraContainer != null) {
+                            int Cx = (int) (mReference.cameraContainer.getX() + mReference.cameraContainer.getWidth()*0.5);
+                            int Cy = (int) (mReference.cameraContainer.getY() + mReference.cameraContainer.getHeight()*0.5);
+                            Util.logd(TAG, "run: (Cx,Cy)"+Cx + "," + Cy);
+                            if (Cx > 0 && Cy > 0) centerPoint = new Point(Cx, Cy);
+                        }
+                        if (centerPoint == null) {
+                            centerPoint = new Point(mReference.dm.widthPixels / 2, mReference.dm.heightPixels / 2);
+                        }
+                        bmCard = BitmapUtil.getBitmapFromData(data, size.width, size.height, format, mReference.rotation, mReference.rectH, mReference.rectW, centerPoint, mReference.cameraSourcePreview.getChildXOffset(), mReference.cameraSourcePreview.getChildYOffset(), mReference.cameraSourcePreview.getChildWidth(), mReference.cameraSourcePreview.getChildHeight());
 
                         mReference._mutex.lock();
 

@@ -18,7 +18,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.accurascan.ocr.mrz.R;
 import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.ContryModel;
 import com.accurascan.ocr.mrz.model.InitModel;
@@ -29,13 +28,14 @@ import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.ml.vision.FirebaseVision;
-import com.google.firebase.ml.vision.common.FirebaseVisionImage;
-import com.google.firebase.ml.vision.face.FirebaseVisionFace;
-import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
-import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
-import com.google.firebase.ml.vision.text.FirebaseVisionText;
-import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.face.Face;
+import com.google.mlkit.vision.face.FaceDetection;
+import com.google.mlkit.vision.face.FaceDetector;
+import com.google.mlkit.vision.face.FaceDetectorOptions;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -46,8 +46,6 @@ import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
@@ -136,8 +134,8 @@ public class RecogEngine {
     private byte[] pDic1 = null;
     private int pDicLen1 = 0;
     private static String[] assetNames = {"mMQDF_f_Passport_bottom_Gray.dic", "mMQDF_f_Passport_bottom.dic"};
-    private static FirebaseVisionTextRecognizer detector;
-    private static FirebaseVisionFaceDetector faceDetector;
+    private static TextRecognizer detector;
+    private static FaceDetector faceDetector;
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
@@ -433,7 +431,7 @@ public class RecogEngine {
             this.activity = (Activity) context;
         }
         if (detector == null) {
-            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+            detector = TextRecognition.getClient();
         }
         isComplete = false;
 //        init();
@@ -456,29 +454,16 @@ public class RecogEngine {
         // To initialise the detector
 
         if (faceDetector == null) {
-//            FirebaseVisionFaceDetectorOptions options =
-//                    new FirebaseVisionFaceDetectorOptions.Builder()
-////                            .setClassificationMode(FirebaseVisionFaceDetectorOptions.FAST)
-////                            .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
-////                            .setClassificationMode(FirebaseVisionFaceDetectorOptions.ALL_CLASSIFICATIONS)
-////                            .enableTracking()
-//                            .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
-//                            .setLandmarkMode(FirebaseVisionFaceDetectorOptions.ALL_LANDMARKS)
-//                            .setClassificationMode(FirebaseVisionFaceDetectorOptions.NO_CLASSIFICATIONS)
-//                            .enableTracking()
-//                            .build();
-//
-//            faceDetector = FirebaseVision.getInstance().getVisionFaceDetector(options);
 
-            FirebaseVisionFaceDetectorOptions options =
-                    new FirebaseVisionFaceDetectorOptions.Builder()
-                            .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
-                            .setLandmarkMode(FirebaseVisionFaceDetectorOptions.ALL_LANDMARKS)
-                            .setClassificationMode(FirebaseVisionFaceDetectorOptions.NO_CLASSIFICATIONS)
+            FaceDetectorOptions options =
+                    new FaceDetectorOptions.Builder()
+                            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+                            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+                            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
                             .enableTracking()
                             .build();
 
-            faceDetector = FirebaseVision.getInstance().getVisionFaceDetector(options);
+            faceDetector = FaceDetection.getClient(options);
         }
     }
 
@@ -629,15 +614,15 @@ public class RecogEngine {
      * @return for failed -> responseCode = 0,
      * for success -> responseCode = 1 && data has cardSide is front or back and ocrdata.
      */
-    private OcrData.MapData MapDataFunction(long src, FirebaseVisionText text) {
+    private OcrData.MapData MapDataFunction(long src, Text text) {
         int[][] boxBoundsLTRB;
         String[] textElements;
 
-        List<FirebaseVisionText.Element> elementArrayList = new ArrayList<>();
-        List<FirebaseVisionText.TextBlock> textBlocks = text.getTextBlocks();
-        for (FirebaseVisionText.TextBlock textBlock : textBlocks) {
-            for (FirebaseVisionText.Line line : textBlock.getLines()) {
-                for (FirebaseVisionText.Element element : line.getElements()) {
+        List<Text.Element> elementArrayList = new ArrayList<>();
+        List<Text.TextBlock> textBlocks = text.getTextBlocks();
+        for (Text.TextBlock textBlock : textBlocks) {
+            for (Text.Line line : textBlock.getLines()) {
+                for (Text.Element element : line.getElements()) {
                     if (element == null)
                         continue;
                     elementArrayList.add(element);
@@ -647,7 +632,7 @@ public class RecogEngine {
         boxBoundsLTRB = new int[elementArrayList.size()][];
         textElements = new String[elementArrayList.size()];
         int counter = 0;
-        for (FirebaseVisionText.Element element : elementArrayList) {
+        for (Text.Element element : elementArrayList) {
             Rect rect = element.getBoundingBox();
             if (rect != null) {
                 boxBoundsLTRB[counter] = new int[]{rect.left, rect.top, rect.right, rect.bottom};
@@ -862,7 +847,7 @@ public class RecogEngine {
      */
     public void doCheckData(Bitmap bmCard, ScanListener scanListener, int i,final int cB) {
         if (detector == null) {
-            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+            detector = TextRecognition.getClient();
         }
 //        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
         int scaledWidth = 1200;
@@ -870,10 +855,10 @@ public class RecogEngine {
         int scaledHeight = (int) (bmCard.getHeight()*ratio);
         Bitmap docBmp = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
 
-        detector.processImage(FirebaseVisionImage.fromBitmap(docBmp))
-                .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+        detector.process(InputImage.fromBitmap(docBmp, 0))
+                .addOnSuccessListener(new OnSuccessListener<Text>() {
                     @Override
-                    public void onSuccess(FirebaseVisionText text) {
+                    public void onSuccess(Text text) {
                         docBmp.recycle();
                         Util.logd(TAG, "ocr_text -> " + i + "-> " + "\n" + text.getText());
                         String s = recognizeCard(text.getText(),i,cB);
@@ -900,10 +885,10 @@ public class RecogEngine {
                                         int i1 = data.getInt("i1");
                                         if (i1 <= 0) {
                                             Util.logd(TAG, "(wxh) -> "+(scaledWidth / 2) + "x" +  (scaledHeight / 3));
-                                            List<FirebaseVisionText.TextBlock> textBlocks = text.getTextBlocks();
-                                            for (FirebaseVisionText.TextBlock element : textBlocks) {
-//                                for (FirebaseVisionText.Line line : textBlock.getLines())
-//                                    for (FirebaseVisionText.Element element : line.getElements())
+                                            List<Text.TextBlock> textBlocks = text.getTextBlocks();
+                                            for (Text.TextBlock element : textBlocks) {
+//                                for (Text.Line line : textBlock.getLines())
+//                                    for (Text.Element element : line.getElements())
                                                 if (element == null || element.getBoundingBox() == null)
                                                     continue;
                                                 Util.logd(TAG, "(box) -> "+(element.getBoundingBox()));
@@ -996,7 +981,7 @@ public class RecogEngine {
      */
     public void doRecognition(Bitmap bmCard, int countryId, int cardId, RecogResult result) {
         if (detector == null) {
-            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+            detector = TextRecognition.getClient();
         }
         AccuraLog.loge(TAG, "Recognize Data");
 //        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
@@ -1004,16 +989,16 @@ public class RecogEngine {
         float ratio = scaledWidth/(float) bmCard.getWidth();
         int scaledHeight = (int) (bmCard.getHeight()*ratio);
         Bitmap docBmp = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
-        detector.processImage(FirebaseVisionImage.fromBitmap(docBmp))
-                .addOnSuccessListener(new OnSuccessListener<FirebaseVisionText>() {
+        detector.process(InputImage.fromBitmap(docBmp, 0))
+                .addOnSuccessListener(new OnSuccessListener<Text>() {
                     @Override
-                    public void onSuccess(FirebaseVisionText text) {
+                    public void onSuccess(Text text) {
                         result.lines = "";
                         StringBuilder MlKitOcr = new StringBuilder();
-                        List<FirebaseVisionText.TextBlock> textBlocks = text.getTextBlocks();
-                        for (FirebaseVisionText.TextBlock textBlock : textBlocks)
-                            for (FirebaseVisionText.Line line : textBlock.getLines())
-                                for (FirebaseVisionText.Element element : line.getElements()) {
+                        List<Text.TextBlock> textBlocks = text.getTextBlocks();
+                        for (Text.TextBlock textBlock : textBlocks)
+                            for (Text.Line line : textBlock.getLines())
+                                for (Text.Element element : line.getElements()) {
                                     if (element == null)
                                         continue;
                                     if (element.getBoundingBox() != null) {
@@ -1069,7 +1054,7 @@ public class RecogEngine {
      */
     public void doRecognizeCard(Bitmap bmCard, CardDetails cardDetails, RecogType recogType) {
         if (detector == null) {
-            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+            detector = TextRecognition.getClient();
         }
 //        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
 
@@ -1087,12 +1072,11 @@ public class RecogEngine {
             mat.release();
         }
         //</editor-fold>
-        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(docBmp);
+        InputImage image = InputImage.fromBitmap(docBmp, 0);
 
-        detector.processImage(image).addOnSuccessListener(text -> {
+        detector.process(image).addOnSuccessListener(text -> {
             docBmp.recycle();
             int ret = extractData(text.getText(), cardDetails);
-//            Extractor.INSTANCE.extractData(text, bmCard, cardDetails);
             Util.logd(TAG, "doCheckData: "+ ret + "\n" + cardDetails.toString() + text.getText());
             if (!TextUtils.isEmpty(cardDetails.getNumber()) && !TextUtils.isEmpty(cardDetails.getExpirationDate())) {
                 cardDetails.setBitmap(bmCard);
@@ -1150,14 +1134,14 @@ public class RecogEngine {
         }
         Bitmap image = imageBitmap;
         if (detector == null) {
-            detector = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+            detector = TextRecognition.getClient();
         }
         AccuraLog.loge(TAG, "Recognize Data");
         int scaledWidth = 1200;
         float ratio = scaledWidth/(float) image.getWidth();
         int scaledHeight = (int) (image.getHeight()*ratio);
         Bitmap scaledBitmap = Bitmap.createScaledBitmap(image, scaledWidth, scaledHeight, true);
-        detector.processImage(FirebaseVisionImage.fromBitmap(scaledBitmap))
+        detector.process(InputImage.fromBitmap(scaledBitmap, 0))
                 .addOnSuccessListener(visionText -> {
                     Utils.bitmapToMat(scaledBitmap,mat);
                     OcrData.MapData mapData = MapDataFunction(mat.getNativeObjAddr(), visionText);
@@ -1303,9 +1287,9 @@ public class RecogEngine {
 //                                .build();
 //////            image = null;
 ////
-//                FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromByteArray(data, metadata);
-                FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(image1);
-                faceDetector.detectInImage(firebaseVisionImage)
+//                InputImage inputImage = InputImage.fromByteArray(data, metadata);
+                InputImage inputImage = InputImage.fromBitmap(image1, 0);
+                faceDetector.process(inputImage)
                         .addOnSuccessListener(faces -> {
                             if (faces.size() > 0) {
                                 AccuraLog.loge(TAG, "onFDetect");
@@ -1313,7 +1297,7 @@ public class RecogEngine {
                                 int indexW = 0;
                                 int indexH = 0;
                                 int currentPosition = 0;
-                                for (FirebaseVisionFace visionFace : faces) {
+                                for (Face visionFace : faces) {
                                     Rect bounds = visionFace.getBoundingBox();
                                     if (bounds.width() > indexW || bounds.height() > indexH) {
                                         indexW = bounds.width();
@@ -1322,7 +1306,7 @@ public class RecogEngine {
                                     }
                                     currentPosition++;
                                 }
-                                FirebaseVisionFace face = faces.get(index);
+                                Face face = faces.get(index);
 //                                Util.logd(TAG, "detectFace: " + face);
                                 Rect bounds = face.getBoundingBox();
                                 float rotY = face.getHeadEulerAngleY();  // Head is rotated to the right rotY degrees
@@ -1343,14 +1327,14 @@ public class RecogEngine {
 ////                                m.mapRect(dest);
 //                                RectF dst = new RectF();
 //                                m.mapRect(dst, dest);
-//                                FirebaseVisionFaceLandmark leftEye = face.getLandmark(FirebaseVisionFaceLandmark.LEFT_EYE);
-//                                FirebaseVisionFaceLandmark rightEye = face.getLandmark(FirebaseVisionFaceLandmark.RIGHT_EYE);
+//                                FaceLandmark leftEye = face.getLandmark(FaceLandmark.LEFT_EYE);
+//                                FaceLandmark rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE);
 //                                if (leftEye != null) {
-//                                    FirebaseVisionPoint point = leftEye.getPosition();
+//                                    Point point = leftEye.getPosition();
 //                                    Util.logd("face landmark : ", "left " + point.getX() + "," + point.getY());
 //                                }
 //                                if (rightEye != null) {
-//                                    FirebaseVisionPoint point = rightEye.getPosition();
+//                                    Point point = rightEye.getPosition();
 //                                    Util.logd("face landmark : ", "rigth " + point.getX() + "," + point.getY());
 //                                }
                                     float x = dest.left;
@@ -1552,43 +1536,7 @@ public class RecogEngine {
         return size;
     }
 
-    private File loadClassifierData(Context context) {
-
-        File faceClassifierFile;
-        InputStream is;
-        FileOutputStream os;
-
-
-        try {
-            is = context.getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
-            File cascadeDir = context.getDir("cascade", Context.MODE_PRIVATE);
-
-//            faceClassifierFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
-            faceClassifierFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
-//            System.out.println("cascade path  = " + faceClassifierFile.getAbsolutePath());
-
-            if (!faceClassifierFile.exists()) {
-                os = new FileOutputStream(faceClassifierFile);
-
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = is.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
-                }
-
-                is.close();
-                os.close();
-            }
-
-        } catch (IOException e) {
-            Util.logd("cascade", "Face cascade not found");
-            return null;
-        }
-
-        return faceClassifierFile;
-    }
-
-    public PointF getCenterPoint(List<FirebaseVisionFace> faces) {
+    public PointF getCenterPoint(List<Face> faces) {
         PointF centerOfAllFaces = new PointF();
 
         final int totalFaces = faces.size();
@@ -1613,7 +1561,7 @@ public class RecogEngine {
      * @param face   Face
      * @param center Center of the face
      */
-    private void getFaceCenter(FirebaseVisionFace face, PointF center) {
+    private void getFaceCenter(Face face, PointF center) {
         Rect bounds = face.getBoundingBox();
         float x = bounds.left;
         float y = bounds.top;
@@ -1702,15 +1650,17 @@ public class RecogEngine {
         try {
             if (detector != null) {
                 detector.close();
+                detector = null;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         try {
             if (faceDetector != null) {
                 faceDetector.close();
+                faceDetector = null;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         closeOCR(destroy);

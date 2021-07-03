@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.util.SparseArray;
@@ -24,6 +25,7 @@ public class MyBardCodeDetector extends Detector<Barcode> {
     private int childYOffset;
     private int childWidth;
     private int childHeight;
+    private Point point;
 
     public Bitmap getBitmap() {
         return bitmap;
@@ -39,7 +41,7 @@ public class MyBardCodeDetector extends Detector<Barcode> {
         Bitmap storedBitmap = null;
         Bitmap finalb = null;
         Bitmap centercrop = null;
-        centercrop = BitmapUtil.getBitmapFromData(frame.getGrayscaleImageData().array(),width,height, ImageFormat.NV21,frame.getMetadata().getRotation(),cardHeight,cardWidth,null,
+        centercrop = BitmapUtil.getBitmapFromData(frame.getGrayscaleImageData().array(),width,height, ImageFormat.NV21,frame.getMetadata().getRotation(),cardHeight,cardWidth,point,
                 childXOffset,childYOffset,childWidth,childHeight);
 
         if (centercrop == null) {
@@ -92,12 +94,13 @@ public class MyBardCodeDetector extends Detector<Barcode> {
         return mDelegate.setFocus(id);
     }
 
-    public void setFrameParam(int cardWidth, int cardHeight, int childXOffset, int childYOffset, int childWidth, int childHeight) {
+    public void setFrameParam(int cardWidth, int cardHeight, int childXOffset, int childYOffset, int childWidth, int childHeight, Point centerPoint) {
         if (cardWidth > 0) this.cardWidth = cardWidth;
         if (cardHeight > 0) this.cardHeight = cardHeight;
         this.childXOffset = childXOffset;
         this.childYOffset = childYOffset;
         this.childWidth = childWidth;
         this.childHeight = childHeight;
+        this.point = centerPoint;
     }
 }

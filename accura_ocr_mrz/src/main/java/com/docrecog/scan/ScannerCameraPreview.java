@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Point;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Handler;
@@ -46,6 +47,7 @@ import java.lang.reflect.Field;
 abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHolder.Callback */ {
     private static final String TAG = ScannerCameraPreview.class.getSimpleName();
     private final RecogEngine recogEngine;
+    private final DisplayMetrics dm;
     protected CameraSource cameraSource;
     private DisplayMetrics displayMetrics;
     public Camera camera;
@@ -95,6 +97,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         this.mContext = context;
         recogEngine = new RecogEngine();
         this.mLastClickTime = System.currentTimeMillis();
+        this.dm = context.getResources().getDisplayMetrics();
     }
 
     ScannerCameraPreview setFacing(int facing){
@@ -156,7 +159,6 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                 AccuraLog.loge(TAG, "InitializeS");
                 if (initModel != null) {
                     if (initModel.getResponseCode() == 1) {
-                        DisplayMetrics dm = context.getResources().getDisplayMetrics();
 
                         if (BitmapUtil.isPortraitMode(context)) {
                             cardWidth = dm.widthPixels - 20;
@@ -209,7 +211,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         myFaceDetector = new MyFaceDetector(detector);
         myFaceDetector.setFrameParam(cardWidth, cardHeight,
                 cameraSourcePreview.getChildXOffset(), cameraSourcePreview.getChildYOffset(),
-                cameraSourcePreview.getChildWidth(), cameraSourcePreview.getChildHeight());
+                cameraSourcePreview.getChildWidth(), cameraSourcePreview.getChildHeight(), getPoint());
 
         cameraSource = new CameraSource.Builder(mContext, myFaceDetector)
                 .setFacing(facing)
@@ -299,7 +301,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         myBarcodedetecter = new MyBardCodeDetector(barcodeDetector);
         myBarcodedetecter.setFrameParam(cardWidth, cardHeight,
                 cameraSourcePreview.getChildXOffset(), cameraSourcePreview.getChildYOffset(),
-                cameraSourcePreview.getChildWidth(), cameraSourcePreview.getChildHeight());
+                cameraSourcePreview.getChildWidth(), cameraSourcePreview.getChildHeight(), getPoint());
 
         CameraSource.Builder builder = new CameraSource.Builder(context, myBarcodedetecter)
                 .setAutoFocusEnabled(true)
@@ -386,6 +388,20 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         startCameraPreview();
     }
 
+    private Point getPoint() {
+        Point centerPoint = null;
+        if (cameraContainer != null) {
+            int Cx = (int) (cameraContainer.getX() + cameraContainer.getWidth()*0.5);
+            int Cy = (int) (cameraContainer.getY() + cameraContainer.getHeight()*0.5);
+            Util.logd(TAG, "run: (Cx,Cy)"+Cx + "," + Cy);
+            if (Cx > 0 && Cy > 0) centerPoint = new Point(Cx, Cy);
+        }
+        if (centerPoint == null) {
+            centerPoint = new Point(dm.widthPixels / 2, dm.heightPixels / 2);
+        }
+        return centerPoint;
+    }
+
     private Camera getCamera(@NonNull CameraSource cameraSource) {
         Field[] declaredFields = CameraSource.class.getDeclaredFields();
 
@@ -411,11 +427,12 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     }
 
     public void setFrameParam(int childXOffset, int childYOffset, int childWidth, int childHeight){
+
         if (myBarcodedetecter!=null) {
-            myBarcodedetecter.setFrameParam(0,0, childXOffset, childYOffset,childWidth, childHeight);
+            myBarcodedetecter.setFrameParam(0,0, childXOffset, childYOffset,childWidth, childHeight, getPoint());
         }
         if (myFaceDetector!=null) {
-            myFaceDetector.setFrameParam(0,0, childXOffset, childYOffset,childWidth, childHeight);
+            myFaceDetector.setFrameParam(0,0, childXOffset, childYOffset,childWidth, childHeight, getPoint());
         }
     }
 
