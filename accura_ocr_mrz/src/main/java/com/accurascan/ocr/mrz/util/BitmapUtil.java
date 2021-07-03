@@ -35,7 +35,6 @@ import android.view.WindowManager;
 
 import com.accurascan.ocr.mrz.BuildConfig;
 import com.docrecog.scan.RecogType;
-import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
 
 import java.io.ByteArrayOutputStream;
 
@@ -281,14 +280,15 @@ public class BitmapUtil {
      * @param mDisplayOrientation camera orientation
      * @param croppedHeight       center cropped image according to height which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData#cameraHeight} cameraHeight
      * @param croppedWidth        center cropped image according to width which is getting from {@link com.accurascan.ocr.mrz.model.InitModel.InitData#cameraWidth} cameraWidth
-     * @param recogType           if recog type is {@link RecogType#OCR} then crop bitmap by scale factor else crop center image
+//     * @param recogType           if recog type is {@link RecogType#OCR} then crop bitmap by scale factor else crop center image
+     * @param centerPoint
      * @param scaleX              camera preview zoom by scaleX
      * @param scaleY              camera preview zoom by scaleY
      * @param childWidth
      * @param childHeight
      * @return a decoded bitmap with cropped image
      */
-    public static Bitmap getBitmapFromData(byte[] data, int width, int height, int format, int mDisplayOrientation, int croppedHeight, int croppedWidth, RecogType recogType, float scaleX, float scaleY, int childWidth, int childHeight) {
+    public static Bitmap getBitmapFromData(byte[] data, int width, int height, int format, int mDisplayOrientation, int croppedHeight, int croppedWidth, Point centerPoint, float scaleX, float scaleY, int childWidth, int childHeight) {
 
 //        int width;
 //        int height;
@@ -329,13 +329,11 @@ public class BitmapUtil {
             Bitmap bmp1 = Bitmap.createBitmap(bmp_org, 0, 0, bmp_org.getWidth(), bmp_org.getHeight(), matrix, true);
 
 //            if (RecogType.OCR == recogType) {
-            DisplayMetrics dm = Resources.getSystem().getDisplayMetrics();
-            Point centerOfCanvas = new Point(dm.widthPixels / 2, dm.heightPixels / 2);
             //get viewfinder border size and position on the screen
-            int left = centerOfCanvas.x - (croppedWidth / 2);
-            int top = centerOfCanvas.y - (croppedHeight / 2);
-            int right = centerOfCanvas.x + (croppedWidth / 2);
-            int bottom = centerOfCanvas.y + (croppedHeight / 2);
+            int left = centerPoint.x - (croppedWidth / 2);
+            int top = centerPoint.y - (croppedHeight / 2);
+            int right = centerPoint.x + (croppedWidth / 2);
+            int bottom = centerPoint.y + (croppedHeight / 2);
             Rect frameRect = new Rect(left, top, right, bottom);
 
 //            if (rotationDegree != 0) {
@@ -424,13 +422,13 @@ public class BitmapUtil {
         Matrix matrix = new Matrix();
         int rotationDegree = 0;
         switch (rotation) {
-            case FirebaseVisionImageMetadata.ROTATION_90:
+            case 1: // ROTATION_90:
                 rotationDegree = 90;
                 break;
-            case FirebaseVisionImageMetadata.ROTATION_180:
+            case 2: // ROTATION_180:
                 rotationDegree = 180;
                 break;
-            case FirebaseVisionImageMetadata.ROTATION_270:
+            case 3: //ROTATION_270:
                 rotationDegree = 270;
                 break;
             default:

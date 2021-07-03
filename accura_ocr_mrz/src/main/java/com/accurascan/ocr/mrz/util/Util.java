@@ -445,7 +445,6 @@ public class Util {
         }
     }
 
-    @Keep
     public static void showErrorAndFinish(final Activity activity, int msgId) {
         DialogInterface.OnClickListener buttonListener =
                 new DialogInterface.OnClickListener() {
@@ -463,7 +462,6 @@ public class Util {
                 .show();
     }
 
-    @Keep
 	public static String getCurTimeString()
 	{
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");

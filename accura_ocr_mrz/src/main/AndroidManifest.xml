@@ -17,7 +17,7 @@
 
     <application>
         <meta-data
-            android:name="com.google.firebase.ml.vision.DEPENDENCIES"
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="face,ocr" />
         <meta-data
             android:name="com.google.android.gms.vision.DEPENDENCIES"
