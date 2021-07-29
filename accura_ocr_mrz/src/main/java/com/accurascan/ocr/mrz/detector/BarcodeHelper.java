@@ -330,7 +330,6 @@ public class BarcodeHelper {
                     pdf417Data.firstName1 = CustomerName[0].trim();
 //                pdf417Data.mname = CustomerName[1].substring(0, 1).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -347,14 +346,12 @@ public class BarcodeHelper {
             try {
                 pdf417Data.address1 = dataHashMap.get(Street_Address_1).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
         if (dataHashMap.containsKey(Street_Address_2)) {
             try {
                 pdf417Data.address2 = dataHashMap.get(Street_Address_2).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -439,7 +436,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.jurisdiction = dataHashMap.get(Jurisdction_Code).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -447,7 +443,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.nameSuffix = dataHashMap.get(NameSuff).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -455,7 +450,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.namePrefix = dataHashMap.get(NamePref).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -467,7 +461,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.licenseClassification = dataHashMap.get(LicenseClassification).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -475,7 +468,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.licenseRestriction = dataHashMap.get(LicenseRestriction).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -483,17 +475,10 @@ public class BarcodeHelper {
             try {
                 pdf417Data.licenseEndorsement = dataHashMap.get(LicenseEndorsement).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
         if (dataHashMap.containsKey(IssueDate) && dataHashMap.get(IssueDate).length() > 4) {
-//            try {
-//                pdf417Data.issueDate = dataHashMap.get(IssueDate).substring(0, 2) + "/"
-//                        + dataHashMap.get(IssueDate).substring(2, 4) + "/" + dataHashMap.get(IssueDate).substring(4);
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
 
             pdf417Data.issueDate = dataHashMap.get(IssueDate);
         }
@@ -502,7 +487,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.organDonor = dataHashMap.get(OrganDonor).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -510,7 +494,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.heightinFT = dataHashMap.get(HeightFT);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -518,7 +501,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.weightLBS = dataHashMap.get(WeightLBS).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -526,7 +508,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.weightKG = dataHashMap.get(WeightKG).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -534,7 +515,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.eyeColor = dataHashMap.get(EyeColor).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -542,7 +522,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.hairColor = dataHashMap.get(HairColor).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -550,7 +529,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.issueTime = dataHashMap.get(IssueTime).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -558,7 +536,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.permitIssue = dataHashMap.get(PermitIssue).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -566,7 +543,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.permitExpire = dataHashMap.get(PermitExpire).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -574,7 +550,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.permitRestriction = dataHashMap.get(PermitRestriction).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -582,7 +557,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.permitEndorsement = dataHashMap.get(PermitEndorsement).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -590,13 +564,11 @@ public class BarcodeHelper {
             try {
                 pdf417Data.fullName = dataHashMap.get(FullName).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         } else if (dataHashMap.containsKey(FullName1)) {
             try {
                 pdf417Data.fullName1 = dataHashMap.get(FullName1).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -604,7 +576,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.heightCM = dataHashMap.get(HeightCM).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -612,7 +583,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.numberDuplicate = dataHashMap.get(NumberDuplicate).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -620,7 +590,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.uniqueCustomerId = dataHashMap.get(UniqueCustomerId).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -628,13 +597,11 @@ public class BarcodeHelper {
             try {
                 pdf417Data.socialSecurityNo = dataHashMap.get(SocialSecurityNo).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         } else if (dataHashMap.containsKey(SocialSecurityNumber)) {
             try {
                 pdf417Data.socialSecurityNo = dataHashMap.get(SocialSecurityNumber).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -643,7 +610,6 @@ public class BarcodeHelper {
                 pdf417Data.under18 = dataHashMap.get(Under18).substring(0, 2) + "/"
                         + dataHashMap.get(Under18).substring(2, 4) + "/" + dataHashMap.get(Under18).substring(4);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -652,7 +618,6 @@ public class BarcodeHelper {
                 pdf417Data.under19 = dataHashMap.get(Under19).substring(0, 2) + "/"
                         + dataHashMap.get(Under19).substring(2, 4) + "/" + dataHashMap.get(Under19).substring(4);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -661,7 +626,6 @@ public class BarcodeHelper {
                 pdf417Data.under21 = dataHashMap.get(Under21).substring(0, 2) + "/"
                         + dataHashMap.get(Under21).substring(2, 4) + "/" + dataHashMap.get(Under21).substring(4);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -669,7 +633,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.inventoryNo = dataHashMap.get(InventoryControlNo).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -677,7 +640,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.raceEthnicity = dataHashMap.get(RaceEthnicity).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -685,7 +647,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.standardVehicleClass = dataHashMap.get(StandardVehicleClass).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -693,7 +654,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.documentDiscriminator = dataHashMap.get(DocumentDiscriminator).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -701,7 +661,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.permitClassification = dataHashMap.get(PermitClassification).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -709,7 +668,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.veteranIndicator = dataHashMap.get(VeteranIndicator).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 
@@ -717,7 +675,6 @@ public class BarcodeHelper {
             try {
                 pdf417Data.courtRestriction = dataHashMap.get(CourtRestriction).trim();
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 

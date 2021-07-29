@@ -9,11 +9,14 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -27,6 +30,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.widget.NestedScrollView;
@@ -64,7 +68,6 @@ public class MainActivity extends AppCompatActivity {
                 if (activity.progressBar != null && activity.progressBar.isShowing()) {
                     activity.progressBar.dismiss();
                 }
-                Log.e(TAG, "handleMessage: " + msg.what);
                 activity.isContinue = true;
                 if (msg.what == 1) {
                     if (activity.sdkModel.isMRZEnable) {
@@ -109,9 +112,13 @@ public class MainActivity extends AppCompatActivity {
                     activity.isContinue = false;
                     // doWorkNative();
                     RecogEngine recogEngine = new RecogEngine();
+                    AccuraLog.refreshLogfile(activity);
                     AccuraLog.enableLogs(true); // make sure to disable logs in release mode
                     recogEngine.setDialog(false); // setDialog(false) To set your custom dialog for license validation
                     activity.sdkModel = recogEngine.initEngine(activity);
+                    if (activity.sdkModel == null){
+                        return;
+                    }
                     AccuraLog.loge(TAG, "SDK version" + recogEngine.getSDKVersion() + "\nInitialized Engine : " + activity.sdkModel.i + " -> " + activity.sdkModel.message);
                     activity.responseMessage = activity.sdkModel.message;
 
@@ -119,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
 
                         // if OCR enable then get card list
                         if (activity.sdkModel.isOCREnable)
-                            activity.modelList = recogEngine.getCardList(activity);
+                            activity.modelList = recogEngine.getCardList(activity.getApplicationContext());
 
                         recogEngine.setBlurPercentage(activity, 62);
                         recogEngine.setFaceBlurPercentage(activity, 70);
@@ -270,11 +277,28 @@ public class MainActivity extends AppCompatActivity {
         rvCards.setLayoutManager(lmCard);
         cardAdapter = new CardListAdpter(this, cardList);
         rvCards.setAdapter(cardAdapter);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(this)) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager()) {
+                try {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    intent.addCategory("android.intent.category.DEFAULT");
+                    intent.setData(Uri.parse(String.format("package:%s", this)));
+                    startActivityForResult(intent, 2296);
+                } catch (Exception e) {
+                    Intent intent = new Intent();
+                    intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                    startActivityForResult(intent, 2296);
+                }
+            } else {
+                doWork();
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(this)) {
             requestCameraPermission();
         } else {
             doWork();
         }
+
+
     }
 
     @Override
@@ -324,6 +348,18 @@ public class MainActivity extends AppCompatActivity {
                     requestPermissions(new String[]{Manifest.permission.CAMERA}, 1);
                 } else {
                     requestPermissions(new String[]{Manifest.permission.CAMERA}, 1);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 2296) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                if (Environment.isExternalStorageManager()) {
+                    doWork();
                 }
             }
         }

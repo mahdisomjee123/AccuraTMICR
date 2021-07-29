@@ -10,6 +10,7 @@ import android.util.Log;
 
 
 import com.accurascan.ocr.mrz.motiondetection.data.GlobalData;
+import com.accurascan.ocr.mrz.util.Util;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -62,18 +63,15 @@ public class SensorsActivity extends Activity implements SensorEventListener {
                     sensorMgr.unregisterListener(this, sensorGrav);
                 }
             } catch (Exception ex) {
-                ex.printStackTrace();
             }
             try {
                 if (sensorMgr != null) {
                     sensorMgr.unregisterListener(this, sensorMag);
                 }
             } catch (Exception ex) {
-                ex.printStackTrace();
             }
             sensorMgr = null;
         } catch (Exception ex) {
-            ex.printStackTrace();
         }
         super.onDestroy();
     }
@@ -104,7 +102,6 @@ public class SensorsActivity extends Activity implements SensorEventListener {
                     sensorMgr = null;
                 }
             } catch (Exception ex2) {
-                ex2.printStackTrace();
             }
         }
     }
@@ -122,18 +119,15 @@ public class SensorsActivity extends Activity implements SensorEventListener {
                     sensorMgr.unregisterListener(this, sensorGrav);
                 }
             } catch (Exception ex) {
-                ex.printStackTrace();
             }
             try {
                 if (sensorMgr != null) {
                     sensorMgr.unregisterListener(this, sensorMag);
                 }
             } catch (Exception ex) {
-                ex.printStackTrace();
             }
             sensorMgr = null;
         } catch (Exception ex) {
-            ex.printStackTrace();
         }
     }
 
@@ -181,7 +175,7 @@ public class SensorsActivity extends Activity implements SensorEventListener {
         if (sensor == null) throw new NullPointerException();
 
         if (sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD && accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
-            Log.e(TAG, "Compass data unreliable");
+            Util.logd(TAG, "Compass data unreliable");
         }
     }
 }

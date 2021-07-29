@@ -157,7 +157,7 @@ public class Util {
 		            // In eng build, we throw the exception so that test tool
 		            // can detect it and report it
 		            if ("eng".equals(Build.TYPE)) {
-		            	Log.i(TAG, "Open Camera fail", e);
+		            	logd(TAG, "Open Camera fail"+ Log.getStackTraceString(e));
 		            	throw e;
 		            	//QA will always consider JE as bug, so..
 		                //throw new RuntimeException("openCamera failed", e);
@@ -280,7 +280,7 @@ public class Util {
         // Cannot find the one match the aspect ratio. This should not happen.
         // Ignore the requirement.
         if (optimalSize == null) {
-            Log.w(TAG, "No preview size match the aspect ratio");
+            logw(TAG, "No preview size match the aspect ratio");
             minDiff = Double.MAX_VALUE;
             maxDiff = 0;
             for (Size size : sizes) {
@@ -348,7 +348,7 @@ public class Util {
         // Cannot find the one match the aspect ratio. This should not happen.
         // Ignore the requirement.
         if (maxPreviewSize == null) {
-            Log.w(TAG, "No preview size match the aspect ratio");
+            logw(TAG, "No preview size match the aspect ratio");
             maxDiff = 0;
             for (Size size : sizes) {
             	if (Math.abs(size.height - targetHeight) > maxDiff) {
@@ -548,7 +548,7 @@ public class Util {
         // the preview sizes and hope that the camera can handle it.  Probably unlikely, but we still
         // account for it.
         if (validPreviewSizes.size() == 0) {
-            Log.w(TAG, "No preview sizes have a corresponding same-aspect-ratio picture size.");
+            logd(TAG, "No preview sizes have a corresponding same-aspect-ratio picture size.");
             for (Camera.Size previewSize : supportedPreviewSizes) {
                 // The null picture size will let us know that we shouldn't set a picture size.
                 validPreviewSizes.add(new CameraSizePair(previewSize, null));
@@ -560,12 +560,12 @@ public class Util {
 
     public static void logd(String tag, String s) {
         if (DEBUG) {
-            Log.d(tag, s);
+            AccuraLog.loge(tag, s);
         }
     }
     public static void logw(String tag, String s) {
         if (DEBUG) {
-            Log.w(tag, s);
+            AccuraLog.loge(tag, s);
         }
     }
 }

@@ -35,6 +35,7 @@ public class RecogResult {
     public String issuedate = "";//
     public String otherid = "";//
     public String otheridchecksum = "";//
+    public String otherid2 = "";//
     public String correctotheridchecksum = "";//
     public String departmentnumber = "";//
     public String secondrowchecksum = "";
@@ -72,7 +73,8 @@ public class RecogResult {
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; otherid = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; otheridchecksum = convchar2string(tmp);
         len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctotheridchecksum = convchar2string(tmp);
-		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; departmentnumber = convchar2string(tmp);
+        len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; otherid2 = convchar2string(tmp);
+        len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; departmentnumber = convchar2string(tmp);
 		len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; secondrowchecksum = convchar2string(tmp);
         len = intData[k++]; for(i=0;i<len;++i) tmp[i] = (byte)intData[k++]; tmp[i] = 0; correctsecondrowchecksum = convchar2string(tmp);
 
@@ -147,7 +149,6 @@ public class RecogResult {
         try {
             outStr = new String(chstr, 0, len, "UTF-8");
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
         }
         return outStr;
     }

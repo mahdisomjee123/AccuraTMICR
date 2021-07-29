@@ -381,6 +381,7 @@ public class OcrResultActivity extends AppCompatActivity {
         addLayout("Date Of Issue", recogResult.issuedate);
         addLayout("Department No.", recogResult.departmentnumber);
         addLayout("Other ID", recogResult.otherid);
+        addLayout("Other ID2", recogResult.otherid2);
         addLayout("Other ID Check", recogResult.otheridchecksum);
         addLayout("Second Row Check No.", recogResult.secondrowchecksum);
         addLayout("Correct Second Row Check No.", recogResult.correctsecondrowchecksum);
