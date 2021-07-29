@@ -8,6 +8,9 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.accurascan.ocr.mrz.util.AccuraLog;
+import com.accurascan.ocr.mrz.util.Util;
+
 import java.io.IOException;
 
 import static com.accurascan.ocr.mrz.util.Util.Assert;
@@ -112,11 +115,11 @@ public class CameraHolder {
         }
         if (mCameraDevice == null) {
             try {
-                Log.v(TAG, "open camera " + cameraId);
+                Util.logd(TAG, "open camera " + cameraId);
                 mCameraDevice = android.hardware.Camera.open(cameraId);
                 mCameraId = cameraId;
             } catch (RuntimeException e) {
-                Log.e(TAG, "fail to connect Camera", e);
+                Util.logd(TAG, "fail to connect Camera" + Log.getStackTraceString(e));
                 throw new Exception(e);
             }
             mParameters = mCameraDevice.getParameters();
@@ -124,7 +127,7 @@ public class CameraHolder {
             try {
                 mCameraDevice.reconnect();
             } catch (IOException e) {
-                Log.e(TAG, "reconnect failed.");
+                Util.logd(TAG, "reconnect failed.");
                 throw new Exception(e);
             }
 //            try {

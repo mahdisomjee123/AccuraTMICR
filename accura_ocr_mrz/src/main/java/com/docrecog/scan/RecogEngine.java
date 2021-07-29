@@ -38,6 +38,7 @@ import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.scottyab.rootbeer.RootBeer;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -57,7 +58,7 @@ public class RecogEngine {
     static {
         try { // for Ocr
             System.loadLibrary("accurasdk");
-            Log.e(RecogEngine.class.getSimpleName(), "Load success");
+            AccuraLog.loge(RecogEngine.class.getSimpleName(), "Load success");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -285,6 +286,29 @@ public class RecogEngine {
 
     public native String getSDKVersion();
 
+    public boolean checkRD(Context context){
+        RootBeer rootBeer = new RootBeer(context);
+        rootBeer.setLogging(false);
+        if (rootBeer.isRooted()/*rootBeer.detectRootManagementApps() ||
+                rootBeer.detectPotentiallyDangerousApps() ||
+                rootBeer.detectRootCloakingApps() ||
+                rootBeer.detectTestKeys() ||
+                rootBeer.checkForBusyBoxBinary() ||
+                rootBeer.checkForSuBinary() ||
+                rootBeer.checkSuExists() ||
+                rootBeer.checkForRWPaths() ||
+                rootBeer.checkForDangerousProps() ||
+                rootBeer.checkForRootNative()*/ /*||
+                com.scottyab.rootbeer.util.Utils.isSelinuxFlagInEnabled() ||
+                rootBeer.checkForMagiskBinary()*/) {
+
+            //we found indication of root
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public int setBlurPercentage(Context context, int blurPercentage) {
         return setBlurPercentage(context, blurPercentage,"");
     }
@@ -327,6 +351,26 @@ public class RecogEngine {
      * @return
      */
     public SDKModel initEngine(Context context) {
+
+        if (checkRD(context)) {
+            if (context instanceof Activity) {
+                ((Activity) context).runOnUiThread(() -> {
+                    AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
+                    builder1.setMessage("Sorry, you can't use this app as we've detected that your device has been rooted");
+                    builder1.setCancelable(true);
+                    builder1.setPositiveButton(
+                            "OK",
+                            (dialog, id) -> {
+                                dialog.cancel();
+                                ((Activity) context).finishAndRemoveTask();
+                            });
+                    AlertDialog alert11 = builder1.create();
+                    alert11.show();
+                });
+            } else
+                Toast.makeText(context, "Sorry, you can't use this app as we've detected that your device has been rooted", Toast.LENGTH_SHORT).show();
+            return null;
+        }
         /*
            initialized sdk by InitEngine from thread
           The return value by initEngine used the identify
@@ -351,7 +395,7 @@ public class RecogEngine {
         int[] ints = new int[5];
 //        File file = loadClassifierData(context);
         int ret = loadDictionary(context, /*file != null ? file.getAbsolutePath() : */"", pDic, pDicLen, pDic1, pDicLen1, context.getAssets(),ints);
-        Log.i("recogPassport", "loadDictionary: " + ret);
+        AccuraLog.loge("recogPassport", "loadDictionary: " + ret);
 //        nM = "Keep Document Steady";
         if (ret < 0) {
             String message = "";
@@ -403,7 +447,7 @@ public class RecogEngine {
                 }
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            AccuraLog.loge(TAG, Log.getStackTraceString(e));
         }
         return null;
     }
@@ -445,7 +489,6 @@ public class RecogEngine {
                 return initModel;
             }
         } catch (JSONException e) {
-            e.printStackTrace();
         }
         return null;
     }
@@ -483,7 +526,6 @@ public class RecogEngine {
                 return initModel;
             }
         } catch (JSONException e) {
-            e.printStackTrace();
         }
         return null;
     }
@@ -508,7 +550,6 @@ public class RecogEngine {
                 return initModel;
             }
         } catch (JSONException e) {
-            e.printStackTrace();
         }
         return null;
     }
@@ -533,7 +574,6 @@ public class RecogEngine {
                 return initModel;
             }
         } catch (JSONException e) {
-            e.printStackTrace();
         }
         return null;
     }
@@ -559,7 +599,6 @@ public class RecogEngine {
                     return false;
                 }
             } catch (JSONException e) {
-                e.printStackTrace();
             }
         }
         src.release();
@@ -580,7 +619,6 @@ public class RecogEngine {
                 }
             }
         } catch (JSONException e) {
-            e.printStackTrace();
         }
         src.release();
         return ret == 1;
@@ -599,7 +637,6 @@ public class RecogEngine {
 //                    }
                 }
             } catch (Exception e) {
-                e.printStackTrace();
                 ret = 0;
             }
         }
@@ -657,7 +694,7 @@ public class RecogEngine {
                 }
             }
         } catch (JSONException e) {
-            AccuraLog.loge(TAG, Log.getStackTraceString(e));
+//            AccuraLog.loge(TAG, Log.getStackTraceString(e));
         }
         return null;
 
@@ -957,18 +994,19 @@ public class RecogEngine {
                                     }
                                 }
                             } catch (JSONException e) {
-                                e.printStackTrace();
+                                AccuraLog.loge(TAG, e.toString());
                             }
                         }
                     }
                 })
                 .addOnFailureListener(e -> {
-                    try {
-                        AccuraLog.loge(TAG, Log.getStackTraceString(e));
-                    } catch (Exception ex) {
-                        AccuraLog.loge(TAG, e.getMessage());
-                        ex.printStackTrace();
+//                    try {
+//                        AccuraLog.loge(TAG, Log.getStackTraceString(e));
+//                    } catch (Exception ex) {
+                    if (e.getMessage() != null) {
+                        AccuraLog.loge(TAG, e.toString());
                     }
+//                    }
                 });
     }
 
@@ -1040,7 +1078,7 @@ public class RecogEngine {
                 }).addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
-                AccuraLog.loge(TAG, Log.getStackTraceString(e));
+                AccuraLog.loge(TAG, e.toString());
             }
         });
 
@@ -1145,13 +1183,6 @@ public class RecogEngine {
                 .addOnSuccessListener(visionText -> {
                     Utils.bitmapToMat(scaledBitmap,mat);
                     OcrData.MapData mapData = MapDataFunction(mat.getNativeObjAddr(), visionText);
-//                    if (detector != null) {
-//                        try {
-//                            detector.close();
-//                        } catch (IOException e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
                     List<OcrData.MapData.ScannedData> result = null;
                     if (mapData != null) {
                         result = mapData.getOcr_data();
@@ -1226,7 +1257,6 @@ public class RecogEngine {
                             mat.release();
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
                     }
 //                    if (isContinue && callBack != null) {
 ////                        if (isdone && ocrData.getFrontData() != null && ocrData.getBackData() == null) {
@@ -1239,13 +1269,6 @@ public class RecogEngine {
 //                    }
                 })
                 .addOnFailureListener(e -> {
-//                    if (detector != null) {
-//                        try {
-//                            detector.close();
-//                        } catch (IOException e1) {
-//                            e1.printStackTrace();
-//                        }
-//                    }
                     src.recycle();
                     image.recycle();
                     mat.release();
@@ -1436,7 +1459,7 @@ public class RecogEngine {
                                             scanListener.onScannedFailed("");
                                         }
                                     } catch (Exception e) {
-                                        AccuraLog.loge(TAG, Log.getStackTraceString(e));
+                                        Util.logd(TAG, Log.getStackTraceString(e));
                                         image1.recycle();
                                         image.recycle();
                                         Util.logd(TAG, "face  Failed");
@@ -1452,15 +1475,9 @@ public class RecogEngine {
                                 }
 //                                scanListener.onScannedSuccess(false, false);
                             }
-//                            try {
-//                                if (faceDetector != null) {
-//                                    faceDetector.close();
-//                                }
-//                            } catch (IOException e) {
-//                                e.printStackTrace();
-//                            }
                         }).addOnFailureListener(e -> {
-                    AccuraLog.loge(TAG, Log.getStackTraceString(e));
+                    Util.logd(TAG, Log.getStackTraceString(e));
+                    AccuraLog.loge(TAG, e.toString());
                     scanListener.onScannedFailed("");
 //                    try {
 //                        if (faceDetector != null) {
@@ -1519,7 +1536,7 @@ public class RecogEngine {
             is.read(pDic);
             is.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            AccuraLog.loge(TAG, e.toString());
         }
 
         try {
@@ -1530,7 +1547,7 @@ public class RecogEngine {
             is.read(pDic1);
             is.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            AccuraLog.loge(TAG, e.toString());
         }
 
         return size;
@@ -1653,7 +1670,6 @@ public class RecogEngine {
                 detector = null;
             }
         } catch (Exception e) {
-            e.printStackTrace();
         }
         try {
             if (faceDetector != null) {
@@ -1661,7 +1677,6 @@ public class RecogEngine {
                 faceDetector = null;
             }
         } catch (Exception e) {
-            e.printStackTrace();
         }
         closeOCR(destroy);
     }

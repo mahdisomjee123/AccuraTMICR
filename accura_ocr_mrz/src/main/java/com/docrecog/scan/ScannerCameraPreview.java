@@ -258,7 +258,6 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                     detector.release();
                                     myFaceDetector.release();
                                 } catch (Exception e) {
-                                    e.printStackTrace();
                                 }
 
                                 preview.post(new Runnable() {
@@ -346,7 +345,6 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                             }
                             Barcode barcode = qrcode.valueAt(0);
                             String output = barcode.rawValue;
-                            Log.e(TAG, "run: " + barcode.valueFormat+" , " + barcode.isRecognized);
 //                            Barcode.DriverLicense driverLicense = qrcode.valueAt(0).driverLicense;
                             if (bitmap != null && !bitmap.isRecycled() && !isDone) {
                                 isDone = true;
@@ -375,7 +373,6 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                                         bitmap.recycle();
                                         onScannedSuccess(ocrData);
                                     } catch (JSONException e) {
-                                        e.printStackTrace();
                                     }
                                 }
                                 mLastClickTime = System.currentTimeMillis();
@@ -416,7 +413,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
                     return null;
                 } catch (IllegalAccessException e) {
-                    e.printStackTrace();
+                    AccuraLog.loge(TAG, e.toString());
                 }
 
                 break;
@@ -497,13 +494,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
             if (mContext instanceof Activity) {
                 Util.showErrorAndFinish((Activity) mContext, R.string.cannot_connect_camera);
             }
-            e.printStackTrace();
         }
-//        try {
-//            setCamera();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
     }
 
     protected void destroy(){

@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.accurascan.ocr.mrz.BuildConfig.DEBUG;
 import static com.accurascan.ocr.mrz.camerautil.CameraSource.FOCUSING;
 import static com.accurascan.ocr.mrz.camerautil.CameraSource.IDLE;
 import static com.accurascan.ocr.mrz.camerautil.CameraSource.PREVIEW_STOPPED;
@@ -186,7 +187,6 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             if (mReference.recogType == RecogType.OCR) {
                 try {
                     if (mReference.i1 == null) {
-                        Log.e(TAG, "initOcr");
                         mReference.i1 = mReference.recogEngine.initOcr(mReference, mReference.mActivity, mReference.countryId, mReference.cardId, mReference.minFrame);
                         AccuraLog.loge(TAG, "InitializeOCR");
                     }
@@ -219,18 +219,18 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         mReference.handler.sendEmptyMessage(0);
                     }
                 } catch (Exception e) {
-                    Log.e("threadmessage", e.getMessage());
+                    if (DEBUG) {
+                        AccuraLog.loge("threadmessage", e.getMessage());
+                    }
                 }
             } else {
 
                 if (BitmapUtil.isPortraitMode(mReference.mActivity)) {
                     mReference.rectW = mReference.dm.widthPixels - 20;
                     mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) / 3;
-                    Log.e(TAG, "run: frame" + mReference.dm.toString() + mReference.rectW + "x" + mReference.rectH);
                 } else {
                     mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) - (int) (100 * mReference.dm.density);
                     mReference.rectW = (int) (mReference.rectH / 0.69);
-                    Log.e(TAG, "run: frame" + mReference.dm.toString() + mReference.rectW + "x" + mReference.rectH);
                 }
                 if (mReference.recogType == RecogType.MRZ || mReference.recogType == RecogType.BANKCARD) {
                     AccuraLog.loge(TAG, "InitializeM");
@@ -767,8 +767,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     AccuraLog.loge(TAG, "ReleaseR");
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                AccuraLog.loge(TAG, "Thread - " + Log.getStackTraceString(e));
+                AccuraLog.loge(TAG, "Thread - " + e.toString());
             } finally {
                 processing.set(false);
             }
@@ -1698,7 +1697,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         private static final String TAG = "CameraErrorCallback";
 
         public void onError(int error, Camera camera) {
-            Log.e(TAG, "Got camera error callback. error=" + error);
+            AccuraLog.loge(TAG, "Got camera error callback. error=" + error);
             if (error == Camera.CAMERA_ERROR_SERVER_DIED) {
                 // We are not sure about the current state of the app (in preview or
                 // snapshot or recording). Closing the app is better than creating a
@@ -2176,7 +2175,6 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         }
                         isContinue = 0;
                     } catch (Exception e) {
-                        e.printStackTrace();
                     }
                 };
                 Runnable runnable1 = () -> new Handler().postDelayed(runnable, 1500);
@@ -2242,7 +2240,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
     @Override
     public void onScannedFailed(String s) {
-        Log.e("ocr_log", s);
+        AccuraLog.loge("ocr_log", s);
     }
 
     private void GotMRZData() {
@@ -2280,14 +2278,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //        try {
 //            playEffect();
 //        } catch (Exception e) {
-//            e.printStackTrace();
 //        }
         recogEngine.removeCallBack(this);
 //        recogEngine.closeEngine(0);
         try {
             Thread.sleep(500);
         } catch (InterruptedException e) {
-            e.printStackTrace();
         }
         mRecCnt = 0;
         bRet = 0;
@@ -2309,7 +2305,6 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             try {
                 onProcessUpdate(-1, "", false);
             } catch (Exception e) {
-                e.printStackTrace();
             }
 
         } else if (recogType == RecogType.MRZ) {
@@ -2343,7 +2338,6 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 OcrData.MapData mapData = new Gson().fromJson(mapObject.toString(), OcrData.MapData.class);
                 ocrData.setFrontData(mapData);
             } catch (JSONException e) {
-                e.printStackTrace();
             }
             g_recogResult = new RecogResult();
             g_recogResult.recType = RecogEngine.RecType.INIT;
@@ -2354,7 +2348,6 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             try {
                 onProcessUpdate(-1, "", false);
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }
 

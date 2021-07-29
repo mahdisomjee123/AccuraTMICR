@@ -21,7 +21,6 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -29,7 +28,6 @@ import android.graphics.RectF;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Surface;
 import android.view.WindowManager;
 
@@ -69,7 +67,6 @@ public class BitmapUtil {
             opts.inJustDecodeBounds = false;
             return BitmapFactory.decodeByteArray(src, 0, src.length, opts);
         } catch (Throwable t) {
-            Log.w("TAG", "unable to decode image");
             return null;
         }
     }
@@ -88,7 +85,6 @@ public class BitmapUtil {
             final Bitmap decoded = decodeByteArray(src, w, h);
             return centerCrop(decoded, w, h);
         } catch (Throwable t) {
-            Log.w("TAG", "unable to crop image");
             return null;
         }
     }
@@ -169,14 +165,7 @@ public class BitmapUtil {
         srcY = Math.max(Math.min(srcY, srcHeight - srcCroppedH), 0);
         final Bitmap cropped = Bitmap.createBitmap(src, srcX, srcY, srcCroppedW, srcCroppedH, m,
                 true /* filter */);
-        if (DEBUG)/* Log.i("TAG",
-                "IN centerCrop, srcW/H=%s/%s desiredW/H=%s/%s srcX/Y=%s/%s" +
-                        " innerW/H=%s/%s scale=%s resultW/H=%s/%s",
-                srcWidth, srcHeight, w, h, srcX, srcY, srcCroppedW, srcCroppedH, scale,
-                cropped.getWidth(), cropped.getHeight());*/
-            if (DEBUG && (w != cropped.getWidth() || h != cropped.getHeight())) {
-                Log.e("TAG", "last center crop violated assumptions.");
-            }
+
         return cropped;
     }
 
@@ -261,7 +250,6 @@ public class BitmapUtil {
             bmp1.recycle();
             return bmCard;
         } catch (Exception e) {
-            e.printStackTrace();
             return null;
         }
 
@@ -464,7 +452,7 @@ public class BitmapUtil {
                 degrees = 270;
                 break;
             default:
-                Log.e("TAG", "Bad rotation value: " + rotation);
+                AccuraLog.loge("TAG", "Bad rotation value: " + rotation);
         }
 
 
@@ -540,7 +528,6 @@ public class BitmapUtil {
     }
 
     public static float getRotation(float v) {
-        Util.logd("TAG", "old 0: " + v);
         if (v < -75 && v >= -105) {
             v = -90;
         } else if (v > 75 && v < 105) {
@@ -550,7 +537,6 @@ public class BitmapUtil {
         } /*else if (v > 110 && v < -110) {
             v = 0;
         }*/
-        Util.logd("TAG", "new 1: " + v);
         return v;
     }
 

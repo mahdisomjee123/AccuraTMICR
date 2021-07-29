@@ -135,7 +135,7 @@ public class FocusManager {
         if (mParameters != null) {
             mInitialized = true;
         } else {
-            Log.e(TAG, "mParameters is not initialized.");
+            Util.logd(TAG, "mParameters is not initialized.");
         }
     }
 
@@ -203,7 +203,7 @@ public class FocusManager {
     }
 
     public void onAutoFocus(boolean focused) {
-    	Log.i(TAG, "onAutoFocus, mState = " + String.valueOf(mState));
+    	Util.logd(TAG, "onAutoFocus, mState = " + String.valueOf(mState));
         if (mState == STATE_FOCUSING_SNAP_ON_FINISH) {
             // Take the picture no matter focus succeeds or fails. No need
             // to play the AF sound if we're about to play the shutter
@@ -260,12 +260,12 @@ public class FocusManager {
         int focusWidth = mFocusIndicatorRotateLayout.getWidth();
         int focusHeight = mFocusIndicatorRotateLayout.getHeight();
         if (focusWidth == 0 || focusHeight == 0) {
-        	Log.i(TAG, "UI Component not initialized, cancel this touch");
+        	Util.logd(TAG, "UI Component not initialized, cancel this touch");
         	return false;
         }
 	
 	
-        Log.i(TAG, "TouchFocus: touch.x = " + x + " touch.y = " + y);
+        Util.logd(TAG, "TouchFocus: touch.x = " + x + " touch.y = " + y);
         int previewWidth = mPreviewFrame.getWidth();
         int previewHeight = mPreviewFrame.getHeight();
         if (mFocusArea == null) {
@@ -325,7 +325,7 @@ public class FocusManager {
     }
 
     private void autoFocus() {
-        Log.v(TAG, "Start autofocus.");
+        Util.logd(TAG, "Start autofocus.");
         mListener.autoFocus();
         mState = STATE_FOCUSING;
         updateFocusUI();
@@ -333,7 +333,7 @@ public class FocusManager {
     }
 
     private void cancelAutoFocus() {
-        Log.v(TAG, "Cancel autofocus.");
+        Util.logd(TAG, "Cancel autofocus.");
 
         // Reset the tap area before calling mListener.cancelAutofocus.
         // Otherwise, focus mode stays at auto and the tap area passed to the
@@ -383,7 +383,7 @@ public class FocusManager {
                 mFocusMode = mParameters.getFocusMode();
             }
         }
-        Log.e(TAG, "get Focus mode :" + mFocusMode);
+        Util.logd(TAG, "get Focus mode :" + mFocusMode);
         return mFocusMode;
     }
 

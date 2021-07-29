@@ -8,9 +8,13 @@ import androidx.annotation.Keep;
 import org.opencv.core.Mat;
 
 public class ImageOpencv {
+    @Keep
     public String message = "";
+    @Keep
     public boolean isSucess = false;
+    @Keep
     public Mat mat;
+    @Keep
     public String rect;
 
     public Bitmap getBitmap(Bitmap docBmp) {
@@ -21,7 +25,6 @@ public class ImageOpencv {
                 docBmp = Bitmap.createBitmap(docBmp, rect.left, rect.top, rect.width(), rect.height());//memory leak
             }
         } catch (Exception e) {
-            e.printStackTrace();
         }
         return docBmp;
     }
@@ -69,7 +72,6 @@ public class ImageOpencv {
 //                newBitmap.recycle();
             }
         } catch (Exception e) {
-            e.printStackTrace();
         }
         return docBmp;
     }
