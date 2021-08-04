@@ -3,6 +3,7 @@ package com.accurascan.ocr.mrz.util;
 import android.content.Context;
 import android.media.MediaScannerConnection;
 import android.os.Environment;
+import android.util.Log;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -12,6 +13,8 @@ import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+
+import static android.os.Environment.DIRECTORY_DOWNLOADS;
 
 public class AccuraLog {
     private static boolean DEBUG = false;
@@ -34,12 +37,16 @@ public class AccuraLog {
     }
 
     public static void refreshLogfile(Context context) {
+        if (!isLogEnable()){
+            Log.e(AccuraLog.class.getSimpleName(), "Please enable logs before call AccuraLog.refreshLogfile(context)");
+            return;
+        }
         // Refresh the data so it can seen when the device is plugged in a
         // computer. You may have to unplug and replug to see the latest
         // changes
         if (context != null) {
             try {
-                File logFile = new File(Environment.getExternalStorageDirectory(), "AccuraLog.txt");
+                File logFile = new File(Environment.getExternalStoragePublicDirectory(DIRECTORY_DOWNLOADS), "AccuraLog.txt");
 
                 if (!logFile.exists()) if (!logFile.createNewFile()) return;
 
@@ -75,7 +82,7 @@ public class AccuraLog {
         {
             // Gets the log file from the root of the primary storage. If it does
             // not exist, the file is created.
-            File logFile = new File(Environment.getExternalStorageDirectory(), "AccuraLog.txt");
+            File logFile = new File(Environment.getExternalStoragePublicDirectory(DIRECTORY_DOWNLOADS), "AccuraLog.txt");
             if (!logFile.exists()) if (!logFile.createNewFile()) return;
 
             // Write the message to the log with a timestamp

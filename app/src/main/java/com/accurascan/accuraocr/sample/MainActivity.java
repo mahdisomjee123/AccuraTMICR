@@ -112,8 +112,8 @@ public class MainActivity extends AppCompatActivity {
                     activity.isContinue = false;
                     // doWorkNative();
                     RecogEngine recogEngine = new RecogEngine();
-                    AccuraLog.refreshLogfile(activity);
                     AccuraLog.enableLogs(true); // make sure to disable logs in release mode
+                    AccuraLog.refreshLogfile(activity);
                     recogEngine.setDialog(false); // setDialog(false) To set your custom dialog for license validation
                     activity.sdkModel = recogEngine.initEngine(activity);
                     if (activity.sdkModel == null){
