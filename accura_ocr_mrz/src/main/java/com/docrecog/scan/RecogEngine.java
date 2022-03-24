@@ -60,7 +60,7 @@ public class RecogEngine {
             System.loadLibrary("accurasdk");
             AccuraLog.loge(RecogEngine.class.getSimpleName(), "Load success");
         } catch (Exception e) {
-            e.printStackTrace();
+            // e.printStackTrace();
         }
     }
 
@@ -103,6 +103,8 @@ public class RecogEngine {
         public String message = "Success";
     }
 
+    public static final String VERSION = "3.1.3";
+
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
     public static final int SCAN_TITLE_OCR = 3;
@@ -140,7 +142,7 @@ public class RecogEngine {
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
-//    static String nM;
+    //    static String nM;
     static float mT = 15;
     Boolean isMrzEnable = true;
     static float v = 5f;
@@ -169,7 +171,7 @@ public class RecogEngine {
         this.callBack = scanListener;
         isComplete = false;
         if (recogType == RecogType.OCR) {
-           // updateData("Back");
+            // updateData("Back");
         }
     }
 
@@ -186,7 +188,7 @@ public class RecogEngine {
 
     public native String doCheckData(byte[] yuvdata, int width, int height);
 
-    private native int doRecogBitmap(Bitmap bitmap, int facepick, int[] intData, Bitmap faceBitmap, int[] faced, boolean unknownVal, int documentType);
+    private native int doRecogBitmap(Bitmap bitmap, int facepick, int[] intData, Bitmap faceBitmap, int[] faced, boolean unknownVal, int documentType, String countries);
 
     private native int doFaceDetect(Bitmap bitmap, Bitmap faceBitmap, float[] fConf);
 
@@ -285,6 +287,12 @@ public class RecogEngine {
     private native int extractData(String s, CardDetails cardDetails);
 
     public native String getSDKVersion();
+
+    public String getVersion() {
+        return "OCR Version : " + VERSION + "\n" +
+                "SDK version : " + getSDKVersion();
+    }
+
 
     public boolean checkRD(Context context){
         RootBeer rootBeer = new RootBeer(context);
@@ -741,7 +749,7 @@ public class RecogEngine {
      * @param documentType
      * @return 0 if failed and >0 if success
      */
-    int doRunData(Bitmap bmCard, int facepick, RecogResult result, MRZDocumentType documentType) {
+    int doRunData(Bitmap bmCard, int facepick, RecogResult result, MRZDocumentType documentType, String countries) {
         int ret = 1;
         //If fail, empty string.
         // both => 0
@@ -771,9 +779,9 @@ public class RecogEngine {
 //                faceBmp = Bitmap.createBitmap(NOR_W, NOR_H, Config.ARGB_8888);
 //            }
         if (documentType == null) {
-           documentType = MRZDocumentType.NONE;
+            documentType = MRZDocumentType.NONE;
         }
-        ret = doRecogBitmap(bmCard, 0, intData, faceBmp, faced, true, documentType.value);
+        ret = doRecogBitmap(bmCard, 0, intData, faceBmp, faced, true, documentType.value, countries);
         AccuraLog.loge(TAG, "GetM - " + documentType + "," + ret);
         if (ret > 0) {
             if (result.recType == RecType.INIT) {
@@ -910,6 +918,7 @@ public class RecogEngine {
                                     String message = jsonObject.getString("responseMessage");
                                     JSONObject data = null;
                                     if (!TextUtils.isEmpty(message) && !message.equals(ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME)) {
+                                        if (!bmCard.isRecycled()) bmCard.recycle();
                                         scanListener.onUpdateProcess(message);
                                         return;
                                     }
@@ -961,6 +970,7 @@ public class RecogEngine {
                                                 }
                                             }
                                             if (i1 > 0) {
+                                                if (!bmCard.isRecycled()) bmCard.recycle();
                                                 // Only check for front Card validation document
                                                 if (cB > 0) {
                                                     scanListener.onUpdateProcess(ACCURA_ERROR_CODE_WRONG_SIDE);
@@ -973,27 +983,34 @@ public class RecogEngine {
 
                                         if (i == 0 && i1 > 0) {
                                             if (cB > 0 && message.equals(ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME)) {
+                                                if (!bmCard.isRecycled()) bmCard.recycle();
                                                 scanListener.onUpdateProcess(message);
                                                 return;
                                             }
+                                            if (!bmCard.isRecycled()) bmCard.recycle();
                                             scanListener.onScannedSuccess(true, false);
                                         } else/* if (i > 0)*/{
 //                                            docBmp.recycle();
                                             if (data.has("isRotate") && data.getBoolean("isRotate") && i == 0) {
                                                 doCheckData(BitmapUtil.rotateBitmap(bmCard, 180), scanListener, 1, cB);
                                             } else if (!TextUtils.isEmpty(message)) {
+                                                if (!bmCard.isRecycled()) bmCard.recycle();
                                                 scanListener.onUpdateProcess(message);
                                             } else {
+                                                if (!bmCard.isRecycled()) bmCard.recycle();
                                                 scanListener.onScannedSuccess(true, i1 > 0);
                                             }
                                         } /*else {
                                             doCheckData(BitmapUtil.rotateBitmap(docBmp, 180), scanListener, 1);
                                         }*/
                                     } else {
+                                        if (!bmCard.isRecycled()) bmCard.recycle();
                                         scanListener.onUpdateProcess(message);
                                     }
                                 }
                             } catch (JSONException e) {
+                                if (!bmCard.isRecycled()) bmCard.recycle();
+                                if (!docBmp.isRecycled()) docBmp.recycle();
                                 AccuraLog.loge(TAG, e.toString());
                             }
                         }
@@ -1003,6 +1020,7 @@ public class RecogEngine {
 //                    try {
 //                        AccuraLog.loge(TAG, Log.getStackTraceString(e));
 //                    } catch (Exception ex) {
+                    if (!bmCard.isRecycled()) bmCard.recycle();
                     if (e.getMessage() != null) {
                         AccuraLog.loge(TAG, e.toString());
                     }
@@ -1131,7 +1149,7 @@ public class RecogEngine {
     /**
      * Call this method if document is valid after {@see checkCard(Bitmap bmp)}
      *
-//     * @param scanListener to get scanned data
+     //     * @param scanListener to get scanned data
      * @param src
      * @param mat          pass met to retrieve ocr data.
      * @param ocrData      to fill data to this object

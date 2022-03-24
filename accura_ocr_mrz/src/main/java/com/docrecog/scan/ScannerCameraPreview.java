@@ -188,7 +188,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
         displayMetrics = this.mContext.getResources().getDisplayMetrics();
         if (barcodeType == RecogType.BARCODE) {
             addScanner(this.mContext);
-            onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, null,false);
+            onUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null,false);
             isSelection = true;
         } else if (barcodeType == RecogType.PDF417) {
             barcodeFormat = Barcode.PDF417;
@@ -330,6 +330,11 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
                 final SparseArray<Barcode> qrcode = detections.getDetectedItems();
 
                 if (qrcode.size() != 0) {
+
+                    if (barcodeType == RecogType.PDF417 && qrcode.valueAt(0).driverLicense == null) {
+                        return;
+                    }
+
 
                     preview.post(new Runnable() {
                         @Override

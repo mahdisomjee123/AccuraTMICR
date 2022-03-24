@@ -135,6 +135,8 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             cameraView.setCountryId(countryId);
         } else if (recogType == RecogType.MRZ) {
             cameraView.setMRZDocumentType(mrzType);
+            cameraView.setMRZCountryCodeList("all");
+
         }
         cameraView.setRecogType(recogType)
                 .setView(linearLayout) // To add camera view
@@ -446,7 +448,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             try {
                 dialog.show();
             } catch (Exception e) {
-                e.printStackTrace();
+                //  e.printStackTrace();
             }
         };
         runOnUiThread(runnable);

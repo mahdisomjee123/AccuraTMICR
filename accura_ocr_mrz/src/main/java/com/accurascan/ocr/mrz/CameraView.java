@@ -7,6 +7,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -40,6 +41,7 @@ public class CameraView {
     private int documentSide = -1;
     private MRZDocumentType documentType = null;
     private int minFrame = 3;
+    private String countryList = "all";
 
     public CameraView(Activity context) {
         this.context = context;
@@ -86,6 +88,18 @@ public class CameraView {
      */
     public CameraView setMRZDocumentType(MRZDocumentType documentType){
         this.documentType = documentType;
+        return this;
+    }
+
+
+    /**
+     * set MRZ Country codes with comma separated string as like "IND,ARK,RUS" or set "all"
+     *
+     * @param countryList default it is 'all'
+     * @return
+     */
+    public CameraView setMRZCountryCodeList(String countryList){
+        this.countryList = countryList;
         return this;
     }
 
@@ -223,8 +237,11 @@ public class CameraView {
                     .setCardData(countryId, cardId)
                     .setOcrCallBack(this.callback)
                     .setStatusBarHeight(this.statusBarHeight);
-            if (this.type == RecogType.MRZ)
+            if (this.type == RecogType.MRZ) {
+                if (!TextUtils.isEmpty(this.countryList)) ocrView.setMrzCountries(this.countryList);
                 ocrView.setMrzDocumentType(documentType != null ? documentType : MRZDocumentType.NONE);
+            }
+
 
             if (this.type == RecogType.OCR) {
                 if (minFrame % 2 == 0) {
@@ -233,6 +250,7 @@ public class CameraView {
                 if (minFrame < 3) {
                     throw new IllegalArgumentException("Must have to set minFrame is grater or equal to 3");
                 }
+                ocrView.setMrzCountries("all");
                 ocrView.setMinFrameForValidate(this.minFrame);
                 if (this.documentSide == 0) {
                     ocrView.setFrontSide();

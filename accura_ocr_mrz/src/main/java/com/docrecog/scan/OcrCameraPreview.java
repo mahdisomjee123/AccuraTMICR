@@ -59,6 +59,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private final RgbMotionDetection detection;
     private boolean isPreviewStarted = false;
     private InitModel i1 = null;
+    private String countries = "";
 
     abstract void onProcessUpdate(int s, String s1, boolean b);
 
@@ -115,7 +116,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private int mDisplayOrientation;
     //
     private int rotation;
-        private final Lock _mutex = new ReentrantLock(true);
+    private final Lock _mutex = new ReentrantLock(true);
     private Thread mCameraOpenThread = new Thread(new Runnable() {
         public void run() {
             try {
@@ -390,7 +391,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                             if (mReference.recogEngine.isMrzEnable) {
                                                 mReference.g_recogResult.lines = "";
 //                                            ret = mReference.recogEngine.doRunData(data, size.width, size.height, 0, mReference.mDisplayRotation, mReference.g_recogResult);
-                                                ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType);
+                                                ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType, mReference.countries);
                                                 if (ret > 0) {
                                                     mReference.checkmrz = 0;
                                                 }
@@ -443,7 +444,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                         };
                                         Runnable runnable1 = () -> new Handler().postDelayed(runnable, 1800);
                                         mReference.mActivity.runOnUiThread(runnable1);
-                                        ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType);
+                                        ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType, mReference.countries);
                                         end = System.currentTimeMillis();
                                         if (ret == 1) {
                                             mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING/*"Processing..."*/);
@@ -518,9 +519,11 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                         mReference.mRecCnt++; //counter increases
                                     } else {
                                         if (mReference.g_recogResult.recType == RecogEngine.RecType.INIT) {
-                                            ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType);
+                                            ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType, mReference.countries);
+                                            if(ret > 0){
+                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING/*"Processing..."*/);
+                                            }
                                             //                            if (ret <= 0 && mRecCnt > 2) {
-
                                             //                                if (mRecCnt % 4 == 1)
                                             //                            faceret = recogEngine.doRunFaceDetect(bmCard, g_recogResult);
                                             if (mReference.g_recogResult.faceBitmap == null) {
@@ -553,7 +556,10 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                                             mReference.mRecCnt++; //counter increases
                                         } else if (mReference.g_recogResult.recType == RecogEngine.RecType.FACE) { //have to do mrz
-                                            ret = mReference.recogEngine.doRunData(docBmp, 0, mReference.g_recogResult, mReference.mrzDocumentType);
+                                            ret = mReference.recogEngine.doRunData(docBmp, 0, mReference.g_recogResult, mReference.mrzDocumentType, mReference.countries);
+                                            if(ret > 0){
+                                                mReference.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING/*"Processing..."*/);
+                                            }
                                             //                                    ret = mReference.recogEngine.doRunData(data, size.width, size.height, 0, mReference.mDisplayRotation, mReference.g_recogResult);
                                             if (mReference.bRet > -1) {
                                                 mReference.bRet++;
@@ -825,6 +831,11 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         this.mrzDocumentType = mrzDocumentType;
     }
 
+    public void setMrzCountries(String countries) {
+        this.countries = countries;
+    }
+
+
 //    /**
 //     * set false to disable sound after scanned success
 //     * else true to enable sound
@@ -1013,7 +1024,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         try {
             mCameraPreviewThread.join();
         } catch (InterruptedException ex) {
-            ex.printStackTrace();
+            // ex.printStackTrace();
         }
         mCameraPreviewThread = null;
         isPreviewStarted = true;

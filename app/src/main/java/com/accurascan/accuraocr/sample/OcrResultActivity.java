@@ -237,7 +237,7 @@ public class OcrResultActivity extends AppCompatActivity {
                                     }
                                 }
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                //   e.printStackTrace();
                             }
                         } else {
                             tv_value.setText(value);
@@ -297,7 +297,7 @@ public class OcrResultActivity extends AppCompatActivity {
                                     back_table_layout.addView(layout);
                                 }
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                // e.printStackTrace();
                             }
                         } else {
                             tv_value.setText(value);
@@ -553,12 +553,16 @@ public class OcrResultActivity extends AppCompatActivity {
             PDF417Data.getPDF417Result().docFrontBitmap.recycle();
             PDF417Data.getPDF417Result().docBackBitmap.recycle();
         }
+        OcrData.setOcrResult(null);
+        CardDetails.setCardDetails(null);
+        RecogResult.setRecogResult(null);
+        PDF417Data.setPDF417Result(null);
         //</editor-fold>
 
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            //  e.printStackTrace();
         }
         setResult(RESULT_OK);
         finish();

@@ -37,6 +37,7 @@
 -keep public class com.docrecog.scan.RecogEngine{
     public static final <fields>;
     native <methods>;
+    public java.lang.String getVersion();
     public int setBlurPercentage(...);
     public int setFaceBlurPercentage(...);
     public int setGlarePercentage(...);
