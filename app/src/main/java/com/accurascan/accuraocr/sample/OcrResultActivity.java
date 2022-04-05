@@ -33,7 +33,7 @@ public class OcrResultActivity extends AppCompatActivity {
     private TextView tv_security;
 
     protected void onCreate(Bundle savedInstanceState) {
-        setTheme(R.style.AppThemeNoActionBar);
+        setTheme(R.style.AppTheme);
         if (getIntent().getIntExtra("app_orientation", 1) != 0) {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         } else {
