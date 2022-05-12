@@ -7,16 +7,20 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+
+import com.accurascan.ocr.mrz.R;
 
 import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.ContryModel;
@@ -47,6 +51,8 @@ import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
@@ -191,6 +197,8 @@ public class RecogEngine {
     private native int doRecogBitmap(Bitmap bitmap, int facepick, int[] intData, Bitmap faceBitmap, int[] faced, boolean unknownVal, int documentType, String countries);
 
     private native int doFaceDetect(Bitmap bitmap, Bitmap faceBitmap, float[] fConf);
+
+    private native String OpenCvFaceDetect(long l);
 
     private native String doFaceCheck(long l, float v);
 
@@ -401,8 +409,8 @@ public class RecogEngine {
         SDKModel sdkModel = new SDKModel();
         getAssetFile(assetNames[0], assetNames[1]);
         int[] ints = new int[5];
-//        File file = loadClassifierData(context);
-        int ret = loadDictionary(context, /*file != null ? file.getAbsolutePath() : */"", pDic, pDicLen, pDic1, pDicLen1, context.getAssets(),ints);
+        File file = loadClassifierData(context);
+        int ret = loadDictionary(context, file != null ? file.getAbsolutePath() : "", pDic, pDicLen, pDic1, pDicLen1, context.getAssets(),ints);
         AccuraLog.loge("recogPassport", "loadDictionary: " + ret);
 //        nM = "Keep Document Steady";
         if (ret < 0) {
@@ -441,6 +449,43 @@ public class RecogEngine {
         sdkModel.i = ret;
         return sdkModel;
     }
+
+
+    private static File loadClassifierData(Context context) {
+
+        File faceClassifierFile = null;
+        InputStream is;
+        FileOutputStream os;
+
+
+        try {
+            is = context.getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
+            File cascadeDir = context.getDir("cascade", context.MODE_PRIVATE);
+
+//            faceClassifierFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+            faceClassifierFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
+
+            if (!faceClassifierFile.exists()) {
+                os = new FileOutputStream(faceClassifierFile);
+
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+
+                is.close();
+                os.close();
+            }
+
+        } catch (IOException e) {
+            Log.i("cascade", "Face cascade not found");
+            return null;
+        }
+
+        return faceClassifierFile;
+    }
+
 
     public List<ContryModel> getCardList(Context context) {
         int[] i = new int[1];
@@ -853,36 +898,56 @@ public class RecogEngine {
      */
     void doFaceDetect(int i, Bitmap bitmap, OcrData ocrData, RecogResult result, ScanListener scanListener) {
         AccuraLog.loge(TAG, "MF Detect");
-        detectFace(bitmap, ocrData, result, new ScanListener() {
-            @Override
-            public void onUpdateProcess(String s) {
+        Bitmap faceBitmap = Bitmap.createBitmap(NOR_W, NOR_H, Config.ARGB_8888);
 
-            }
 
-            @Override
-            public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
-                scanListener.onScannedSuccess(true, true);
-            }
+        Mat matimage = new Mat();
+        Utils.bitmapToMat(bitmap, matimage);
 
-            @Override
-            void onFaceScanned(Bitmap bitmap) {
-                scanListener.onFaceScanned(bitmap);
-            }
+        String xyz = OpenCvFaceDetect(matimage.getNativeObjAddr());
+        byte[] decodedString = Base64.decode(xyz, Base64.DEFAULT);
+        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+        matimage.release();
+        if (xyz.length() > 50) {
 
-            @Override
-            public void onScannedFailed(String s) {
-                if (s.equals("1")) {
-                    if (i % 2 == 0 && result != null) {
-                        doFaceDetect(1, BitmapUtil.rotateBitmap(bitmap, 180), ocrData, result, scanListener);
-                    } else {
-                        callBack.onUpdateProcess(ACCURA_ERROR_CODE_FACE);
-                        scanListener.onScannedSuccess(false, false);
+            xyz = "";
+            Mat clone = new Mat();
+
+            Utils.bitmapToMat(decodedByte, clone);
+
+            String s = doFaceCheck(clone.getNativeObjAddr(), v);
+            clone.release();
+
+            try {
+                if (s != null && !s.equals("")) {
+                    JSONObject jsonObject = new JSONObject(s);
+                    int ic = jsonObject.getInt("responseCode");
+                    AccuraLog.loge(TAG, "checkf" + ic);
+                    if (ic == 1) {
+                        scanListener.onFaceScanned(decodedByte.copy(Config.ARGB_8888, false));
+                    } else if (ic == 10) {
+                        AccuraLog.loge(TAG, "failed check: "+ic );
+                        String message = jsonObject.getString("responseMessage");
+                        if (!message.isEmpty() && this.callBack != null) {
+                            this.callBack.onUpdateProcess(message);
+                            scanListener.onScannedSuccess(false, false);
+                        }
                     }
-                } else {
-                    scanListener.onScannedSuccess(false, false);
-                }
+                } else scanListener.onScannedSuccess(false, false);
+                if (!decodedByte.isRecycled()) faceBitmap.recycle();
+            } catch (JSONException e) {
+                if (!decodedByte.isRecycled())faceBitmap.recycle();
+                AccuraLog.loge(TAG, Log.getStackTraceString(e));
             }
-        });
+        } else {
+
+            xyz = "";
+            callBack.onUpdateProcess(ACCURA_ERROR_CODE_FACE);
+
+            scanListener.onScannedSuccess(false, false);
+        }
+
+
     }
 
     /**
