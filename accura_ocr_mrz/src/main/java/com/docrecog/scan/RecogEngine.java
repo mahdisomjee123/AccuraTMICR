@@ -33,10 +33,6 @@ import com.accurascan.ocr.mrz.util.Util;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.face.Face;
-import com.google.mlkit.vision.face.FaceDetection;
-import com.google.mlkit.vision.face.FaceDetector;
-import com.google.mlkit.vision.face.FaceDetectorOptions;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
@@ -144,7 +140,6 @@ public class RecogEngine {
     private int pDicLen1 = 0;
     private static String[] assetNames = {"mMQDF_f_Passport_bottom_Gray.dic", "mMQDF_f_Passport_bottom.dic"};
     private static TextRecognizer detector;
-    private static FaceDetector faceDetector;
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
@@ -546,23 +541,6 @@ public class RecogEngine {
         return null;
     }
 
-    private void init() {
-        // To initialise the detector
-
-        if (faceDetector == null) {
-
-            FaceDetectorOptions options =
-                    new FaceDetectorOptions.Builder()
-                            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
-                            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
-                            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
-                            .enableTracking()
-                            .build();
-
-            faceDetector = FaceDetection.getClient(options);
-        }
-    }
-
     /**
      * Initialized MRZ or Bankcard
      *
@@ -864,7 +842,7 @@ public class RecogEngine {
 
         }
         if (/*checkValid(bmImg) &&*/ result.faceBitmap == null) {
-            detectFace(bmImg, null, result, new ScanListener() {
+            detectOpencvFace(bmImg, null, result, new ScanListener() {
 
                 @Override
                 public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
@@ -924,6 +902,7 @@ public class RecogEngine {
                     int ic = jsonObject.getInt("responseCode");
                     AccuraLog.loge(TAG, "checkf" + ic);
                     if (ic == 1) {
+                        result.faceBitmap = decodedByte.copy(Config.ARGB_8888 ,false);
                         scanListener.onFaceScanned(decodedByte.copy(Config.ARGB_8888, false));
                     } else if (ic == 10) {
                         AccuraLog.loge(TAG, "failed check: "+ic );
@@ -934,9 +913,9 @@ public class RecogEngine {
                         }
                     }
                 } else scanListener.onScannedSuccess(false, false);
-                if (!decodedByte.isRecycled()) faceBitmap.recycle();
+                if (!decodedByte.isRecycled()) decodedByte.recycle();
             } catch (JSONException e) {
-                if (!decodedByte.isRecycled())faceBitmap.recycle();
+                if (!decodedByte.isRecycled())decodedByte.recycle();
                 AccuraLog.loge(TAG, Log.getStackTraceString(e));
             }
         } else {
@@ -1302,7 +1281,7 @@ public class RecogEngine {
                         if (findFace) {
                             isContinue = false;
                             boolean finalIsdone1 = isdone;
-                            detectFace(src.copy(Config.ARGB_8888, false), ocrData, null, new ScanListener() {
+                            detectOpencvFace(src.copy(Config.ARGB_8888, false), ocrData, null, new ScanListener() {
                                 @Override
                                 void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
                                     boolean isFinal;
@@ -1361,226 +1340,93 @@ public class RecogEngine {
                 });
     }
 
-    public void detectFace(Bitmap image, OcrData ocrData, RecogResult result, ScanListener scanListener) {
-        if (/*(ocrData != null && ocrData.getFaceImage() != null) || */(result != null && result.faceBitmap != null)) {
+    /**
+     * Detect face using OpenCV.
+     *
+     * @param bitmap
+     * @param ocrData
+     * @param result
+     * @param scanListener
+     */
+    public void detectOpencvFace(Bitmap bitmap, OcrData ocrData, RecogResult result, ScanListener scanListener) {
+        if ((result != null && result.faceBitmap != null)) {
             if (scanListener != null) {
                 scanListener.onScannedSuccess(true, true);
             }
-            image.recycle();
+            bitmap.recycle();
             return;
         }
-        if (image != null && !image.isRecycled()) {
-            init();
+        if (bitmap != null && !bitmap.isRecycled()) {
+            Mat matimage = new Mat();
+            Utils.bitmapToMat(bitmap, matimage);
 
-//            FrameMetadata frameMetadata = new FrameMetadata.Builder()
-//                    .setWidth(camera.getParameters().getPreviewSize().width)
-//                    .setHeight(camera.getParameters().getPreviewSize().height)
-//                    .setFormate(camera.getParameters().getPreviewFormat())
-//                    .setRotation(BitmapUtil.getRotation(activity, mDisplayOrientation))
-//                    .build();
-//
-//            Bitmap image1 = BitmapUtil.getBitmap(data, frameMetadata);
-            Bitmap image1 = image.copy(Config.ARGB_8888, false);
+            String xyz = OpenCvFaceDetect(matimage.getNativeObjAddr());
+            byte[] decodedString = Base64.decode(xyz, Base64.DEFAULT);
+            Bitmap faceBitmap1 = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+            matimage.release();
+            if (xyz.length() > 50) {
 
-            if (image1 != null && !image1.isRecycled()/* && checkValid(image)*/) {
-//                FirebaseVisionImageMetadata metadata =
-//                        new FirebaseVisionImageMetadata.Builder()
-////                                .setFormat(camera.getParameters().getPreviewFormat())
-//                                .setFormat(FirebaseVisionImageMetadata.IMAGE_FORMAT_NV21)
-//                                .setWidth(frameMetadata.getWidth())
-//                                .setHeight(frameMetadata.getHeight())
-//                                .setRotation(frameMetadata.getRotation())
-//                                .build();
-//////            image = null;
-////
-//                InputImage inputImage = InputImage.fromByteArray(data, metadata);
-                InputImage inputImage = InputImage.fromBitmap(image1, 0);
-                faceDetector.process(inputImage)
-                        .addOnSuccessListener(faces -> {
-                            if (faces.size() > 0) {
-                                AccuraLog.loge(TAG, "onFDetect");
-                                int index = 0;
-                                int indexW = 0;
-                                int indexH = 0;
-                                int currentPosition = 0;
-                                for (Face visionFace : faces) {
-                                    Rect bounds = visionFace.getBoundingBox();
-                                    if (bounds.width() > indexW || bounds.height() > indexH) {
-                                        indexW = bounds.width();
-                                        indexH = bounds.height();
-                                        index = currentPosition;
-                                    }
-                                    currentPosition++;
+                xyz = "";
+                Mat clone = new Mat();
+
+                Utils.bitmapToMat(faceBitmap1, clone);
+
+                String s = doFaceCheck(clone.getNativeObjAddr(), v);
+                clone.release();
+
+                try {
+                    if (s != null && !s.equals("")) {
+                        JSONObject jsonObject = new JSONObject(s);
+                        int ic = jsonObject.getInt("responseCode");
+                        AccuraLog.loge(TAG, "checkf" + ic);
+                        if (ic == 1) {
+                            if (ocrData != null) {
+                                if (ocrData.getFaceImage() != null)
+                                    ocrData.getFaceImage().recycle();
+                                ocrData.setFaceImage(faceBitmap1.copy(Config.ARGB_8888, false));
+                                if (scanListener != null) {
+                                    scanListener.onScannedSuccess(true, true);
                                 }
-                                Face face = faces.get(index);
-//                                Util.logd(TAG, "detectFace: " + face);
-                                Rect bounds = face.getBoundingBox();
-                                float rotY = face.getHeadEulerAngleY();  // Head is rotated to the right rotY degrees
-                                float rotZ = face.getHeadEulerAngleZ();  // Head is tilted sideways rotZ degrees
-                                float angle = BitmapUtil.getRotation(rotZ);
-                                if (!(angle == 90 || angle == -90 || angle == 0)) {
-//                                if ((rotZ < -45 && rotZ >= -135 && !(rotZ < -90 + 20 && rotZ >= -90 - 20))
-//                                        || (rotZ > 45 && rotZ < 135 && !(rotZ > 90 - 20 && rotZ < 90 + 20))) {
-//                                if ((rotZ < -45 && rotZ >= -135) || (rotZ > 45 && rotZ < 135)) {
-                                    this.callBack.onScannedSuccess(false, false);
-                                    AccuraLog.loge(TAG, "fside");
-                                } else {
-                                    RectF dest = new RectF((int) bounds.left, (int) bounds.top, (int) bounds.right, (int) bounds.bottom);
-
-//                                Matrix m = new Matrix();
-////                                m.postRotate(rotZ);
-//                                m.setRotate(rotZ, dest.centerX(), dest.centerY());
-////                                m.mapRect(dest);
-//                                RectF dst = new RectF();
-//                                m.mapRect(dst, dest);
-//                                FaceLandmark leftEye = face.getLandmark(FaceLandmark.LEFT_EYE);
-//                                FaceLandmark rightEye = face.getLandmark(FaceLandmark.RIGHT_EYE);
-//                                if (leftEye != null) {
-//                                    Point point = leftEye.getPosition();
-//                                    Util.logd("face landmark : ", "left " + point.getX() + "," + point.getY());
-//                                }
-//                                if (rightEye != null) {
-//                                    Point point = rightEye.getPosition();
-//                                    Util.logd("face landmark : ", "rigth " + point.getX() + "," + point.getY());
-//                                }
-                                    float x = dest.left;
-                                    float y = dest.top;
-                                    float width = (dest.right - dest.left);
-                                    float height = (dest.bottom - dest.top);
-
-                                    float wX = width * 0.1f;
-                                    float wY = height * 0.1f;
-                                    float newX = x - wX;
-                                    float newY = y - wY;
-                                    float newWidth = (width + (wX * 2));
-                                    float newHeight = (height + (wY * 2));
-//                                    Util.logd(TAG, "detectFace: old" + x + "," + y + "," + width + "," + height);
-//                                    Util.logd(TAG, "detectFace: new" + newX + "," + newY + "," + newWidth + "," + newHeight);
-                                    if (newX < 0) {
-                                        newWidth = newWidth + (int) (newX * 2);
-                                        newX = 0;
-                                    }
-                                    if (newY < 0) {
-                                        newHeight = newHeight + (int) (newY * 2);
-                                        newY = 0;
-                                    }
-
-                                    if (newX + newWidth > image1.getWidth())
-                                        newWidth = image1.getWidth() - newX;
-
-                                    if (newY + newHeight > image1.getHeight())
-                                        newHeight = image1.getHeight() - newY;
-
-                                    try {
-//                                        Util.logd(TAG, "detectFace: final" + newX + "," + newY + "," + newWidth + "," + newHeight);
-                                        //                                    Bitmap faceBitmap = Bitmap.createBitmap(image1,
-                                        //                                            (int) 0,
-                                        //                                            (int) 0,
-                                        //                                            (int) image1.getWidth(),
-                                        //                                            (int) image1.getHeight(), m, true);
-                                        //                                    Bitmap faceBitmap1 = Bitmap.createBitmap(faceBitmap,
-                                        //                                            (int) newX,
-                                        //                                            (int) newY,
-                                        //                                            (int) newWidth,
-                                        //                                            (int) newHeight);
-                                        //                                    Bitmap faceBitmap1 = BitmapUtil.rotateBitmap(faceBitmap, rotZ);
-                                        Bitmap faceBitmap1 = BitmapUtil.rotatedCropBitmap(image1,
-                                                new Rect((int) newX, (int) newY, (int) (newWidth + newX), (int) (newHeight + newY)),
-                                                angle);
-//                                        Bitmap faceBitmap1 = BitmapUtil.rotateRectForOrientation((int) rotZ,
-//                                                new Rect(0,0,image1.getWidth(),image1.getHeight()),
-//                                                new Rect((int) newX, (int) newY, (int) (newWidth + newX), (int) (newHeight + newY)),
-//                                                image1);
-                                        Mat clone = new Mat();
-                                        Utils.bitmapToMat(faceBitmap1, clone);
-                                        String s = doFaceCheck(clone.getNativeObjAddr(), v);
-                                        clone.release();
-                                        try {
-                                            if (s != null && !s.equals("")) {
-                                                JSONObject jsonObject = new JSONObject(s);
-                                                int ic = jsonObject.getInt("responseCode");
-                                                AccuraLog.loge(TAG, "checkf" + ic);
-                                                if (ic == 1) {
-                                                    if (ocrData != null) {
-                                                        if (ocrData.getFaceImage() != null)
-                                                            ocrData.getFaceImage().recycle();
-                                                        ocrData.setFaceImage(faceBitmap1.copy(Config.ARGB_8888, false));
-                                                        if (scanListener != null) {
-                                                            scanListener.onScannedSuccess(true, true);
-                                                        }
-                                                    } else if (result != null) {
-                                                        result.faceBitmap = faceBitmap1.copy(Config.ARGB_8888, false);
+                            } else if (result != null) {
+                                result.faceBitmap = faceBitmap1.copy(Config.ARGB_8888, false);
 //                                                        result.recType = RecType.FACE;
 //                                                        result.docFrontBitmap = image.copy(Config.ARGB_8888, false);
-                                                        if (result.recType == RecType.MRZ) {
-                                                            result.bRecDone = true;
-                                                        }
-                                                        if (scanListener != null) {
-                                                            scanListener.onFaceScanned(faceBitmap1.copy(Config.ARGB_8888, false));
-                                                        }
-                                                    }
-                                                    image1.recycle();
-                                                    image.recycle();
-                                                    faceBitmap1.recycle();
-                                                } else if (ic == 10) {
-                                                    AccuraLog.loge(TAG, "failed check: "+ic );
-                                                    image1.recycle();
-                                                    image.recycle();
-                                                    faceBitmap1.recycle();
-                                                    String message = jsonObject.getString("responseMessage");
-                                                    if (!message.isEmpty() && this.callBack != null) {
-                                                        this.callBack.onUpdateProcess(message);
-                                                        scanListener.onScannedFailed("");
-                                                    }
-                                                }
-//                                                faceBitmap1.recycle();
-                                            }
-                                        } catch (JSONException e) {
-                                            image1.recycle();
-                                            image.recycle();
-                                            faceBitmap1.recycle();
-                                            scanListener.onScannedFailed("");
-                                        }
-                                    } catch (Exception e) {
-                                        Util.logd(TAG, Log.getStackTraceString(e));
-                                        image1.recycle();
-                                        image.recycle();
-                                        Util.logd(TAG, "face  Failed");
-                                        scanListener.onScannedFailed("");
-                                    }
+                                if (result.recType == RecType.MRZ) {
+                                    result.bRecDone = true;
                                 }
-                            } else {
-                                image1.recycle();
-//                                image.recycle();
                                 if (scanListener != null) {
-                                    if (ocrData != null) this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_FACE);
-                                    scanListener.onScannedFailed("1");
+                                    scanListener.onFaceScanned(faceBitmap1.copy(Config.ARGB_8888, false));
                                 }
-//                                scanListener.onScannedSuccess(false, false);
                             }
-                        }).addOnFailureListener(e -> {
-                    Util.logd(TAG, Log.getStackTraceString(e));
-                    AccuraLog.loge(TAG, e.toString());
+                            bitmap.recycle();
+                            faceBitmap1.recycle();
+                        } else if (ic == 10) {
+                            AccuraLog.loge(TAG, "failed check: "+ic );
+                            bitmap.recycle();
+                            faceBitmap1.recycle();
+                            String message = jsonObject.getString("responseMessage");
+                            if (!message.isEmpty() && this.callBack != null) {
+                                this.callBack.onUpdateProcess(message);
+                                scanListener.onScannedFailed("");
+                            }
+                        }
+                    } else scanListener.onScannedFailed("");
+                    if (!faceBitmap1.isRecycled()) faceBitmap1.recycle();
+                } catch (JSONException e) {
+                    bitmap.recycle();
+                    if (!faceBitmap1.isRecycled()) faceBitmap1.recycle();
                     scanListener.onScannedFailed("");
-//                    try {
-//                        if (faceDetector != null) {
-//                            faceDetector.close();
-//                        }
-//                    } catch (IOException e1) {
-//                        e1.printStackTrace();
-//                    }
-                });
+                    AccuraLog.loge(TAG, Log.getStackTraceString(e));
+                }
             } else {
-                image1.recycle();
-                image.recycle();
-                scanListener.onScannedFailed("");
+                bitmap.recycle();
+                xyz = "";
+                if (faceBitmap1 != null && !faceBitmap1.isRecycled()) faceBitmap1.recycle();
+                if (scanListener != null) {
+                    if (ocrData != null) this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_FACE);
+                    scanListener.onScannedFailed("1");
+                }
             }
-        } else {
-            AccuraLog.loge(TAG, "ReleasefI");
-            if (image != null) {
-                image.recycle();
-            }
-            scanListener.onScannedFailed("");
         }
     }
 
@@ -1636,128 +1482,11 @@ public class RecogEngine {
         return size;
     }
 
-    public PointF getCenterPoint(List<Face> faces) {
-        PointF centerOfAllFaces = new PointF();
-
-        final int totalFaces = faces.size();
-        if (totalFaces > 0) {
-            float sumX = 0f;
-            float sumY = 0f;
-            for (int i = 0; i < totalFaces; i++) {
-                PointF faceCenter = new PointF();
-                getFaceCenter(faces.get(i), faceCenter);
-                sumX = sumX + faceCenter.x;
-                sumY = sumY + faceCenter.y;
-            }
-            centerOfAllFaces.set(sumX / totalFaces, sumY / totalFaces);
-        }
-
-        return centerOfAllFaces;
-    }
-
-    /**
-     * Calculates center of a given face
-     *
-     * @param face   Face
-     * @param center Center of the face
-     */
-    private void getFaceCenter(Face face, PointF center) {
-        Rect bounds = face.getBoundingBox();
-        float x = bounds.left;
-        float y = bounds.top;
-        float width = (bounds.right - bounds.left);
-        float height = (bounds.bottom - bounds.top);
-        center.set(x + (width / 2), y + (height / 2)); // face center in original bitmap
-    }
-
-    public void transform(Bitmap original, PointF focusPoint,/*, FaceCenterCropListener faceCenterCropListener*/OcrData ocrData) {
-
-        Util.logd("Time log", "Image cropping begins");
-
-        Util.logd(TAG, "transform: ");
-
-//        this.faceCenterCropListener=faceCenterCropListener;
-
-        int height = 400;
-        int width = 400;
-        if (width == 0 || height == 0) {
-            throw new IllegalArgumentException("width or height should not be zero!");
-        }
-        float scaleX = (float) width / original.getWidth();
-        float scaleY = (float) height / original.getHeight();
-
-        if (scaleX != scaleY) {
-
-            Bitmap.Config config =
-                    original.getConfig() != null ? original.getConfig() : Bitmap.Config.ARGB_8888;
-            Bitmap result = Bitmap.createBitmap(width, height, config);
-
-            float scale = Math.max(scaleX, scaleY);
-
-            float left = 0f;
-            float top = 0f;
-
-            float scaledWidth = width, scaledHeight = height;
-
-            if (scaleX < scaleY) {
-
-                scaledWidth = scale * original.getWidth();
-
-                float faceCenterX = scale * focusPoint.x;
-                left = getLeftPoint(width, scaledWidth, faceCenterX);
-
-            } else {
-
-                scaledHeight = scale * original.getHeight();
-
-                float faceCenterY = scale * focusPoint.y;
-                top = getTopPoint(height, scaledHeight, faceCenterY);
-            }
-
-            RectF targetRect = new RectF(left, top, left + scaledWidth, top + scaledHeight);
-            Canvas canvas = new Canvas(result);
-            canvas.drawBitmap(original, null, targetRect, null);
-
-            Util.logd("Time log", "Face cropping done");
-
-            ocrData.setFaceImage(result);
-
-        } else {
-        }
-    }
-
-    private float getTopPoint(int height, float scaledHeight, float faceCenterY) {
-        if (faceCenterY <= height / 2) { // Face is near the top edge
-            return 0f;
-        } else if ((scaledHeight - faceCenterY) <= height / 2) { // face is near bottom edge
-            return height - scaledHeight;
-        } else {
-            return (height / 2) - faceCenterY;
-        }
-    }
-
-    private float getLeftPoint(int width, float scaledWidth, float faceCenterX) {
-        if (faceCenterX <= width / 2) { // face is near the left edge.
-            return 0f;
-        } else if ((scaledWidth - faceCenterX) <= width / 2) {  // face is near right edge
-            return (width - scaledWidth);
-        } else {
-            return (width / 2) - faceCenterX;
-        }
-    }
-
     void closeEngine(int destroy) {
         try {
             if (detector != null) {
                 detector.close();
                 detector = null;
-            }
-        } catch (Exception e) {
-        }
-        try {
-            if (faceDetector != null) {
-                faceDetector.close();
-                faceDetector = null;
             }
         } catch (Exception e) {
         }

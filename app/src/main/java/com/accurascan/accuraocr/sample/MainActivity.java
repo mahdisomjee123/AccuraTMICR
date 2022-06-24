@@ -278,7 +278,7 @@ public class MainActivity extends AppCompatActivity {
         rvCards.setLayoutManager(lmCard);
         cardAdapter = new CardListAdpter(this, cardList);
         rvCards.setAdapter(cardAdapter);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (Environment.isExternalStorageManager()) {
                 try {
                     Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
@@ -293,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 doWork();
             }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(this)) {
+        } else*/ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Util.isPermissionsGranted(this)) {
             requestCameraPermission();
         } else {
             doWork();

@@ -45,7 +45,6 @@ dependencies {
 
     //OCR SCAN
     implementation 'com.google.android.gms:play-services-mlkit-text-recognition:16.3.0'
-    implementation 'com.google.android.gms:play-services-mlkit-face-detection:16.2.0'
     implementation 'com.google.android.gms:play-services-vision:20.1.3'
 
     // Check root detection
