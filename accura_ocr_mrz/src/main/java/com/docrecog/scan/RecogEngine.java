@@ -8,10 +8,7 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.PointF;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.DisplayMetrics;
@@ -38,6 +35,7 @@ import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import com.scottyab.rootbeer.RootBeer;
 
 import org.json.JSONArray;
@@ -457,7 +455,6 @@ public class RecogEngine {
             is = context.getResources().openRawResource(R.raw.haarcascade_frontalface_alt);
             File cascadeDir = context.getDir("cascade", context.MODE_PRIVATE);
 
-//            faceClassifierFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
             faceClassifierFile = new File(cascadeDir, "haarcascade_frontalface_alt.xml");
 
             if (!faceClassifierFile.exists()) {
@@ -474,7 +471,7 @@ public class RecogEngine {
             }
 
         } catch (IOException e) {
-            Log.i("cascade", "Face cascade not found");
+            Util.logd(TAG, Log.getStackTraceString(e));
             return null;
         }
 
@@ -523,7 +520,7 @@ public class RecogEngine {
             this.activity = (Activity) context;
         }
         if (detector == null) {
-            detector = TextRecognition.getClient();
+            detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         }
         isComplete = false;
 //        init();
@@ -842,7 +839,7 @@ public class RecogEngine {
 
         }
         if (/*checkValid(bmImg) &&*/ result.faceBitmap == null) {
-            detectOpencvFace(bmImg, null, result, new ScanListener() {
+            detectFace(bmImg, null, result, new ScanListener() {
 
                 @Override
                 public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
@@ -875,58 +872,37 @@ public class RecogEngine {
      * @param scanListener   call back required to getting success or failed response
      */
     void doFaceDetect(int i, Bitmap bitmap, OcrData ocrData, RecogResult result, ScanListener scanListener) {
-        AccuraLog.loge(TAG, "MF Detect");
-        Bitmap faceBitmap = Bitmap.createBitmap(NOR_W, NOR_H, Config.ARGB_8888);
 
+        detectFace(bitmap, ocrData, result, new ScanListener() {
+            @Override
+            public void onUpdateProcess(String s) {
 
-        Mat matimage = new Mat();
-        Utils.bitmapToMat(bitmap, matimage);
-
-        String xyz = OpenCvFaceDetect(matimage.getNativeObjAddr());
-        byte[] decodedString = Base64.decode(xyz, Base64.DEFAULT);
-        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-        matimage.release();
-        if (xyz.length() > 50) {
-
-            xyz = "";
-            Mat clone = new Mat();
-
-            Utils.bitmapToMat(decodedByte, clone);
-
-            String s = doFaceCheck(clone.getNativeObjAddr(), v);
-            clone.release();
-
-            try {
-                if (s != null && !s.equals("")) {
-                    JSONObject jsonObject = new JSONObject(s);
-                    int ic = jsonObject.getInt("responseCode");
-                    AccuraLog.loge(TAG, "checkf" + ic);
-                    if (ic == 1) {
-                        result.faceBitmap = decodedByte.copy(Config.ARGB_8888 ,false);
-                        scanListener.onFaceScanned(decodedByte.copy(Config.ARGB_8888, false));
-                    } else if (ic == 10) {
-                        AccuraLog.loge(TAG, "failed check: "+ic );
-                        String message = jsonObject.getString("responseMessage");
-                        if (!message.isEmpty() && this.callBack != null) {
-                            this.callBack.onUpdateProcess(message);
-                            scanListener.onScannedSuccess(false, false);
-                        }
-                    }
-                } else scanListener.onScannedSuccess(false, false);
-                if (!decodedByte.isRecycled()) decodedByte.recycle();
-            } catch (JSONException e) {
-                if (!decodedByte.isRecycled())decodedByte.recycle();
-                AccuraLog.loge(TAG, Log.getStackTraceString(e));
             }
-        } else {
 
-            xyz = "";
-            callBack.onUpdateProcess(ACCURA_ERROR_CODE_FACE);
+            @Override
+            public void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                scanListener.onScannedSuccess(true, true);
+            }
 
-            scanListener.onScannedSuccess(false, false);
-        }
+            @Override
+            void onFaceScanned(Bitmap bitmap) {
+                scanListener.onFaceScanned(bitmap);
+            }
 
-
+            @Override
+            public void onScannedFailed(String s) {
+                if (s.equals("1")) {
+//                    if (i % 2 == 0 && result != null) {
+//                        doFaceDetect(1, BitmapUtil.rotateBitmap(bitmap, 180), ocrData, result, scanListener);
+//                    } else {
+                    callBack.onUpdateProcess(ACCURA_ERROR_CODE_FACE);
+                    scanListener.onScannedSuccess(false, false);
+//                    }
+                } else {
+                    scanListener.onScannedSuccess(false, false);
+                }
+            }
+        });
     }
 
     /**
@@ -936,7 +912,7 @@ public class RecogEngine {
      */
     public void doCheckData(Bitmap bmCard, ScanListener scanListener, int i,final int cB) {
         if (detector == null) {
-            detector = TextRecognition.getClient();
+            detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         }
 //        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
         int scaledWidth = 1200;
@@ -1061,14 +1037,10 @@ public class RecogEngine {
                     }
                 })
                 .addOnFailureListener(e -> {
-//                    try {
-//                        AccuraLog.loge(TAG, Log.getStackTraceString(e));
-//                    } catch (Exception ex) {
                     if (!bmCard.isRecycled()) bmCard.recycle();
                     if (e.getMessage() != null) {
                         AccuraLog.loge(TAG, e.toString());
                     }
-//                    }
                 });
     }
 
@@ -1081,7 +1053,7 @@ public class RecogEngine {
      */
     public void doRecognition(Bitmap bmCard, int countryId, int cardId, RecogResult result) {
         if (detector == null) {
-            detector = TextRecognition.getClient();
+            detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         }
         AccuraLog.loge(TAG, "Recognize Data");
 //        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
@@ -1154,7 +1126,7 @@ public class RecogEngine {
      */
     public void doRecognizeCard(Bitmap bmCard, CardDetails cardDetails, RecogType recogType) {
         if (detector == null) {
-            detector = TextRecognition.getClient();
+            detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         }
 //        final Bitmap docBmp = bmCard.copy(Config.ARGB_8888, false);
 
@@ -1234,7 +1206,7 @@ public class RecogEngine {
         }
         Bitmap image = imageBitmap;
         if (detector == null) {
-            detector = TextRecognition.getClient();
+            detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         }
         AccuraLog.loge(TAG, "Recognize Data");
         int scaledWidth = 1200;
@@ -1281,7 +1253,7 @@ public class RecogEngine {
                         if (findFace) {
                             isContinue = false;
                             boolean finalIsdone1 = isdone;
-                            detectOpencvFace(src.copy(Config.ARGB_8888, false), ocrData, null, new ScanListener() {
+                            detectFace(src.copy(Config.ARGB_8888, false), ocrData, null, new ScanListener() {
                                 @Override
                                 void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
                                     boolean isFinal;
@@ -1348,7 +1320,7 @@ public class RecogEngine {
      * @param result
      * @param scanListener
      */
-    public void detectOpencvFace(Bitmap bitmap, OcrData ocrData, RecogResult result, ScanListener scanListener) {
+    public void detectFace(Bitmap bitmap, OcrData ocrData, RecogResult result, ScanListener scanListener) {
         if ((result != null && result.faceBitmap != null)) {
             if (scanListener != null) {
                 scanListener.onScannedSuccess(true, true);
