@@ -2213,7 +2213,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         if (checkmrz == 0) {
                             updateData();
                         }
-                        refreshPreview();
+//                        refreshPreview();
                     }
                 } else {
                     if (checkmrz == 0) {

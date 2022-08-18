@@ -60,7 +60,7 @@ public class RecogEngine {
             System.loadLibrary("accurasdk");
             AccuraLog.loge(RecogEngine.class.getSimpleName(), "Load success");
         } catch (Exception e) {
-            // e.printStackTrace();
+            e.printStackTrace();
         }
     }
 
@@ -103,7 +103,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "3.1.3";
+    public static final String VERSION = "3.4.1";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -141,7 +141,7 @@ public class RecogEngine {
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
-    //    static String nM;
+//    static String nM;
     static float mT = 15;
     Boolean isMrzEnable = true;
     static float v = 5f;
@@ -170,7 +170,7 @@ public class RecogEngine {
         this.callBack = scanListener;
         isComplete = false;
         if (recogType == RecogType.OCR) {
-            // updateData("Back");
+           // updateData("Back");
         }
     }
 
@@ -265,7 +265,7 @@ public class RecogEngine {
 
     private native ImageOpencv checkDocument(long matInput, long matOut, float v);
 
-    private native String recognizeData(long src, int[][] boxBoundsLTRB, String[] textElements);
+    private native String recognizeData(long src, int[][] boxBoundsLTRB, String[] textElements, String[] lineElements, String s);
 
     private native String recognizeCard(String s, int r, int cB);
 
@@ -293,7 +293,6 @@ public class RecogEngine {
         return "OCR Version : " + VERSION + "\n" +
                 "SDK version : " + getSDKVersion();
     }
-
 
     public boolean checkRD(Context context){
         RootBeer rootBeer = new RootBeer(context);
@@ -442,7 +441,6 @@ public class RecogEngine {
         sdkModel.i = ret;
         return sdkModel;
     }
-
 
     private static File loadClassifierData(Context context) {
 
@@ -682,16 +680,49 @@ public class RecogEngine {
     private OcrData.MapData MapDataFunction(long src, Text text) {
         int[][] boxBoundsLTRB;
         String[] textElements;
+        List<String> lineElements = new ArrayList<>();
+        JSONArray jsonArray = new JSONArray();
 
         List<Text.Element> elementArrayList = new ArrayList<>();
         List<Text.TextBlock> textBlocks = text.getTextBlocks();
+        if (TextUtils.isEmpty(text.getText())) return null;
         for (Text.TextBlock textBlock : textBlocks) {
             for (Text.Line line : textBlock.getLines()) {
+                JSONObject object = new JSONObject();
+                try {
+                    object.put("text", line.getText());
+                    object.put("block_l", line.getBoundingBox().left);
+                    object.put("block_t", line.getBoundingBox().top);
+                    object.put("block_r", line.getBoundingBox().right);
+                    object.put("block_b", line.getBoundingBox().bottom);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+                JSONArray jsonElementArray = new JSONArray();
                 for (Text.Element element : line.getElements()) {
                     if (element == null)
                         continue;
                     elementArrayList.add(element);
+                    try {
+                        JSONObject jsonElementObject = new JSONObject();
+                        jsonElementObject.put("text", element.getText());
+                        jsonElementObject.put("block_l", element.getBoundingBox().left);
+                        jsonElementObject.put("block_t", element.getBoundingBox().top);
+                        jsonElementObject.put("block_r", element.getBoundingBox().right);
+                        jsonElementObject.put("block_b", element.getBoundingBox().bottom);
+                        jsonElementArray.put(jsonElementObject);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                 }
+                try {
+                    object.put("element", jsonElementArray);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                jsonArray.put(object);
+                lineElements.add(line.getText());
             }
         }
         boxBoundsLTRB = new int[elementArrayList.size()][];
@@ -706,7 +737,8 @@ public class RecogEngine {
             }
         }
 
-        String mapResult = recognizeData(src, boxBoundsLTRB, textElements);
+        String mapResult = recognizeData(src, boxBoundsLTRB, textElements,
+                lineElements.toArray(new String[lineElements.size()]), jsonArray.toString());
         try {
             if (mapResult != null && !mapResult.equals("")) {
                 JSONObject jsonObject = new JSONObject(mapResult);
@@ -767,6 +799,7 @@ public class RecogEngine {
      * @param bmCard document bitmap
      * @param result {@link RecogResult} to get data
      * @param documentType
+     * @param countries
      * @return 0 if failed and >0 if success
      */
     int doRunData(Bitmap bmCard, int facepick, RecogResult result, MRZDocumentType documentType, String countries) {
@@ -799,7 +832,7 @@ public class RecogEngine {
 //                faceBmp = Bitmap.createBitmap(NOR_W, NOR_H, Config.ARGB_8888);
 //            }
         if (documentType == null) {
-            documentType = MRZDocumentType.NONE;
+           documentType = MRZDocumentType.NONE;
         }
         ret = doRecogBitmap(bmCard, 0, intData, faceBmp, faced, true, documentType.value, countries);
         AccuraLog.loge(TAG, "GetM - " + documentType + "," + ret);
@@ -872,8 +905,8 @@ public class RecogEngine {
      * @param scanListener   call back required to getting success or failed response
      */
     void doFaceDetect(int i, Bitmap bitmap, OcrData ocrData, RecogResult result, ScanListener scanListener) {
-
-        detectFace(bitmap, ocrData, result, new ScanListener() {
+        AccuraLog.loge(TAG, "MF Detect");
+        detectFace(bitmap.copy(Config.ARGB_8888, false), ocrData, result, new ScanListener() {
             @Override
             public void onUpdateProcess(String s) {
 
@@ -1165,7 +1198,7 @@ public class RecogEngine {
     /**
      * Call this method if document is valid after {@see checkCard(Bitmap bmp)}
      *
-     //     * @param scanListener to get scanned data
+//     * @param scanListener to get scanned data
      * @param src
      * @param mat          pass met to retrieve ocr data.
      * @param ocrData      to fill data to this object
