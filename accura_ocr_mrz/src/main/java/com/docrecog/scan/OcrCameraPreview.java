@@ -389,7 +389,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                             Bitmap card = imageOpencv.getBitmap(bmCard, bitmap.getWidth(), bitmap.getHeight(), false);
                                             int ret = 0;
                                             if (mReference.recogEngine.isMrzEnable) {
-                                                mReference.g_recogResult.lines = "";
+//                                                mReference.g_recogResult.lines = "";
 //                                            ret = mReference.recogEngine.doRunData(data, size.width, size.height, 0, mReference.mDisplayRotation, mReference.g_recogResult);
                                                 ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType, mReference.countries);
                                                 if (ret > 0) {
