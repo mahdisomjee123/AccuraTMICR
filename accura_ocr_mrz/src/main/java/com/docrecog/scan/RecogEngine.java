@@ -103,7 +103,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "3.4.2";
+    public static final String VERSION = "3.4.3";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -1370,7 +1370,10 @@ public class RecogEngine {
             Bitmap faceBitmap1 = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
             matimage.release();
             if (xyz.length() > 50) {
-
+                if (ocrData == null && this.callBack != null) {
+                    // To show Processing... msg for MRZ document
+                    this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
+                }
                 xyz = "";
                 Mat clone = new Mat();
 
