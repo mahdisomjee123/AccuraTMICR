@@ -9,6 +9,24 @@
     android:padding="25dp"
     tools:context=".MainActivity">
 
+    <TextView
+        android:id="@+id/tv_version"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="version"
+        android:textColor="@color/darkGray"
+        />
+
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/switch_api"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enable api "
+        android:checked="false"
+        android:paddingStart="@dimen/_10dp"
+        android:paddingEnd="@dimen/_10dp"
+        />
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">

@@ -29,6 +29,9 @@ import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.mlkit.vision.barcode.BarcodeScanner;
+import com.google.mlkit.vision.barcode.BarcodeScanning;
+import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
@@ -103,7 +106,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "3.4.3";
+    public static final String VERSION = "4.0.1";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -138,12 +141,17 @@ public class RecogEngine {
     private int pDicLen1 = 0;
     private static String[] assetNames = {"mMQDF_f_Passport_bottom_Gray.dic", "mMQDF_f_Passport_bottom.dic"};
     private static TextRecognizer detector;
+    private static BarcodeScanner barcodeDetector;
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
+    // Added By Ankita20220616
+    public static final int TUN_CARD = 367;
+    public static final int TUN_COUN = 190;
 //    static String nM;
     static float mT = 15;
     Boolean isMrzEnable = true;
+    String countryCode;
     static float v = 5f;
 
     private static float[] fConf = new float[3]; //face detection confidence
@@ -434,7 +442,7 @@ public class RecogEngine {
             }
         } else {
             sdkModel.isMRZEnable = ints[0] == 1;//isMrzEnable;//ret == 1 || ret == 4 || ret == 6 || ret == 7;
-            sdkModel.isOCREnable = ints[1] == 1;//isOcrEnable;//ret == 2 || ret == 4 || ret == 5 || ret == 7;
+            sdkModel.isOCREnable = ints[1] == 1 || ints[4] == 1;//isOcrEnable;//ret == 2 || ret == 4 || ret == 5 || ret == 7;
             sdkModel.isAllBarcodeEnable = ints[2] == 1;//isPDFEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
             sdkModel.isBankCardEnable = ints[3] == 1;//isBankCardEnable;//ret == 3 || ret == 5 || ret == 6 || ret == 7;
         }
@@ -528,7 +536,12 @@ public class RecogEngine {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
                 InitModel initModel = new Gson().fromJson(jsonObject.toString(), InitModel.class);
-                isMrzEnable = initModel.getInitData() != null ? initModel.getInitData().getMRZEnable() : false;
+                if (initModel.getInitData() != null) {
+                    if (jsonObject.getJSONObject("data").has("country_code")) {
+                        countryCode = jsonObject.getJSONObject("data").getString("country_code");
+                    }
+                }
+                isMrzEnable = initModel.getInitData() != null && (initModel.getInitData().getMRZEnable() == 1 || initModel.getInitData().getMRZEnable() == 2);
                 return initModel;
             }
         } catch (JSONException e) {
@@ -1152,6 +1165,89 @@ public class RecogEngine {
     }
 
     /**
+     * To detect Barcode
+     * @param bmCard       camera frame
+     * @param ocrData       to save data in object
+     *  // Added method By Ankita20220616 to detect barcode from Tunisia Id card
+     */
+    public void doBarcodeRecognition(Bitmap bmCard, OcrData ocrData) {
+        if (barcodeDetector == null) {
+            barcodeDetector = BarcodeScanning.getClient();
+        }
+        barcodeDetector.process(InputImage.fromBitmap(bmCard, 0))
+                .addOnSuccessListener(barcodes -> {
+                    for (Barcode barcode: barcodes) {
+                        int valueType = barcode.getValueType();
+                        switch (valueType) {
+                            case Barcode.TYPE_TEXT:
+                                ocrData.setBarcode(barcode.getRawValue());
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    bmCard.recycle();
+                    if (!TextUtils.isEmpty(ocrData.getBarcode())) {
+                        if (RecogEngine.this.callBack != null) {
+                            RecogEngine.this.callBack.onScannedSuccess(true, false);
+                        }
+                    } else if (RecogEngine.this.callBack != null) {
+                        RecogEngine.this.callBack.onScannedSuccess(false, false);
+                    }
+                }).addOnFailureListener(e -> {
+
+                });
+
+    }
+
+    protected void updateTNLogic(OcrData ocrData) {
+
+        if (!TextUtils.isEmpty(ocrData.getBarcode())) {
+            if (ocrData.getFrontData()!=null && ocrData.getFrontData().getOcr_data() != null && ocrData.getFrontData().getOcr_data().size() > 0) {
+                boolean isMatch = false;
+                String barcodeData = ocrData.getBarcode();
+                String id2 = barcodeData.substring(0, 8);
+                for (OcrData.MapData.ScannedData scannedData : ocrData.getFrontData().getOcr_data()) {
+                    if (scannedData !=null) {
+                        if ((scannedData.key.equals("Id No") || scannedData.key.equals("id_no") || scannedData.key.equals("ID No")) && scannedData.key_data.equals(id2)) {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+                }
+                OcrData.MapData.ScannedData object = createObject(1, "ID Match", String.valueOf(isMatch));
+                if (object != null) ocrData.getFrontData().getOcr_data().add(object);
+            }
+            if (ocrData.getBackData() != null && ocrData.getBackData().getOcr_data() != null) {
+                OcrData.MapData.ScannedData scannedData = createObject(1, "Barcode Data", ocrData.getBarcode());
+                if (scannedData != null) {
+                    ocrData.getBackData().getOcr_data().add(scannedData);
+                }
+                String barcode_details = ocrData.getBarcode();
+                String date_of_issue = barcode_details.substring((barcode_details.length() - 6));
+                if (!date_of_issue.isEmpty()) {
+                    String date_final = date_of_issue.substring(0, 2) + "/" + date_of_issue.substring(2, 4) + "/" + date_of_issue.substring(4, 6);
+                    OcrData.MapData.ScannedData scannedData1 = createObject(1, "Date of Issue", date_final);
+                    if (scannedData1 != null) {
+                        ocrData.getBackData().getOcr_data().add(scannedData1);
+                    }
+                }
+            }
+        }
+    }
+
+    private OcrData.MapData.ScannedData createObject(int i, String s1, String s2) {
+        try {
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("type", i);
+            jsonObject.put("key", s1);
+            jsonObject.put("key_data", s2);
+            return new Gson().fromJson(jsonObject.toString(), OcrData.MapData.ScannedData.class);
+        } catch (JSONException e) {
+        }
+        return null;
+    }
+    /**
      * To detect and recognize bank card
      * @param bmCard       camera frame
      * @param cardDetails
@@ -1497,6 +1593,14 @@ public class RecogEngine {
                 detector = null;
             }
         } catch (Exception e) {
+        }
+        try {
+            if (barcodeDetector != null) {
+                barcodeDetector.close();
+                barcodeDetector = null;
+            }
+        } catch (Exception e) {
+            AccuraLog.loge(TAG, Log.getStackTraceString(e));
         }
         closeOCR(destroy);
     }

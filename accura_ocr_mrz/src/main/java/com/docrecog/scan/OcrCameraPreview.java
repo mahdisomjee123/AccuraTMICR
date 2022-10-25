@@ -9,6 +9,7 @@ import android.media.CameraProfile;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -29,6 +30,7 @@ import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.motiondetection.ImageProcessing;
 import com.accurascan.ocr.mrz.motiondetection.RgbMotionDetection;
 import com.accurascan.ocr.mrz.motiondetection.data.GlobalData;
+import com.accurascan.ocr.mrz.util.API_Utils;
 import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
@@ -57,13 +59,20 @@ import static com.accurascan.ocr.mrz.camerautil.FocusManager.isSupported;
 abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Camera.PreviewCallback, FocusManager.Listener {
 
     private final RgbMotionDetection detection;
+    protected String api_key = null;
+    protected boolean isProgressVisible = true;
     private boolean isPreviewStarted = false;
     private InitModel i1 = null;
+    private boolean checkBarcode = false; // Added By Ankita20220616 for Tunisia Id card
+
     private String countries = "";
+    private boolean isAPIEnable = false;
 
     abstract void onProcessUpdate(int s, String s1, boolean b);
 
     abstract void onError(String s);
+
+    abstract void onAPIError(String s);
 
     abstract void onUpdateLayout(int width, int height);
 
@@ -172,6 +181,11 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             }
         }
     };
+
+    protected OcrCameraPreview setApiEnable(boolean isApiEnable) {
+        this.isAPIEnable = isApiEnable;
+        return this;
+    }
 
     private static final class NativeThread extends Thread {
 
@@ -396,7 +410,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                                     mReference.checkmrz = 0;
                                                 }
                                             }
-                                            bmCard.recycle();
+
 //                                        if (mReference.checkmrz == 0) {
                                             //                                    if (ocrData.getFaceImage() == null) {
                                             //                                        recogEngine.doFaceDetect(mRecCnt, bmCard, data, camera, mDisplayOrientation, ocrData, null, new RecogEngine.ScanListener() {
@@ -407,8 +421,15 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                             //                                        });
                                             //                                        mRecCnt++;
                                             //                                    } else {
-                                            mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData, false);
-                                            //                                    }
+
+
+                                            // Added condition By Ankita20220616 for Tunisia
+                                            if (mReference.cardId == RecogEngine.TUN_CARD && mReference.countryId == RecogEngine.TUN_COUN && mReference.checkBarcode) {
+                                                mReference.recogEngine.doBarcodeRecognition(/*mReference,*/ bmCard, mReference.ocrData);
+                                            } else {
+                                                bmCard.recycle();
+                                                mReference.recogEngine.doRecognition(/*mReference,*/ card, imageOpencv.mat, mReference.ocrData, false);
+                                            }                                            //                                    }
 //                                        } else {
 //                                            if (ret == 1 || ret == 2) {
 //                                                mReference.GotMRZData();
@@ -1035,6 +1056,8 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         ocrData.setFrontimage(null);
         ocrData.setBackimage(null);
         ocrData.setFaceImage(null);
+        ocrData = new OcrData();
+        checkBarcode = false;
         g_recogResult = new RecogResult();
         g_recogResult.recType = RecogEngine.RecType.INIT;
         g_recogResult.bRecDone = false;
@@ -2208,10 +2231,10 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 if (isbothavailable) {
                     if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
                         AccuraLog.loge(TAG, "Ocr Done");
-                        updateData();
+                        updateData(isAPIEnable);
                     } else {
                         if (checkmrz == 0) {
-                            updateData();
+                            updateData(false);
                         }
 //                        refreshPreview();
                     }
@@ -2254,34 +2277,41 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         AccuraLog.loge("ocr_log", s);
     }
 
-    private void GotMRZData() {
-        checkmrz = 0;
-        if (isbothavailable) {
-            if (ocrData.getFrontData() != null && ocrData.getBackData() != null && checkmrz == 0) {
-                updateData();
-            } else {
-                updateData();
-            }
-        } else {
-            sendInformation();
+    private void updateData(boolean isAPIEnable) {
+        // Added if() By Ankita20220616 for continue scanning barcode on back side
+        if (cardId == RecogEngine.TUN_CARD && countryId == RecogEngine.TUN_COUN && ocrData.getBackimage() != null && TextUtils.isEmpty(ocrData.getBarcode())) {
+            checkBarcode = true;
+            if (ocrData.getBackData().getOcr_data() != null) ocrData.getBackData().getOcr_data().clear();
+            refreshPreview();
+            return;
         }
+        stopPreviewCallBack();
+        int b = 0; // api calling together
+        if (ocrData.getFrontData() != null && ocrData.getBackData() == null) b = 1;
+        else if (ocrData.getFrontData() == null && ocrData.getBackData() != null) b = 2;
+//        else if (isbothavailable) b = ++scanSide; // uncomment for separate api calling
+        API_Utils.getInstance(new API_Utils.SCAN_RESULT() {
+            @Override
+            public void onSuccess(String id, String message) {
+                ssFinalInfo();
+            }
+
+            @Override
+            public void onFailed(String s) {
+                ssFinalInfo();
+                try {
+                    onAPIError(s);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).checksssssData(b, mActivity, recogEngine.countryCode, ocrData, isAPIEnable, api_key);
     }
 
-    private void updateData() {
-        if (recogType == RecogType.OCR) {
-            stopPreviewCallBack();
-            ocrData.setMrzData(g_recogResult);
-            onScannedComplete(ocrData);
-        }
-//        int updateMessage = -1;
-//        if (ocrData.getFrontData() != null && ocrData.getBackData() == null) {
-//            updateMessage = RecogEngine.SCAN_TITLE_OCR_BACK/*"Now Scan Back Side of " + ocrData.getCardname()*/;
-//        } else if (ocrData.getBackData() != null && ocrData.getFrontData() == null) {
-//            updateMessage = RecogEngine.SCAN_TITLE_OCR_FRONT/*"Now Scan Front Side of " + ocrData.getCardname()*/;
-//        }
-//        if (ocrData.getBackData() == null || ocrData.getFrontData() == null && updateMessage > -1) {
-//            onProcessUpdate(updateMessage, "", true);
-//        }
+    private void ssFinalInfo() {
+        ocrData.setMrzData(g_recogResult);
+        recogEngine.updateTNLogic(ocrData);
+        onScannedComplete(ocrData);
     }
 
     private void sendInformation() {
@@ -2300,23 +2330,36 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         bRet = 0;
         fCount = 0;
         if (recogType == RecogType.OCR) {
-//            ocrData.setFaceDocument(bitmapToBytes(ocrData.getFaceImage()));
-//            ocrData.setFrontDocument(bitmapToBytes(ocrData.getFrontimage()));
-//            ocrData.setBackDocument(bitmapToBytes(ocrData.getBackimage()));
-//            ocrData.setFaceImage(null);
-//            ocrData.setFrontimage(null);
-//            ocrData.setBackimage(null);
-//            g_recogResult.docFrontBitmap = null;
-//            g_recogResult.docBackBitmap = null;
-            ocrData.setMrzData(g_recogResult);
-            onScannedComplete(ocrData);
-            g_recogResult = new RecogResult();
-            g_recogResult.recType = RecogEngine.RecType.INIT;
-            g_recogResult.bRecDone = false;
-            try {
-                onProcessUpdate(-1, "", false);
-            } catch (Exception e) {
-            }
+
+            API_Utils.getInstance(new API_Utils.SCAN_RESULT() {
+                @Override
+                public void onSuccess(String id, String message) {
+                    updateInformation();
+                }
+
+                private void updateInformation() {
+                    ssFinalInfo();
+                    g_recogResult = new RecogResult();
+                    g_recogResult.recType = RecogEngine.RecType.INIT;
+                    g_recogResult.bRecDone = false;
+                    try {
+                        onProcessUpdate(-1, "", false);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onFailed(String s) {
+                    updateInformation();
+                    try {
+                        onAPIError(s);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).checksssssData(0, mActivity, recogEngine.countryCode, ocrData, isAPIEnable, api_key);
+
 
         } else if (recogType == RecogType.MRZ) {
 //            g_recogResult.faceDoc = bitmapToBytes(g_recogResult.faceBitmap);

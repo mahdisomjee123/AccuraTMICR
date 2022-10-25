@@ -6,6 +6,8 @@ import android.util.Base64;
 
 import androidx.annotation.Keep;
 
+import com.google.android.gms.common.annotation.KeepForSdk;
+
 import java.util.List;
 
 @Keep
@@ -18,6 +20,7 @@ public class OcrData {
     private Bitmap Frontimage;
     private MapData FrontData;
     private RecogResult mrzData;
+    private String barcode; // Added By Ankita20220616
 
     public String getCardname() {
         return cardname;
@@ -75,10 +78,20 @@ public class OcrData {
         this.mrzData = mrzData;
     }
 
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public void setBarcode(String barcode) {
+        this.barcode = barcode;
+    }
+
     @Keep
     public class MapData {
 
         public String card_side;
+        public String card_code;
+        public int isApi;
         public int is_face;
         public List<ScannedData> ocr_data;
 
@@ -88,6 +101,22 @@ public class OcrData {
 
         public void setCardSide(String card_side) {
             this.card_side = card_side;
+        }
+
+        public String getCard_code() {
+            return card_code;
+        }
+
+        public void setCard_code(String card_code) {
+            this.card_code = card_code;
+        }
+
+        public boolean getIsApi() {
+            return isApi == 1;
+        }
+
+        public void setIsApi(int isApi) {
+            this.isApi = isApi;
         }
 
         public boolean getFace() {

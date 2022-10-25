@@ -41,7 +41,7 @@ public class InitModel {
         private String cardName;
         private Boolean isbothavailable;
         private String cardside = "";
-        private Boolean isMRZEnable;
+        private int isMRZEnable;
 
         public Integer getCameraHeight() {
             return cameraHeight;
@@ -83,11 +83,11 @@ public class InitModel {
             this.cardside = cardside;
         }
 
-        public Boolean getMRZEnable() {
+        public int getMRZEnable() {
             return isMRZEnable;
         }
 
-        public void setMRZEnable(Boolean MRZEnable) {
+        public void setMRZEnable(int MRZEnable) {
             isMRZEnable = MRZEnable;
         }
     }

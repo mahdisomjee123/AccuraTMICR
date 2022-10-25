@@ -52,6 +52,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
     private String cardName;
     private boolean isBack = false;
     private MRZDocumentType mrzType;
+    private boolean isEnabled;
 
     private static class MyHandler extends Handler {
         private final WeakReference<OcrActivity> mActivity;
@@ -103,6 +104,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         cardId = getIntent().getIntExtra("card_id", 0);
         countryId = getIntent().getIntExtra("country_id", 0);
         cardName = getIntent().getStringExtra("card_name");
+        isEnabled = getIntent().getBooleanExtra("api_enabled", true);
 
         AccuraLog.loge(TAG, "RecogType " + recogType);
         AccuraLog.loge(TAG, "Card Id " + cardId);
@@ -144,6 +146,8 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 .setOcrCallback(this)  // To get Update and Success Call back
                 .setStatusBarHeight(statusBarHeight)  // To remove Height from Camera View if status bar visible
                 .setFrontSide()
+                .setApiEnableWithProgress(isEnabled, true)
+                .setApiKey("add your api key")
 //                optional field
 //                .setEnableMediaPlayer(false) // false to disable sound and true to enable sound and default it is true
 //                .setCustomMediaPlayer(MediaPlayer.create(this, com.accurascan.ocr.mrz.R.raw.beep)) // To add your custom sound and Must have to enable media player
@@ -400,6 +404,12 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             default:
                 return s;
         }
+    }
+
+    @Override
+    public void onAPIError(String errorMessage) {
+        Runnable runnable = () -> Toast.makeText(OcrActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+        runOnUiThread(runnable);
     }
 
     @Override

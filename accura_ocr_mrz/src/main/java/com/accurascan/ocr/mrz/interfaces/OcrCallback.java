@@ -46,4 +46,5 @@ public interface OcrCallback {
      */
     void onError(String errorMessage);
 
+    void onAPIError(String errorMessage);
 }
