@@ -106,7 +106,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "4.0.1";
+    public static final String VERSION = "4.0.2";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -148,6 +148,10 @@ public class RecogEngine {
     // Added By Ankita20220616
     public static final int TUN_CARD = 367;
     public static final int TUN_COUN = 190;
+
+    public int countryId;
+    public int cardId;
+
 //    static String nM;
     static float mT = 15;
     Boolean isMrzEnable = true;
@@ -1329,8 +1333,8 @@ public class RecogEngine {
 
     private void detectText(Bitmap src, Mat mat, OcrData ocrData, boolean isQIDcard) {
         Bitmap imageBitmap = bitmapFromMat(mat);
-        if (isQIDcard) {
-            imageBitmap.recycle();
+        if (isQIDcard || imageBitmap == null) {
+            if (imageBitmap!=null && !imageBitmap.isRecycled()) imageBitmap.recycle();
             imageBitmap = src.copy(Config.ARGB_8888, false);
         }
         Bitmap image = imageBitmap;
@@ -1344,6 +1348,17 @@ public class RecogEngine {
         Bitmap scaledBitmap = Bitmap.createScaledBitmap(image, scaledWidth, scaledHeight, true);
         detector.process(InputImage.fromBitmap(scaledBitmap, 0))
                 .addOnSuccessListener(visionText -> {
+                    if (TextUtils.isEmpty(visionText.getText())) {
+                        callBack.onUpdateProcess(ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME);
+                        callBack.onScannedSuccess(false, false);
+                        src.recycle();
+                        image.recycle();
+                        mat.release();
+                        return;
+                    }
+                    if (countryId == 2 && (cardId == 402 || cardId == 396)) {
+                        callBack.onUpdateProcess(ACCURA_ERROR_CODE_PROCESSING);
+                    }
                     Utils.bitmapToMat(scaledBitmap,mat);
                     OcrData.MapData mapData = MapDataFunction(mat.getNativeObjAddr(), visionText);
                     List<OcrData.MapData.ScannedData> result = null;
@@ -1550,7 +1565,7 @@ public class RecogEngine {
     }
 
     private Bitmap bitmapFromMat(Mat mat) {
-        if (mat != null) {
+        if (mat != null && mat.width() > 0 && mat.height() > 0) {
             Bitmap bmp = Bitmap.createBitmap(mat.width(), mat.height(), Config.ARGB_8888);
             Utils.matToBitmap(mat, bmp);
             return bmp;

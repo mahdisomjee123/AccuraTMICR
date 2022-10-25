@@ -40,6 +40,7 @@ import com.google.gson.Gson;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.opencv.core.Mat;
 
 import java.io.ByteArrayOutputStream;
 import java.lang.ref.WeakReference;
@@ -396,6 +397,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                         float ratio = scaledWidth / (float) bmCard.getWidth();
                                         int scaledHeight = (int) (bmCard.getHeight() * ratio);
                                         bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+                                    }
+                                    if ((mReference.countryId == 2 && (mReference.cardId == 402 || mReference.cardId == 396)) && mReference.recogEngine.checkValid(bmCard)) {
+                                        bmCard.recycle();
+                                        mReference.recogEngine.doRecognition(/*mReference,*/ bitmap, new Mat(), mReference.ocrData, false);
+                                        mReference._mutex.unlock();
+                                        return;
                                     }
                                     ImageOpencv imageOpencv = mReference.recogEngine.checkCard(bitmap);
                                     if (imageOpencv != null) {
@@ -995,6 +1002,8 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                 throw new IllegalArgumentException("Country Code must have to > 0");
             if (this.cardId < 0)
                 throw new IllegalArgumentException("Card Code must have to > 0");
+            recogEngine.countryId = countryId;
+            recogEngine.cardId = cardId;
         }
 //        if (recogType == RecogType.OCR) {
 //        // zoom camera reduce blur on document
