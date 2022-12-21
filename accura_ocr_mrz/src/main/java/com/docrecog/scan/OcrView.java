@@ -16,7 +16,6 @@ public abstract class OcrView extends OcrCameraPreview {
 //    private MediaPlayer mediaPlayer = null;
     private int statusBarHeight = 0;
     private RecogType recogType = null;
-    private boolean isApiEnable = false;
 
     public OcrView(Activity context) {
         super(context);
@@ -115,17 +114,6 @@ public abstract class OcrView extends OcrCameraPreview {
         return this;
     }
 
-    public OcrView setAPIEnable(boolean isApiEnable, boolean isProgressVisible) {
-        this.isApiEnable = isApiEnable;
-        this.isProgressVisible = isProgressVisible;
-        return this;
-    }
-
-    public OcrView setApiKeyandProgress(String api_key) {
-        this.api_key = api_key;
-        return this;
-    }
-
     /**
      * call this method to initialized camera and ocr
      */
@@ -152,7 +140,6 @@ public abstract class OcrView extends OcrCameraPreview {
         .setType(recogType)
         .setHeight(statusBarHeight)
         .setFacing(cameraFacing)
-        .setApiEnable(this.isApiEnable)
         .start();
     }
 
@@ -266,13 +253,6 @@ public abstract class OcrView extends OcrCameraPreview {
                     OcrView.this.ocrCallBack.onError(s);
 //                }
 //            });
-        }
-    }
-
-    @Override
-    void onAPIError(String s) {
-        if (ocrCallBack != null) {
-            OcrView.this.ocrCallBack.onAPIError(s);
         }
     }
 

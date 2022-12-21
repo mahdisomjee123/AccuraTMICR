@@ -42,9 +42,6 @@ public class CameraView {
     private MRZDocumentType documentType = null;
     private int minFrame = 3;
     private String countryList = "all";
-    private String api_key = null;
-    private boolean isProgressVisible = true;
-    private boolean isApiEnable = false;
 
     public CameraView(Activity context) {
         this.context = context;
@@ -194,17 +191,6 @@ public class CameraView {
         return this;
     }
 
-    public CameraView setApiEnableWithProgress(boolean enableApi, boolean isProgressVisible) {
-        this.isApiEnable = enableApi;
-        this.isProgressVisible = isProgressVisible;
-        return this;
-    }
-
-    public CameraView setApiKey(String api_key) {
-        this.api_key = api_key;
-        return this;
-    }
-
     /**
      * call this method to initialized camera and ocr
      */
@@ -250,9 +236,7 @@ public class CameraView {
                     .setCameraFacing(this.cameraFacing)
                     .setCardData(countryId, cardId)
                     .setOcrCallBack(this.callback)
-                    .setStatusBarHeight(this.statusBarHeight)
-                    .setAPIEnable(this.isApiEnable, this.isProgressVisible)
-                    .setApiKeyandProgress(this.api_key);
+                    .setStatusBarHeight(this.statusBarHeight);
             if (this.type == RecogType.MRZ) {
                 if (!TextUtils.isEmpty(this.countryList)) ocrView.setMrzCountries(this.countryList);
                 ocrView.setMrzDocumentType(documentType != null ? documentType : MRZDocumentType.NONE);

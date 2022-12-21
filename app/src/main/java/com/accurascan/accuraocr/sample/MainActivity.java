@@ -29,7 +29,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.app.ActivityCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -51,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private ProgressDialog progressBar;
     private boolean isContinue = false;
-    private boolean isEnabled = false;
 
     private static class MyHandler extends Handler {
         private final WeakReference<MainActivity> mActivity;
@@ -113,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
                     RecogEngine recogEngine = new RecogEngine();
                     AccuraLog.enableLogs(true); // make sure to disable logs in release mode
                     AccuraLog.refreshLogfile(activity);
-                    Log.e(TAG,recogEngine.getVersion());
+                    AccuraLog.loge(TAG,recogEngine.getVersion());
                     recogEngine.setDialog(false); // setDialog(false) To set your custom dialog for license validation
                     activity.sdkModel = recogEngine.initEngine(activity);
                     if (activity.sdkModel == null){
@@ -185,10 +183,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         TextView tvVersion = findViewById(R.id.tv_version);
-        SwitchCompat aSwitch = findViewById(R.id.switch_api);
-        aSwitch.setOnCheckedChangeListener((compoundButton, b) -> {
-            isEnabled = b;
-        });
         tvVersion.setText(BuildConfig.VERSION_NAME);
         scrollView = findViewById(R.id.scroll_view);
         btnMrz = findViewById(R.id.lout_mrz);
@@ -502,7 +496,6 @@ public class MainActivity extends AppCompatActivity {
                         } else if (cardModel.getCard_type() == 2) {
                             RecogType.DL_PLATE.attachTo(intent);
                         } else {
-                            intent.putExtra("api_enabled", isEnabled);
                             RecogType.OCR.attachTo(intent);
                         }
                         intent.putExtra("app_orientation", getRequestedOrientation());
