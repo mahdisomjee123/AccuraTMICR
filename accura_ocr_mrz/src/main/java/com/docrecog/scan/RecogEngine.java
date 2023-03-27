@@ -35,6 +35,9 @@ import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions;
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import com.scottyab.rootbeer.RootBeer;
 
@@ -103,7 +106,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "5.0.1";
+    public static final String VERSION = "5.1.0";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -152,6 +155,7 @@ public class RecogEngine {
     static float mT = 15;
     Boolean isMrzEnable = true;
     String countryCode;
+    private String languageCode = "en";
     static float v = 5f;
 
     private static float[] fConf = new float[3]; //face detection confidence
@@ -416,13 +420,13 @@ public class RecogEngine {
         if (ret < 0) {
             String message = "";
             if (ret == -1) {
-                message = "No Key Found";
+                message = "'key.license' Not Found";
             } else if (ret == -2) {
-                message = "Invalid Key";
+                message = "'key.license' Invalid Key";
             } else if (ret == -3) {
-                message = "Invalid Platform";
+                message = "'key.license' Invalid Platform";
             } else if (ret == -4) {
-                message = "Invalid License";
+                message = "'key.license' Invalid License";
             }
             sdkModel.message = message;
             if (displayDialog) {
@@ -525,11 +529,7 @@ public class RecogEngine {
         if (context instanceof Activity) {
             this.activity = (Activity) context;
         }
-        if (detector == null) {
-            detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
-        }
         isComplete = false;
-//        init();
         DisplayMetrics dm = context.getResources().getDisplayMetrics();
         String s = loadOCR(context, context.getAssets(), countryId, cardId, dm.widthPixels, minFrame);
         try {
@@ -540,6 +540,10 @@ public class RecogEngine {
                     if (jsonObject.getJSONObject("data").has("country_code")) {
                         countryCode = jsonObject.getJSONObject("data").getString("country_code");
                     }
+                    if (jsonObject.getJSONObject("data").has("languageCode")) {
+                        languageCode = jsonObject.getJSONObject("data").getString("languageCode");
+                    }
+                    init();
                 }
                 isMrzEnable = initModel.getInitData() != null && (initModel.getInitData().getMRZEnable() == 1 || initModel.getInitData().getMRZEnable() == 2);
                 return initModel;
@@ -547,6 +551,18 @@ public class RecogEngine {
         } catch (JSONException e) {
         }
         return null;
+    }
+
+    private void init() {
+        if (languageCode.equals("ch")) {
+            detector = TextRecognition.getClient(new ChineseTextRecognizerOptions.Builder().build());
+        } else if (languageCode.equals("ja")) {
+            detector = TextRecognition.getClient(new JapaneseTextRecognizerOptions.Builder().build());
+        } else if (languageCode.equals("ko")) {
+            detector = TextRecognition.getClient(new KoreanTextRecognizerOptions.Builder().build());
+        } else if (detector == null) {
+            detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        }
     }
 
     /**
@@ -1253,13 +1269,24 @@ public class RecogEngine {
         }
         Bitmap image = imageBitmap;
         if (detector == null) {
-            detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+            init();
         }
         AccuraLog.loge(TAG, "Recognize Data");
-        int scaledWidth = 1200;
-        float ratio = scaledWidth/(float) image.getWidth();
-        int scaledHeight = (int) (image.getHeight()*ratio);
+        int scaledWidth;
+        int scaledHeight;
+        if (image.getWidth() > image.getHeight()) {
+            scaledWidth = 1200;
+            float ratio = scaledWidth/(float) image.getWidth();
+            scaledHeight = (int) (image.getHeight()*ratio);
+        } else {
+            scaledHeight = 1200;
+            float ratio = scaledHeight/(float) image.getHeight();
+            scaledWidth = (int) (image.getWidth()*ratio);
+        }
         Bitmap scaledBitmap = Bitmap.createScaledBitmap(image, scaledWidth, scaledHeight, true);
+        if (countryId == 2 && (cardId == 72 || cardId == 163)) {
+            callBack.onUpdateProcess(ACCURA_ERROR_CODE_PROCESSING);
+        }
         detector.process(InputImage.fromBitmap(scaledBitmap, 0))
                 .addOnSuccessListener(visionText -> {
                     if (TextUtils.isEmpty(visionText.getText())) {

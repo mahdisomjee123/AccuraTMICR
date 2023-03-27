@@ -57,6 +57,7 @@ import static com.accurascan.ocr.mrz.camerautil.FocusManager.isSupported;
 abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Camera.PreviewCallback, FocusManager.Listener {
 
     private final RgbMotionDetection detection;
+    protected View frameBox = null;
     private boolean isPreviewStarted = false;
     private InitModel i1 = null;
 //    private boolean checkBarcode = false; // Added By Ankita20220616 for Tunisia Id card
@@ -296,7 +297,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 //                            mReference.onProcessUpdate(-1, "", false);
 //                        bmCard = BitmapUtil.getBitmapFromData(data, size, format, mReference.rotation, mReference.rectH, mReference.rectW, mReference.recogType);
                         Point centerPoint = null;
-                        if (mReference.cameraContainer != null) {
+                        if (mReference.frameBox != null) {
+                            int Cx = (int) (mReference.frameBox.getX() + mReference.frameBox.getWidth()*0.5);
+                            int Cy = (int) (mReference.frameBox.getY() + mReference.frameBox.getHeight()*0.5);
+                            Util.logd(TAG, "run: (Cx,Cy)"+Cx + "," + Cy);
+                            if (Cx > 0 && Cy > 0) centerPoint = new Point(Cx, Cy);
+                        } else if (mReference.cameraContainer != null) {
                             int Cx = (int) (mReference.cameraContainer.getX() + mReference.cameraContainer.getWidth()*0.5);
                             int Cy = (int) (mReference.cameraContainer.getY() + mReference.cameraContainer.getHeight()*0.5);
                             Util.logd(TAG, "run: (Cx,Cy)"+Cx + "," + Cy);
@@ -385,7 +391,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                         int scaledHeight = (int) (bmCard.getHeight() * ratio);
                                         bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
                                     }
-                                    if (mReference.countryId == 2 && (mReference.cardId == 402 || mReference.cardId == 396)) {
+                                    if (mReference.countryId == 2 && (mReference.cardId == 402 || mReference.cardId == 396 || mReference.cardId == 72 || mReference.cardId == 163)) {
                                         if( mReference.recogEngine.checkValid(bmCard)){
                                             bmCard.recycle();
                                             mReference.recogEngine.doRecognition(/*mReference,*/ bitmap, null, mReference.ocrData, false);

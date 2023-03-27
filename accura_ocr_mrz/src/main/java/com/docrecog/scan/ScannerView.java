@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.util.DisplayMetrics;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -11,7 +12,6 @@ import androidx.annotation.NonNull;
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.PDF417Data;
-import com.accurascan.ocr.mrz.util.BitmapUtil;
 
 public abstract class ScannerView extends ScannerCameraPreview {
     public boolean isflashOn = false;
@@ -36,6 +36,15 @@ public abstract class ScannerView extends ScannerCameraPreview {
     public ScannerView setView(ViewGroup view) {
         this.cameraContainer = view;
         return this;
+    }
+
+    /**
+     * @param frameBox crop camera preview according to frameBox
+     * @return
+     */
+    public ScannerView setBoxView(View frameBox) {
+        this.frameBox = frameBox;
+        return null;
     }
 
     /**

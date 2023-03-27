@@ -1,6 +1,7 @@
 package com.docrecog.scan;
 
 import android.app.Activity;
+import android.view.View;
 import android.view.ViewGroup;
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 
@@ -56,6 +57,15 @@ public abstract class OcrView extends OcrCameraPreview {
      */
     public OcrView setView(ViewGroup view) {
         this.cameraContainer = view;
+        return this;
+    }
+
+    /**
+     * @param frameBox crop camera preview according to frameBox
+     * @return
+     */
+    public OcrView setBoxView(View frameBox) {
+        this.frameBox = frameBox;
         return this;
     }
 

@@ -226,6 +226,13 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         if (recogType == RecogType.BARCODE) btn_barcode_selection.setVisibility(View.VISIBLE);
         else btn_barcode_selection.setVisibility(View.GONE);
         //</editor-fold>
+
+        if (cameraView != null) {
+            // if dev want to change the position of center box(ex. R.id.border_frame of demo app)
+            // then make sure to set that view using below function
+            // make sure before call this function view draw successfully on layout.
+            cameraView.setBoxView(borderFrame);
+        }
     }
 
     /**

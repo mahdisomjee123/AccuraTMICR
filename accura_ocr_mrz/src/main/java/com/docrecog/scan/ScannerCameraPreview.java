@@ -14,6 +14,7 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -49,6 +50,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
     private final RecogEngine recogEngine;
     private final DisplayMetrics dm;
     protected CameraSource cameraSource;
+    protected View frameBox;
     private DisplayMetrics displayMetrics;
     public Camera camera;
     private int facing = 0;
@@ -392,7 +394,12 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
     private Point getPoint() {
         Point centerPoint = null;
-        if (cameraContainer != null) {
+        if (frameBox != null) {
+            int Cx = (int) (frameBox.getX() + frameBox.getWidth()*0.5);
+            int Cy = (int) (frameBox.getY() + frameBox.getHeight()*0.5);
+            Util.logd(TAG, "run: (Cx,Cy)"+Cx + "," + Cy);
+            if (Cx > 0 && Cy > 0) centerPoint = new Point(Cx, Cy);
+        } else if (cameraContainer != null) {
             int Cx = (int) (cameraContainer.getX() + cameraContainer.getWidth()*0.5);
             int Cy = (int) (cameraContainer.getY() + cameraContainer.getHeight()*0.5);
             Util.logd(TAG, "run: (Cx,Cy)"+Cx + "," + Cy);

@@ -29,6 +29,7 @@ public class CameraView {
     private int countryId;
     private int cardId;
     private ViewGroup cameraContainer;
+    private View frameBox;
     private int cameraFacing;
     private OcrCallback callback;
     private int statusBarHeight = 0;
@@ -111,6 +112,17 @@ public class CameraView {
      */
     public CameraView setView(ViewGroup cameraContainer) {
         this.cameraContainer = cameraContainer;
+        return this;
+    }
+
+    /**
+     * @param frameBox crop camera preview according to frameBox
+     * @return
+     */
+    public CameraView setBoxView(View frameBox) {
+        this.frameBox = frameBox;
+        if(this.ocrView != null) this.ocrView.setBoxView(frameBox);
+        else if(this.scannerView != null) this.scannerView.setBoxView(frameBox);
         return this;
     }
 
@@ -233,6 +245,7 @@ public class CameraView {
             };
             ocrView.setRecogType(this.type)
                     .setView(this.cameraContainer)
+                    .setBoxView(this.frameBox)
                     .setCameraFacing(this.cameraFacing)
                     .setCardData(countryId, cardId)
                     .setOcrCallBack(this.callback)
@@ -268,6 +281,7 @@ public class CameraView {
             };
             scannerView.setBarcodeType(this.type)
                     .setOcrCallBack(this.callback)
+                    .setBoxView(this.frameBox)
                     .setCameraFacing(this.cameraFacing)
                     .setView(this.cameraContainer)
                     .setCardData(countryId)
