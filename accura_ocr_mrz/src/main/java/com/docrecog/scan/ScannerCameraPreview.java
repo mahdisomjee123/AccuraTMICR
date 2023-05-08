@@ -233,6 +233,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
             @Override
             public void receiveDetections(Detector.Detections<Face> detections) {
+                myFaceDetector.setData(getPoint());
                 if (GlobalData.isPhoneInMotion()) {
                     onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, RecogEngine.ACCURA_ERROR_CODE_MOTION, false);
                     return;
@@ -322,7 +323,7 @@ abstract class ScannerCameraPreview /*extends SurfaceView implements SurfaceHold
 
             @Override
             public void receiveDetections(Detector.Detections<Barcode> detections) {
-
+                myBarcodedetecter.setData(getPoint());
                 /*called when detect data*/
                 if (GlobalData.isPhoneInMotion()) {
                     onUpdate(RecogEngine.SCAN_TITLE_DEFAULT, RecogEngine.ACCURA_ERROR_CODE_MOTION, false);

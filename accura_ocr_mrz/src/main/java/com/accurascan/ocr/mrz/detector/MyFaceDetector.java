@@ -103,4 +103,8 @@ public class MyFaceDetector extends Detector<Face> {
         this.childHeight = childHeight;
         this.point = centerPoint;
     }
+
+    public void setData(Point centerPoint){
+        this.point = centerPoint;
+    }
 }

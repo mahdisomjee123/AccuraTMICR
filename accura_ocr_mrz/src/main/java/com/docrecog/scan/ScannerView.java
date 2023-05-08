@@ -44,7 +44,7 @@ public abstract class ScannerView extends ScannerCameraPreview {
      */
     public ScannerView setBoxView(View frameBox) {
         this.frameBox = frameBox;
-        return null;
+        return this;
     }
 
     /**

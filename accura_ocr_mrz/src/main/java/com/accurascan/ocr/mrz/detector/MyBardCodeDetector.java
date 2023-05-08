@@ -103,4 +103,8 @@ public class MyBardCodeDetector extends Detector<Barcode> {
         this.childHeight = childHeight;
         this.point = centerPoint;
     }
+
+    public void setData(Point centerPoint){
+        this.point = centerPoint;
+    }
 }
