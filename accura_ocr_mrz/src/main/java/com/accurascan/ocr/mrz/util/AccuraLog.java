@@ -16,6 +16,8 @@ import java.util.Locale;
 
 import static android.os.Environment.DIRECTORY_DOWNLOADS;
 
+import com.docrecog.scan.RecogEngine;
+
 public class AccuraLog {
     private static boolean DEBUG = false;
 
@@ -25,6 +27,7 @@ public class AccuraLog {
 
     public static void enableLogs(boolean isLogEnable) {
         AccuraLog.DEBUG = isLogEnable;
+        RecogEngine._enableSDKLog(isLogEnable);
     }
 
     public static void loge(String tag, String s) {

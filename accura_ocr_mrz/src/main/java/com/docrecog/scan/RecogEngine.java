@@ -66,6 +66,10 @@ public class RecogEngine {
             e.printStackTrace();
         }
     }
+    private native static void enableSDKLog(boolean isLogEnable);
+    public static void _enableSDKLog(boolean isLogEnable) {
+        enableSDKLog(isLogEnable);
+    }
 
     @androidx.annotation.Keep
     abstract static class ScanListener {
@@ -106,7 +110,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "5.1.0.1";
+    public static final String VERSION = "5.1.1";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -191,7 +195,7 @@ public class RecogEngine {
     }
 
     //This is SDK app calling JNI method
-    private native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets, int[] intData);
+    private native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets, int[] intData, boolean logEnable);
 //    public native int loadDictionary(Context activity, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
 
     //return value: 0:fail,1:success,correct document, 2:success,incorrect document
@@ -414,7 +418,7 @@ public class RecogEngine {
         getAssetFile(assetNames[0], assetNames[1]);
         int[] ints = new int[5];
         File file = loadClassifierData(context);
-        int ret = loadDictionary(context, file != null ? file.getAbsolutePath() : "", pDic, pDicLen, pDic1, pDicLen1, context.getAssets(),ints);
+        int ret = loadDictionary(context, file != null ? file.getAbsolutePath() : "", pDic, pDicLen, pDic1, pDicLen1, context.getAssets(),ints,AccuraLog.isLogEnable());
         AccuraLog.loge("recogPassport", "loadDictionary: " + ret);
 //        nM = "Keep Document Steady";
         if (ret < 0) {
