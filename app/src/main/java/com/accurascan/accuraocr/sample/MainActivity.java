@@ -8,12 +8,15 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -23,6 +26,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,15 +38,21 @@ import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.ContryModel;
+import com.accurascan.ocr.mrz.model.OcrData;
+import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.Util;
 import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -50,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private ProgressDialog progressBar;
     private boolean isContinue = false;
+    private RadioGroup swCardSide;
 
     private static class MyHandler extends Handler {
         private final WeakReference<MainActivity> mActivity;
@@ -72,6 +83,9 @@ public class MainActivity extends AppCompatActivity {
                         activity.btnVisaMrz.setVisibility(View.VISIBLE);
                         activity.btnPassportMrz.setVisibility(View.VISIBLE);
                         activity.btnMrz.setVisibility(View.VISIBLE);
+                        if (activity.isStaticOCR == 1) {
+                            activity.btnCaptureMrz.setVisibility(View.VISIBLE);
+                        }
                     }
                     if (activity.sdkModel.isBankCardEnable)
                         activity.btnBank.setVisibility(View.VISIBLE);
@@ -94,11 +108,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    RecogEngine recogEngine = new RecogEngine();
     private static class NativeThread extends Thread {
         private final WeakReference<MainActivity> mActivity;
+        RecogEngine recogEngine;
 
         public NativeThread(MainActivity activity) {
             mActivity = new WeakReference<MainActivity>(activity);
+            recogEngine = activity.recogEngine;
         }
 
         @Override
@@ -107,8 +124,6 @@ public class MainActivity extends AppCompatActivity {
             if (activity != null) {
                 try {
                     activity.isContinue = false;
-                    // doWorkNative();
-                    RecogEngine recogEngine = new RecogEngine();
                     AccuraLog.enableLogs(true); // make sure to disable logs in release mode
                     AccuraLog.refreshLogfile(activity);
                     AccuraLog.loge(TAG,recogEngine.getVersion());
@@ -154,7 +169,8 @@ public class MainActivity extends AppCompatActivity {
     private List<Object> cardList = new ArrayList<>();
     private List<ContryModel> modelList;
     private int selectedPosition = -1;
-    private View btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBarcode,btnBank, lout_country;
+    private ContryModel.CardModel _cardModel = null;
+    private View btnCaptureMrz, btnMrz, btnPassportMrz, btnIdMrz, btnVisaMrz, btnBarcode,btnBank, lout_country;
     private RecogEngine.SDKModel sdkModel;
     private String responseMessage;
     private final String KEY_COUNTRY_VIEW_STATE = "country_state";
@@ -166,6 +182,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean isCardViewVisible;
     private int[] position;
     private NestedScrollView scrollView;
+    final private int PICK_IMAGE = 1; // request code of select image from gallery
+    final private int PICK_MRZ_IMAGE = 2; // request code of select image from gallery
+    final private int isStaticOCR = 1;
 
     private void setCountryLayout() {
 //        contryList = new ArrayList<>();
@@ -183,8 +202,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         TextView tvVersion = findViewById(R.id.tv_version);
-        tvVersion.setText(BuildConfig.VERSION_NAME);
+        tvVersion.setText("Version : " + BuildConfig.VERSION_NAME);
+        swCardSide = findViewById(R.id.r_group);
         scrollView = findViewById(R.id.scroll_view);
+        btnCaptureMrz = findViewById(R.id.lout_capture_mrz);
+        btnCaptureMrz.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.setType("image/*");
+                intent.setAction(Intent.ACTION_GET_CONTENT);
+                startActivityForResult(Intent.createChooser(intent, ""), PICK_MRZ_IMAGE);
+            }
+        });
         btnMrz = findViewById(R.id.lout_mrz);
         btnMrz.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -362,6 +392,139 @@ public class MainActivity extends AppCompatActivity {
                     doWork();
                 }
             }
+        } else if (requestCode == PICK_IMAGE || requestCode == PICK_MRZ_IMAGE) { //handle request code PICK_IMAGE used for selecting image from gallery
+
+            if (data == null) // data contain result of selected image from gallery and other
+                return;
+
+            if (progressBar != null && !progressBar.isShowing()) {
+                progressBar.setMessage("Processing...");
+                progressBar.show();
+            }
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+
+                    final Uri[] selectedImageUri = {data.getData()};
+                    // Get the path from the Uri
+                    final String path = FileUtils.getPath(MainActivity.this, data.getData());//getPathFromURI(selectedImageUri[0]);
+                    if (path != null) {
+                        File f = new File(path);
+                        selectedImageUri[0] = Uri.fromFile(f);
+                        Bitmap selectedImageBitmap;
+                        try {
+                            selectedImageBitmap = MediaStore.Images.Media.getBitmap(MainActivity.this.getContentResolver(), selectedImageUri[0]);
+
+                            if (requestCode == PICK_MRZ_IMAGE) {
+                                recogEngine.detectFromCapturedImage(MainActivity.this, selectedImageBitmap, MRZDocumentType.NONE, "all",1, new OcrCallback(){
+                                    @Override
+                                    public void onUpdateLayout(int width, int height) {
+
+                                    }
+
+                                    @Override
+                                    public void onScannedComplete(Object result) {
+                                        if (progressBar != null && progressBar.isShowing()) {
+                                            progressBar.dismiss();
+                                        }
+                                        ((RecogResult) result).docFrontBitmap = selectedImageBitmap;
+                                        RecogResult.setRecogResult((RecogResult) result);
+                                        Intent intent = new Intent(MainActivity.this, OcrResultActivity.class);
+                                        RecogType.MRZ.attachTo(intent);
+                                        intent.putExtra("app_orientation", getRequestedOrientation());
+                                        startActivityForResult(intent, 101);
+                                    }
+
+                                    @Override
+                                    public void onProcessUpdate(int titleCode, String errorMessage, boolean isFlip) {
+                                        if (progressBar != null && progressBar.isShowing()) {
+                                            progressBar.dismiss();
+                                        }
+                                        if (errorMessage.equals(RecogEngine.ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME)) {
+                                            Toast.makeText(MainActivity.this, "Card not Matched", Toast.LENGTH_LONG).show();
+                                        } else Toast.makeText(MainActivity.this, "Message : "+errorMessage, Toast.LENGTH_LONG).show();
+                                    }
+
+                                    @Override
+                                    public void onError(String errorMessage) {
+                                        if (progressBar != null && progressBar.isShowing()) {
+                                            progressBar.dismiss();
+                                        }
+                                        Toast.makeText(MainActivity.this, "Error Message : "+errorMessage, Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+
+                                return;
+                            }
+
+                            int country_id = ((ContryModel) MainActivity.this.contryList.get(selectedPosition)).getCountry_id();
+                            int card_id = _cardModel.getCard_id();
+                            String[] cardCodes = new String[]{"Front Side", "Back Side"};
+                            Log.e(TAG, "cardCodes:  " + Arrays.toString(cardCodes));
+
+                            int cardSide;
+                            switch (swCardSide.getCheckedRadioButtonId()){
+                                case R.id.rb_back:
+                                    cardSide = 1;
+                                    break;
+                                default: cardSide = 0; break;
+                            }
+                            recogEngine.detectOCRFromCapturedImage(MainActivity.this, selectedImageBitmap, MRZDocumentType.NONE, country_id, card_id, cardSide, new OcrCallback() {
+                                @Override
+                                public void onUpdateLayout(int width, int height) {
+
+                                }
+
+                                @Override
+                                public void onScannedComplete(Object result) {
+                                    if (progressBar != null && progressBar.isShowing()) {
+                                        progressBar.dismiss();
+                                    }
+                                    OcrData.setOcrResult((OcrData) result);
+                                    Intent intent = new Intent(MainActivity.this, OcrResultActivity.class);
+                                    RecogType.OCR.attachTo(intent);
+                                    intent.putExtra("app_orientation", getRequestedOrientation());
+                                    startActivity(intent);
+                                }
+
+                                @Override
+                                public void onProcessUpdate(int titleCode, String errorMessage, boolean isFlip) {
+                                    if (progressBar != null && progressBar.isShowing()) {
+                                        progressBar.dismiss();
+                                    }
+                                    Toast.makeText(MainActivity.this, "Message : "+getErrorMessage(errorMessage), Toast.LENGTH_LONG).show();
+                                }
+
+                                @Override
+                                public void onError(String errorMessage) {
+                                    if (progressBar != null && progressBar.isShowing()) {
+                                        progressBar.dismiss();
+                                    }
+                                    Toast.makeText(MainActivity.this, "Error Message : "+errorMessage, Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        } catch (IOException e) {
+                            if (progressBar != null && progressBar.isShowing()) {
+                                progressBar.dismiss();
+                            }
+                            e.printStackTrace();
+                        }
+                    } else {
+                        if (progressBar != null && progressBar.isShowing()) {
+                            progressBar.dismiss();
+                        }
+                        Toast.makeText(MainActivity.this, "Image not found", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }, 1000);
+        }
+    }
+    private String getErrorMessage(String s) {
+        switch (s) {
+            case RecogEngine.ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME:
+                return "Card not Matched";
+            default:
+                return s;
         }
     }
 
@@ -487,20 +650,28 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
 
-                        Intent intent = new Intent(CardListAdpter.this.context, OcrActivity.class);
-                        intent.putExtra("country_id", ((ContryModel) MainActivity.this.contryList.get(selectedPosition)).getCountry_id());
-                        intent.putExtra("card_id", cardModel.getCard_id());
-                        intent.putExtra("card_name", cardModel.getCard_name());
-                        if (cardModel.getCard_type() == 1) {
-                            RecogType.PDF417.attachTo(intent);
-                        } else if (cardModel.getCard_type() == 2) {
-                            RecogType.DL_PLATE.attachTo(intent);
+                        if ((isStaticOCR == 1 && (cardModel.getCard_type() == 1 || cardModel.getCard_type() == 2)) || isStaticOCR == 0) {
+                            Intent intent = new Intent(CardListAdpter.this.context, OcrActivity.class);
+                            intent.putExtra("country_id", ((ContryModel) MainActivity.this.contryList.get(selectedPosition)).getCountry_id());
+                            intent.putExtra("card_id", cardModel.getCard_id());
+                            intent.putExtra("card_name", cardModel.getCard_name());
+                            if (cardModel.getCard_type() == 1) {
+                                RecogType.PDF417.attachTo(intent);
+                            } else if (cardModel.getCard_type() == 2) {
+                                RecogType.DL_PLATE.attachTo(intent);
+                            } else {
+                                RecogType.OCR.attachTo(intent);
+                            }
+                            intent.putExtra("app_orientation", getRequestedOrientation());
+                            startActivity(intent);
+                            overridePendingTransition(0, 0);
                         } else {
-                            RecogType.OCR.attachTo(intent);
+                            _cardModel = cardModel;
+                            Intent intent = new Intent();
+                            intent.setType("*/*");
+                            intent.setAction(Intent.ACTION_GET_CONTENT);
+                            startActivityForResult(Intent.createChooser(intent, ""), PICK_IMAGE);
                         }
-                        intent.putExtra("app_orientation", getRequestedOrientation());
-                        startActivity(intent);
-                        overridePendingTransition(0, 0);
                     }
                 });
             }

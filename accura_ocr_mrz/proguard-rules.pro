@@ -48,4 +48,6 @@
     public void setDialog(...);
     initEngine(...);
     getCardList(...);
+    detectFromCapturedImage(...);
+    detectOCRFromCapturedImage(...);
 }

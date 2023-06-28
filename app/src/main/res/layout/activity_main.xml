@@ -13,9 +13,44 @@
         android:id="@+id/tv_version"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_margin="@dimen/_5dp"
         android:text="version"
         android:textColor="@color/darkGray"
         />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/_5dp"
+        android:text="Scan Front/Back side of Doc"
+        android:textSize="15sp"
+        android:textColor="@color/black"
+        />
+
+    <RadioGroup
+        android:id="@+id/r_group"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginStart="5dp">
+
+        <RadioButton
+            android:id="@+id/rb_front"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="Scan Front Side"
+            />
+        <RadioButton
+            android:id="@+id/rb_back"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:checked="false"
+            android:text="Scan Back Side"/>
+    </RadioGroup>
+
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -33,6 +68,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
+
+                <com.accurascan.ocr.mrz.customview.CustomTextView
+                    android:id="@+id/lout_capture_mrz"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="@dimen/_5dp"
+                    android:background="@drawable/btn_bg_gray"
+                    android:padding="@dimen/_15dp"
+                    android:text="Capture MRZ"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    app:typeface="ALLER_STD_REG"
+                    android:visibility="gone"/>
 
                 <com.accurascan.ocr.mrz.customview.CustomTextView
                     android:id="@+id/lout_passport_mrz"

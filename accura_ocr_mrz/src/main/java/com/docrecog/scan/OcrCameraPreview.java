@@ -191,7 +191,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             if (mReference.recogType == RecogType.OCR) {
                 try {
                     if (mReference.i1 == null) {
-                        mReference.i1 = mReference.recogEngine.initOcr(mReference, mReference.mActivity, mReference.countryId, mReference.cardId, mReference.minFrame);
+                        mReference.i1 = mReference.recogEngine.initOcr(mReference, mReference.mActivity, mReference.countryId, mReference.cardId, mReference.minFrame, 0);
                         AccuraLog.loge(TAG, "InitializeOCR");
                     }
                     if (mReference.i1 != null && mReference.i1.getInitData() != null) {

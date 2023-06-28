@@ -360,6 +360,9 @@ public class OcrResultActivity extends AppCompatActivity {
     }
 
     private void setMRZData(RecogResult recogResult) {
+        if (recogResult == null) {
+            return;
+        }
         ly_mrz_container.setVisibility(View.VISIBLE);
         addLayout("MRZ", recogResult.lines);
         addLayout("Document Type", recogResult.docType);

@@ -19,6 +19,7 @@ import androidx.annotation.NonNull;
 
 import com.accurascan.ocr.mrz.R;
 
+import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.ContryModel;
 import com.accurascan.ocr.mrz.model.InitModel;
@@ -46,6 +47,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
@@ -110,7 +112,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "5.1.1";
+    public static final String VERSION = "5.4.0";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -277,7 +279,7 @@ public class RecogEngine {
      */
     private native int setMotionThreshold(Context context, int motionThreshold, @NonNull String message);
 
-    private native String loadOCR(Context context, AssetManager assetManager, int countryid, int cardid, int widthPixels, int minFrame);
+    private native String loadOCR(Context context, AssetManager assetManager, int countryid, int cardid, int widthPixels, int minFrame, int i);
 
     private native ImageOpencv checkDocument(long matInput, long matOut, float v);
 
@@ -519,11 +521,12 @@ public class RecogEngine {
      * @param countryId    is country Id
      * @param cardId       is Card Id
      * @param minFrame     To compare data between 'minFrame' and send most validation front dates of qatar ID cards.
+     * @param i
      * @return {@link InitModel}
      */
     // for failed -> responseCode = 0,
     // for success -> responseCode = 1
-    protected InitModel initOcr(ScanListener scanListener, Context context, int countryId, int cardId, int minFrame) {
+    protected InitModel initOcr(ScanListener scanListener, Context context, int countryId, int cardId, int minFrame, int i) {
         findFace = false;
         if (scanListener != null) {
             this.callBack = scanListener;
@@ -535,7 +538,7 @@ public class RecogEngine {
         }
         isComplete = false;
         DisplayMetrics dm = context.getResources().getDisplayMetrics();
-        String s = loadOCR(context, context.getAssets(), countryId, cardId, dm.widthPixels, minFrame);
+        String s = loadOCR(context, context.getAssets(), countryId, cardId, dm.widthPixels, minFrame, i);
         try {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
@@ -897,6 +900,180 @@ public class RecogEngine {
         }
 //        }
         return ret;
+    }
+
+    public void detectFromCapturedImage(Context context, Bitmap bmCard, MRZDocumentType documentType, String countries, int detectFace, OcrCallback ocrCallback) {
+        RecogResult result = new RecogResult();
+        result.recType = RecogEngine.RecType.INIT;
+        result.bRecDone = false;
+        this.callBack = new ScanListener() {
+            @Override
+            void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                closeEngine(1);
+                if (isDone || !result.lines.isEmpty() || result.faceBitmap != null) {
+                    ocrCallback.onScannedComplete(result);
+                } else {
+                    ocrCallback.onError("Failed Recognition");
+                }
+            }
+
+            @Override
+            void onUpdateProcess(String s) {
+
+            }
+
+            @Override
+            void onScannedFailed(String s) {
+                closeEngine(1);
+                ocrCallback.onError(s);
+            }
+        };
+
+        InitModel initModel = initCard(context, 0);
+        if (initModel == null) {
+            this.callBack.onScannedFailed("Failed Initialization");
+            return;
+        } else if (initModel.getResponseCode() != 1) {
+            this.callBack.onScannedFailed(initModel.getResponseMessage());
+            return;
+        }
+        int ret;
+        if (documentType == null) {
+            documentType = MRZDocumentType.NONE;
+        }
+        if (countries == null || countries.isEmpty()) {
+            countries = "all";
+        }
+        ret = doRecogBitmap(bmCard, 0, intData, null, faced, true, documentType.value, countries);
+
+        if (detectFace > 0) {
+            Mat matimage = new Mat();
+            Utils.bitmapToMat(bmCard, matimage);
+            int scaledWidth = 1000;
+            float ratio = scaledWidth/(float)bmCard.getWidth();
+            int scaledHeight = (int)(ratio * bmCard.getHeight());
+            Imgproc.resize(matimage, matimage, new Size(scaledWidth, scaledHeight));
+
+            String xyz = OpenCvFaceDetect(matimage.getNativeObjAddr());
+            matimage.release();
+            if (xyz.length() > 50) {
+                byte[] decodedString = Base64.decode(xyz, Base64.DEFAULT);
+                result.faceBitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                result.recType = RecType.FACE;
+            }
+        }
+        AccuraLog.loge(TAG, "GetM - " + documentType + "," + ret);
+
+        if (ret > 0) {
+            if (result.recType == RecType.INIT) {
+                if (result.faceBitmap == null) {
+                    result.recType = RecType.MRZ;
+                } else {
+                    result.recType = RecType.BOTH;
+                    result.bRecDone = true;
+                }
+            } else if (result.recType == RecType.FACE) {
+                result.recType = RecType.BOTH;
+                result.bRecDone = true;
+            }
+            result.ret = ret;
+            result.SetResult(intData);
+        }
+        this.callBack.onScannedSuccess(true, true);
+    }
+
+    public void detectOCRFromCapturedImage(Context context, Bitmap bmCard, MRZDocumentType documentType, int countryId, int cardId, int cardSide, OcrCallback ocrCallback) {
+        OcrData ocrData = new OcrData();
+        this.callBack = new ScanListener() {
+            @Override
+            void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                closeEngine(1);
+                if (isDone || ocrData.getFrontData() != null || ocrData.getBackData() != null) {
+                    ocrCallback.onScannedComplete(ocrData);
+                } else {
+                    ocrCallback.onError("Failed Recognition");
+                }
+            }
+
+            @Override
+            void onUpdateProcess(String s) {
+                if (!s.equals(ACCURA_ERROR_CODE_PROCESSING)) {
+                    closeEngine(1);
+                }
+                if (!s.equals(ACCURA_ERROR_CODE_PROCESSING) && !s.equals(ACCURA_ERROR_CODE_FACE) && !s.equals(ACCURA_ERROR_CODE_FACE_BLUR) && !s.equals(ACCURA_ERROR_CODE_HOLOGRAM)) {
+                    ocrCallback.onProcessUpdate(-1, s, false);
+                }
+            }
+
+            @Override
+            void onScannedFailed(String s) {
+                closeEngine(1);
+                ocrCallback.onError(s);
+            }
+        };
+
+        InitModel i1 = initOcr(this.callBack, context, countryId, cardId, 1, 1);
+        if (i1 != null && i1.getInitData() != null) {
+            if (cardSide > 0) {
+                if (i1.getInitData().getIsbothavailable()) {
+                    updateData("Front");
+                } else {
+                    this.callBack.onScannedFailed("Back Side not available");
+                    return;
+                }
+            }
+            ocrData.setCardname(i1.getInitData().getCardName());
+        } else {
+            this.callBack.onScannedFailed("Failed Initialization");
+            return;
+        }
+
+
+        Bitmap bitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+        if (bmCard.getWidth() > 650) {
+            int scaledWidth = 650;
+            float ratio = scaledWidth / (float) bmCard.getWidth();
+            int scaledHeight = (int) (bmCard.getHeight() * ratio);
+            bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+        }
+        if (countryId == 2 && (cardId == 402 || cardId == 396 || cardId == 72 || cardId == 163)) {
+            bmCard.recycle();
+            doRecognition(/*mReference,*/ bitmap, null, ocrData, false);
+            return;
+        }
+        float tempResolution = v;
+        v = 0;
+        ImageOpencv imageOpencv = checkCard(bitmap);
+        v = tempResolution;
+        if (imageOpencv != null) {
+            if (imageOpencv.isSucess && imageOpencv.mat != null) {
+                Bitmap card = imageOpencv.getBitmap(bmCard, bitmap.getWidth(), bitmap.getHeight(), false);
+                int ret;
+                if (isMrzEnable) {
+                    RecogResult result = new RecogResult();
+                    result.recType = RecogEngine.RecType.INIT;
+                    result.bRecDone = false;
+                    ret = doRecogBitmap(bmCard, 0, intData, null, faced, true, documentType.value, "all");
+                    if (ret > 0) {
+                        result.recType = RecType.MRZ;
+                        result.ret = ret;
+                        result.SetResult(intData);
+                        ocrData.setMrzData(result);
+                    }
+                }
+                if (bmCard != card) {
+                    bmCard.recycle();
+                }
+                doRecognition(card, imageOpencv.mat, ocrData, false);
+            } else {
+//                refreshPreview();
+                bmCard.recycle();
+                if (imageOpencv.message.isEmpty()) {
+                    this.callBack.onUpdateProcess(ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME);
+                }
+            }
+        } else this.callBack.onScannedFailed("Failed Initialization");
+        AccuraLog.loge(TAG, "GetM - " + documentType);
     }
 
     int doRunFaceDetect(Bitmap bmImg, RecogResult result) {
