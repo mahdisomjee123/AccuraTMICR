@@ -391,8 +391,14 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                         int scaledHeight = (int) (bmCard.getHeight() * ratio);
                                         bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
                                     }
-                                    if (mReference.countryId == 2 && (mReference.cardId == 402 || mReference.cardId == 396 || mReference.cardId == 72 || mReference.cardId == 163)) {
+                                    if (mReference.countryId == 2 && (mReference.cardId == 402 || mReference.cardId == 396 || mReference.cardId == 72 || mReference.cardId == 163 || mReference.cardId == 65)) {
                                         if( mReference.recogEngine.checkValid(bmCard)){
+                                            if (mReference.recogEngine.isMrzEnable && mReference.cardId == 65) {
+                                                int ret = mReference.recogEngine.doRunData(bmCard, 0, mReference.g_recogResult, mReference.mrzDocumentType, mReference.countries);
+                                                if (ret > 0) {
+                                                    mReference.checkmrz = 0;
+                                                }
+                                            }
                                             bmCard.recycle();
                                             mReference.recogEngine.doRecognition(/*mReference,*/ bitmap, null, mReference.ocrData, false);
                                         } else {

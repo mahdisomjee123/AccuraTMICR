@@ -112,7 +112,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "5.4.0";
+    public static final String VERSION = "5.6.0";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -1036,7 +1036,19 @@ public class RecogEngine {
             int scaledHeight = (int) (bmCard.getHeight() * ratio);
             bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
         }
-        if (countryId == 2 && (cardId == 402 || cardId == 396 || cardId == 72 || cardId == 163)) {
+        if (countryId == 2 && (cardId == 402 || cardId == 396 || cardId == 72 || cardId == 163 || cardId == 65)) {
+            if (isMrzEnable && cardId == 65) {
+                RecogResult result = new RecogResult();
+                result.recType = RecogEngine.RecType.INIT;
+                result.bRecDone = false;
+                int ret = doRecogBitmap(bmCard, 0, intData, null, faced, true, documentType.value, "all");
+                if (ret > 0) {
+                    result.recType = RecType.MRZ;
+                    result.ret = ret;
+                    result.SetResult(intData);
+                    ocrData.setMrzData(result);
+                }
+            }
             bmCard.recycle();
             doRecognition(/*mReference,*/ bitmap, null, ocrData, false);
             return;
@@ -1478,7 +1490,7 @@ public class RecogEngine {
                         mat.release();
                         return;
                     }
-                    if (countryId == 2 && (cardId == 402 || cardId == 396)) {
+                    if (countryId == 2 && (cardId == 402 || cardId == 396 || cardId == 65)) {
                         callBack.onUpdateProcess(ACCURA_ERROR_CODE_PROCESSING);
                     }
                     Utils.bitmapToMat(scaledBitmap,mat);
@@ -1494,6 +1506,9 @@ public class RecogEngine {
                     boolean isContinue = true;
                     Util.logd(TAG, "done - " + isdone);
                     if (isdone) {
+                        if (result.size() > 0 && result.get(0).getKey().equals("key")) {
+                            mapData.getOcr_data().clear();
+                        }
                         if (mapData.getCardSide().toLowerCase().contains("front")) {
                             if (ocrData.getFrontimage() != null) {
 //                                isdone = false;
@@ -1526,7 +1541,7 @@ public class RecogEngine {
                                     if (isComplete) isFinal = finalIsdone1;
                                     else isFinal = finalIsdone;
                                     if (isFinal && ocrData.getFrontData() != null && ocrData.getFaceImage() != null && ocrData.getBackData() == null) {
-                                        updateData(mapData.card_side);
+//                                        updateData(mapData.card_side);
                                         isComplete = true;
                                     }
                                     if (callBack != null) {

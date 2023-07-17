@@ -184,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
     private NestedScrollView scrollView;
     final private int PICK_IMAGE = 1; // request code of select image from gallery
     final private int PICK_MRZ_IMAGE = 2; // request code of select image from gallery
-    final private int isStaticOCR = 1;
+    final private int isStaticOCR = 0;
 
     private void setCountryLayout() {
 //        contryList = new ArrayList<>();
