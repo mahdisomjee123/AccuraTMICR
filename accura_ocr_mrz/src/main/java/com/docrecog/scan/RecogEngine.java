@@ -18,7 +18,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 
 import com.accurascan.ocr.mrz.R;
-
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.ContryModel;
@@ -50,7 +49,10 @@ import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -112,7 +114,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "5.6.0";
+    public static final String VERSION = "6.0.0";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -145,6 +147,7 @@ public class RecogEngine {
     private int pDicLen = 0;
     private byte[] pDic1 = null;
     private int pDicLen1 = 0;
+    private int pLicLen1 = 0;
     private static String[] assetNames = {"mMQDF_f_Passport_bottom_Gray.dic", "mMQDF_f_Passport_bottom.dic"};
     private static TextRecognizer detector;
     private boolean findFace = false;
@@ -197,7 +200,7 @@ public class RecogEngine {
     }
 
     //This is SDK app calling JNI method
-    private native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets, int[] intData, boolean logEnable);
+    private native int loadDictionary(Context activity, String s, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets, int[] intData, boolean logEnable, byte[] img_Lic1, int len_Lic1);
 //    public native int loadDictionary(Context activity, byte[] img_Dic, int len_Dic, byte[] img_Dic1, int len_Dic1,/*, byte[] licenseKey*/AssetManager assets);
 
     //return value: 0:fail,1:success,correct document, 2:success,incorrect document
@@ -370,31 +373,66 @@ public class RecogEngine {
         this.displayDialog = displayDialog;
     }
 
+
+    private void RDDetection(Context context) {
+        if (context instanceof Activity) {
+            ((Activity) context).runOnUiThread(() -> {
+                AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
+                builder1.setMessage("Sorry, you can't use this app as we've detected that your device has been rooted");
+                builder1.setCancelable(true);
+                builder1.setPositiveButton(
+                        "OK",
+                        (dialog, id) -> {
+                            dialog.cancel();
+                            ((Activity) context).finishAndRemoveTask();
+                        });
+                AlertDialog alert11 = builder1.create();
+                alert11.show();
+            });
+        } else
+            Toast.makeText(context, "Sorry, you can't use this app as we've detected that your device has been rooted", Toast.LENGTH_SHORT).show();
+    }
+
     /**
      * Must have to call initEngine on app open
      *
      * @param context
      * @return
      */
-    public SDKModel initEngine(Context context) {
-
+    public SDKModel initEngine(Context context, String licenseFilePath) {
         if (checkRD(context)) {
-            if (context instanceof Activity) {
-                ((Activity) context).runOnUiThread(() -> {
-                    AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
-                    builder1.setMessage("Sorry, you can't use this app as we've detected that your device has been rooted");
-                    builder1.setCancelable(true);
-                    builder1.setPositiveButton(
-                            "OK",
-                            (dialog, id) -> {
-                                dialog.cancel();
-                                ((Activity) context).finishAndRemoveTask();
-                            });
-                    AlertDialog alert11 = builder1.create();
-                    alert11.show();
-                });
-            } else
-                Toast.makeText(context, "Sorry, you can't use this app as we've detected that your device has been rooted", Toast.LENGTH_SHORT).show();
+            RDDetection(context);
+            return null;
+        }
+        byte[] licBuff; // Added on 20220623
+        SDKModel sdkModel = new SDKModel();
+        if (TextUtils.isEmpty(licenseFilePath)) {
+            sdkModel.i = -6;
+            sdkModel.message = "Please add license Path";
+            return sdkModel;
+        }
+        File file = new File(licenseFilePath);
+        if (!file.exists()) {
+            sdkModel.i = -7;
+            sdkModel.message = "File not exist";
+            return sdkModel;
+        }
+        licBuff = readKeyFile(licenseFilePath);
+        if (licBuff == null) {
+            sdkModel.i = -8;
+            sdkModel.message = "Please add valid license path";
+            return sdkModel;
+        }
+        return _initEngine(context, licBuff, pLicLen1);
+    }
+
+    public SDKModel initEngine(Context context) {
+        return _initEngine(context, new byte[0], 0);
+    }
+
+    public SDKModel _initEngine(Context context, byte[] licBuff, int pLicLen) {
+        if (checkRD(context)) {
+            RDDetection(context);
             return null;
         }
         /*
@@ -420,7 +458,7 @@ public class RecogEngine {
         getAssetFile(assetNames[0], assetNames[1]);
         int[] ints = new int[5];
         File file = loadClassifierData(context);
-        int ret = loadDictionary(context, file != null ? file.getAbsolutePath() : "", pDic, pDicLen, pDic1, pDicLen1, context.getAssets(),ints,AccuraLog.isLogEnable());
+        int ret = loadDictionary(context, file != null ? file.getAbsolutePath() : "", pDic, pDicLen, pDic1, pDicLen1, context.getAssets(),ints,AccuraLog.isLogEnable(),licBuff, pLicLen);
         AccuraLog.loge("recogPassport", "loadDictionary: " + ret);
 //        nM = "Keep Document Steady";
         if (ret < 0) {
@@ -1706,6 +1744,28 @@ public class RecogEngine {
             Bitmap bmp = Bitmap.createBitmap(mat.width(), mat.height(), Config.ARGB_8888);
             Utils.matToBitmap(mat, bmp);
             return bmp;
+        }
+        return null;
+    }
+
+    // Added on 20231107
+    private byte[] readKeyFile(String input) {
+        File file = new File(input);
+        if (!file.exists()) {
+            return null;
+        }
+        int size = (int) file.length();
+        byte[] bytes = new byte[size];
+        try {
+            BufferedInputStream buf = new BufferedInputStream(new FileInputStream(file));
+            buf.read(bytes, 0, bytes.length);
+            buf.close();
+            pLicLen1 = size;
+            return bytes;
+        } catch (FileNotFoundException e) {
+            AccuraLog.loge(TAG, "Read : " + Log.getStackTraceString(e));
+        } catch (IOException e) {
+            AccuraLog.loge(TAG, "Read: " + Log.getStackTraceString(e));
         }
         return null;
     }
