@@ -2,13 +2,17 @@ package com.accurascan.accuraocr.sample;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,7 +20,9 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
@@ -38,15 +44,21 @@ import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.accurascan.accuraocr.sample.download.DownloadListener;
+import com.accurascan.accuraocr.sample.download.DownloadUtils;
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.ContryModel;
 import com.accurascan.ocr.mrz.model.OcrData;
 import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.Util;
+import com.androidnetworking.error.ANError;
 import com.docrecog.scan.MRZDocumentType;
 import com.docrecog.scan.RecogEngine;
 import com.docrecog.scan.RecogType;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -112,12 +124,22 @@ public class MainActivity extends AppCompatActivity {
     private static class NativeThread extends Thread {
         private final WeakReference<MainActivity> mActivity;
         RecogEngine recogEngine;
+        private String cardParams;
+        private String licenseFilePath;
 
         public NativeThread(MainActivity activity) {
             mActivity = new WeakReference<MainActivity>(activity);
             recogEngine = activity.recogEngine;
+            this.licenseFilePath = "";
         }
 
+        public void setFilePath(String s) {
+            this.licenseFilePath = s;
+        }
+
+        public void setCardParams(String s){
+            this.cardParams = s;
+        }
         @Override
         public void run() {
             MainActivity activity = mActivity.get();
@@ -128,8 +150,13 @@ public class MainActivity extends AppCompatActivity {
                     AccuraLog.refreshLogfile(activity);
                     AccuraLog.loge(TAG,recogEngine.getVersion());
                     recogEngine.setDialog(false); // setDialog(false) To set your custom dialog for license validation
-                    activity.sdkModel = recogEngine.initEngine(activity);
+
+                    if (!licenseFilePath.isEmpty()) {
+                        activity.sdkModel = recogEngine.initEngine(activity, licenseFilePath);
+                    } else
+                        activity.sdkModel = recogEngine.initEngine(activity);
                     if (activity.sdkModel == null){
+                        activity.handler.sendEmptyMessage(0);
                         return;
                     }
                     AccuraLog.loge(TAG, "SDK version" + recogEngine.getSDKVersion() + "\nInitialized Engine : " + activity.sdkModel.i + " -> " + activity.sdkModel.message);
@@ -141,19 +168,34 @@ public class MainActivity extends AppCompatActivity {
                         if (activity.sdkModel.isOCREnable)
                             activity.modelList = recogEngine.getCardList(activity.getApplicationContext());
 
-                        recogEngine.setBlurPercentage(activity, 62);
-                        recogEngine.setFaceBlurPercentage(activity, 70);
-                        recogEngine.setGlarePercentage(activity, 6, 98);
-                        recogEngine.isCheckPhotoCopy(activity, false);
-                        recogEngine.SetHologramDetection(activity, true);
-                        recogEngine.setLowLightTolerance(activity, 39);
-                        recogEngine.setMotionThreshold(activity, 18);
-
+                        if (cardParams != null) {
+                            JSONObject object = new JSONObject(cardParams);
+                            try {
+                                recogEngine.setBlurPercentage(activity, object.getInt("setBlurPercentage"));
+                                recogEngine.setFaceBlurPercentage(activity, object.getInt("setFaceBlurPercentage"));
+                                recogEngine.setGlarePercentage(activity, 6, 98);
+                                recogEngine.isCheckPhotoCopy(activity, object.getBoolean("isCheckPhotoCopy"));
+                                recogEngine.SetHologramDetection(activity, object.getBoolean("SetHologramDetection"));
+                                recogEngine.setLowLightTolerance(activity, object.getInt("setLowLightTolerance"));
+                                recogEngine.setMotionThreshold(activity, object.getInt("setMotionThreshold"));
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            recogEngine.setBlurPercentage(activity, 62);
+                            recogEngine.setFaceBlurPercentage(activity, 70);
+                            recogEngine.setGlarePercentage(activity, 6, 98);
+                            recogEngine.isCheckPhotoCopy(activity, false);
+                            recogEngine.SetHologramDetection(activity, true);
+                            recogEngine.setLowLightTolerance(activity, 39);
+                            recogEngine.setMotionThreshold(activity, 18);
+                        }
                         activity.handler.sendEmptyMessage(1);
                     } else
                         activity.handler.sendEmptyMessage(0);
 
                 } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
             super.run();
@@ -161,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private Handler handler = new MyHandler(this);
-    private Thread nativeThread = new NativeThread(this);
+    private NativeThread nativeThread = new NativeThread(this);
     private RecyclerView rvCountry, rvCards;
     private LinearLayoutManager lmCountry, lmCard;
     private CardListAdpter countryAdapter, cardAdapter;
@@ -194,6 +236,137 @@ public class MainActivity extends AppCompatActivity {
         MainActivity.this.rvCountry.setVisibility(View.VISIBLE);
         MainActivity.this.rvCards.setVisibility(View.INVISIBLE);
         restoreInstantState();
+    }
+
+    public void downloadTextFile(Context context, final String link) {
+        NetworkInfo activeNetworkInfo = ((ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
+        if (!(activeNetworkInfo != null && activeNetworkInfo.isConnected())) {
+            onErrora("Please check your internet connection", null);
+            return;
+        }
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        String oldVersion = sharedPreferences.getString(DownloadUtils.LICENSE_VERSION, "");
+        String lastSavedFile = sharedPreferences.getString(DownloadUtils.LICENSE_NAME, "");
+
+        File licenseDir = new File(context.getFilesDir().toString(), "accura");
+        DownloadUtils.getInstance(new DownloadListener() {
+            @Override
+            public void onDownloadComplete(String licenseDetails) {
+
+                String updatedVersion = "";
+                String fileName = "";
+                try {
+                    JSONObject jsonObject = new JSONObject(licenseDetails);
+                    if (!jsonObject.has("Android")) {
+                        onErrora("Please add license details for Android", null);
+                        return;
+                    }
+                    JSONObject object = jsonObject.getJSONObject("Android");
+                    if (object.has("card_params") && !object.isNull("card_params")) {
+                        nativeThread.setCardParams(object.getJSONObject("card_params").toString());
+                    }
+                    if (object.has("ocr_license") && !TextUtils.isEmpty(object.getString("ocr_license"))) {
+                        fileName = object.getString("ocr_license");
+                    }
+                    if (jsonObject.has("version") && !TextUtils.isEmpty(jsonObject.getString("version"))) {
+                        updatedVersion = jsonObject.getString("version");
+                    }
+                } catch (JSONException e) {
+                    AccuraLog.loge(TAG, Log.getStackTraceString(e));
+                }
+
+                if (fileName.isEmpty()) {
+                    onErrora("File details not valid", null);
+                    return;
+                }
+
+                if (lastSavedFile.isEmpty() || oldVersion.isEmpty() || !updatedVersion.equals(oldVersion)) {
+                    String finalUpdatedVersion = updatedVersion;
+                    showDialog(progress_bar_type);
+                    DownloadUtils.getInstance(new DownloadListener() {
+                        @Override
+                        public void onDownloadComplete(String fileName) {
+                            sharedPreferences.edit().putString(DownloadUtils.LICENSE_VERSION, finalUpdatedVersion).apply();
+                            sharedPreferences.edit().putString(DownloadUtils.LICENSE_NAME, fileName).apply();
+                            nativeThread.setFilePath(licenseDir.getPath() + "/" + fileName);
+                            if (pDialog != null && pDialog.isShowing()) {
+                                pDialog.dismiss();
+                            }
+                            nativeThread.start();
+                        }
+
+                        @Override
+                        public void onProgress(int progress) {
+                            if (pDialog != null) {
+                                pDialog.setProgress(progress);
+                            }
+                        }
+
+                        @Override
+                        public void onError(String s, ANError error) {
+                            sharedPreferences.edit().putString(DownloadUtils.LICENSE_VERSION, "").apply();
+                            onErrora(s, error);
+                        }
+
+                    }).downloadLicenseFile(licenseDir.getPath(), link.substring(0, link.lastIndexOf("/")+1)+ fileName, fileName, lastSavedFile);
+
+                } else {
+                    File licenseFilePath = null;
+                    if (new File(licenseDir, fileName).exists()) {
+                        licenseFilePath = new File(licenseDir, fileName);
+                    } else if (new File(licenseDir, lastSavedFile).exists()) {
+                        licenseFilePath = new File(licenseDir, lastSavedFile);
+                    }
+                    if (licenseFilePath != null) {
+                        nativeThread.setFilePath(licenseFilePath.getPath());
+                    } else {
+                        onErrora(DownloadUtils.ERROR_CODE_FILE_NOT_FOUND, null);
+                    }
+                    nativeThread.start();
+                }
+            }
+
+            @Override
+            public void onError(String s, ANError error) {
+                onErrora(s, error);
+            }
+        }).parseFile(licenseDir.getPath(), link, link.substring(link.lastIndexOf("/")));
+    }
+    private void download() {
+        if (!isFinishing()) {
+            progressBar.show();
+        }
+        downloadTextFile(this, "https://dev.accurascan.com/mahdiedit/accura-config1.json");
+    }
+
+    public void onErrora(String s, ANError error) {
+        Toast.makeText(MainActivity.this, s+"\n"+Log.getStackTraceString(error), Toast.LENGTH_SHORT).show();
+        if (pDialog != null && pDialog.isShowing()) {
+            pDialog.dismiss();
+        }
+        nativeThread.start();
+    }
+
+    // Progress Dialog
+    private ProgressDialog pDialog;
+    public static final int progress_bar_type = 0;
+
+    @Override
+    protected Dialog onCreateDialog(int id) {
+        switch (id) {
+            case progress_bar_type: // we set this to 0
+                pDialog = new ProgressDialog(this);
+                pDialog.setMessage("Downloading file. Please wait...");
+                pDialog.setIndeterminate(false);
+                pDialog.setMax(100);
+                pDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                pDialog.setCanceledOnTouchOutside(false);
+                pDialog.setCancelable(false);
+                pDialog.show();
+                return pDialog;
+            default:
+                return null;
+        }
     }
 
     @Override
@@ -554,10 +727,11 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         progressBar.setMessage("Please wait...");
         progressBar.setCancelable(false);
-        if (!isFinishing()) {
-            progressBar.show();
-            nativeThread.start();
-        }
+        download();
+//        if (!isFinishing()) {
+//            progressBar.show();
+//            nativeThread.start();
+//        }
     }
 
     @Override
