@@ -727,11 +727,11 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         progressBar.setMessage("Please wait...");
         progressBar.setCancelable(false);
-        download();
-//        if (!isFinishing()) {
-//            progressBar.show();
-//            nativeThread.start();
-//        }
+//        download();
+        if (!isFinishing()) {
+            progressBar.show();
+            nativeThread.start();
+        }
     }
 
     @Override

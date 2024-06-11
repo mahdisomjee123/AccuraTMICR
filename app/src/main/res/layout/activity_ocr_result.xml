@@ -98,7 +98,7 @@
                             android:layout_gravity="center"
                             android:src="@mipmap/ic_document_verified" />
 
-                        <com.accurascan.ocr.mrz.customview.CustomTextView
+                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="match_parent"
                             android:layout_marginStart="@dimen/_10dp"
@@ -109,13 +109,12 @@
 
                     </LinearLayout>
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         android:id="@+id/tv_security"
                         style="@style/ScoreText"
                         android:text="Yes"
                         android:textColor="@color/security_true"
-                        android:textStyle="bold"
-                        app:typeface="ALLER_STD" />
+                        android:textStyle="bold" />
                 </LinearLayout>
                 <!--front table-->
                 <LinearLayout
@@ -125,7 +124,7 @@
                     android:orientation="vertical"
                     android:visibility="visible">
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         style="@style/ResultText"
                         android:text="OCR FRONT" />
 
@@ -147,7 +146,7 @@
                     android:orientation="vertical"
                     android:visibility="visible">
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         style="@style/ResultText"
                         android:text="OCR BACK" />
 
@@ -169,7 +168,7 @@
                     android:orientation="vertical"
                     android:visibility="visible">
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         style="@style/ResultText"
                         android:text="MRZ" />
 
@@ -191,7 +190,7 @@
                     android:orientation="vertical"
                     android:visibility="visible">
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         style="@style/ResultText"
                         android:text="Bank Card Data" />
 
@@ -213,7 +212,7 @@
                     android:orientation="vertical"
                     android:visibility="visible">
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         style="@style/ResultText"
                         android:text="@string/usa_dl_result" />
 
@@ -236,7 +235,7 @@
                     android:visibility="visible">
 
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         style="@style/ResultText"
                         android:text="@string/PDF417_Barcode" />
 
@@ -377,7 +376,7 @@
                     android:background="@color/white"
                     android:orientation="vertical">
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         style="@style/ResultText"
                         android:text="FRONT SIDE" />
 
@@ -408,7 +407,7 @@
                     android:orientation="vertical"
                     android:paddingBottom="@dimen/_10dp">
 
-                    <com.accurascan.ocr.mrz.customview.CustomTextView
+                    <TextView
                         style="@style/ResultText"
                         android:text="BACK SIDE" />
 
