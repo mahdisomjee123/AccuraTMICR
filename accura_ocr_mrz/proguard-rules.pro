@@ -23,6 +23,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+-obfuscationdictionary keyword.txt
+-packageobfuscationdictionary keyword.txt
+-classobfuscationdictionary keyword.txt
 -dontwarn javax.annotation.Nullable
 -dontwarn javax.annotation.**
 -keepattributes *Annotation*
