@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.hardware.Camera;
 import android.media.CameraProfile;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
@@ -54,7 +55,7 @@ import static com.accurascan.ocr.mrz.camerautil.CameraSource.IDLE;
 import static com.accurascan.ocr.mrz.camerautil.CameraSource.PREVIEW_STOPPED;
 import static com.accurascan.ocr.mrz.camerautil.FocusManager.isSupported;
 
-abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Camera.PreviewCallback, FocusManager.Listener {
+abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Camera.PreviewCallback, FocusManager.Listener, Camera.PictureCallback {
 
     private final RgbMotionDetection detection;
     protected View frameBox = null;
@@ -72,6 +73,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
     abstract void onScannedComplete(Object result);
 
+//    abstract void onFocusLockedCallBack();
     private static final String TAG = OcrCameraPreview.class.getSimpleName();
 
     private CameraSourcePreview cameraSourcePreview;
@@ -176,6 +178,65 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
         }
     };
 
+    public void tapCapture() {
+        if (mCameraDevice != null && recogType == RecogType.BANKCARD) {
+            mCameraDevice.cancelAutoFocus();
+            mCameraDevice.autoFocus(new Camera.AutoFocusCallback() {
+                @Override
+                public void onAutoFocus(boolean b, Camera camera) {
+                    mCameraDevice.takePicture(null, null, null, OcrCameraPreview.this);
+                }
+            });
+        }
+    }
+    @Override
+    public void onPictureTaken(byte[] bytes, Camera camera) {
+        AsyncTask.execute(new Runnable() {
+            @Override
+            public void run() {
+                final int format = camera.getParameters().getPictureFormat();
+                final Camera.Size size = camera.getParameters().getPictureSize();
+                Point centerPoint = null;
+                if (cameraContainer != null) {
+                    int Cx = (int) (cameraContainer.getX() + cameraContainer.getWidth() * 0.5);
+                    int Cy = (int) (cameraContainer.getY() + cameraContainer.getHeight() * 0.5);
+                    Util.logd(TAG, "run: (Cx,Cy)" + Cx + "," + Cy);
+                    if (Cx > 0 && Cy > 0) centerPoint = new Point(Cx, Cy);
+                }
+                if (centerPoint == null) {
+                    centerPoint = new Point(dm.widthPixels / 2, dm.heightPixels / 2);
+                }
+                Bitmap bmCard = BitmapUtil.getBitmapFromData(bytes,true, size.width, size.height, format, rotation, rectH, rectW, centerPoint, recogType, cameraSourcePreview.getChildXOffset(), cameraSourcePreview.getChildYOffset(), cameraSourcePreview.getChildWidth(), cameraSourcePreview.getChildHeight());
+//                Bitmap bitmap = bmCard.copy(Bitmap.Config.ARGB_8888, false);
+//                if (bmCard.getWidth() > 650) {
+//                    int scaledWidth = 650;
+//                    float ratio = scaledWidth / (float) bmCard.getWidth();
+//                    int scaledHeight = (int) (bmCard.getHeight() * ratio);
+//                    bitmap = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+//                }
+                if (bmCard != null) {
+                    if (cardDetails == null) {
+                        cardDetails = new CardDetails();
+                    }
+                    onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
+                    boolean b = recogEngine.doRecognizeMICR(bmCard, cardDetails, recogType);
+
+                    mActivity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (b) {
+                                onScannedSuccess(b, false);
+                            } else {
+                                onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+        camera.cancelAutoFocus();
+        camera.startPreview();
+    }
     private static final class NativeThread extends Thread {
 
         private final WeakReference<OcrCameraPreview> reference;
@@ -708,7 +769,8 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                     if (mReference.cardDetails == null) {
                                         mReference.cardDetails = new CardDetails();
                                     }
-                                    mReference.recogEngine.doRecognizeCard(bmCard.copy(Bitmap.Config.ARGB_8888, false), mReference.cardDetails, mReference.recogType);
+                                    boolean b = mReference.recogEngine.doRecognizeMICR(bmCard.copy(Bitmap.Config.ARGB_8888, false), mReference.cardDetails, mReference.recogType);
+                                    mReference.onScannedSuccess(b, false);
                                 }
                             } else {
                                 if (mReference.recogType == RecogType.MRZ && mReference.g_recogResult.recType == RecogEngine.RecType.FACE && mReference.bRet > -1) {
@@ -1925,7 +1987,9 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             setPreviewDisplay(cameraSourcePreview.getHolder());
             setDisplayOrientation();
 
+            if (recogType != RecogType.BANKCARD) {
             mCameraDevice.setOneShotPreviewCallback(OcrCameraPreview.this);
+            }
             setCameraParameters(UPDATE_PARAM_ALL);
 
             // Inform the mainthread to go on the UI initialization.

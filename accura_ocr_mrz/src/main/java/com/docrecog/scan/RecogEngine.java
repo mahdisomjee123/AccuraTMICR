@@ -27,6 +27,7 @@ import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
+import com.checkem.MicrOcrUtil;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.vision.common.InputImage;
@@ -70,6 +71,9 @@ public class RecogEngine {
             e.printStackTrace();
         }
     }
+
+    private MicrOcrUtil micrOcrUtil;
+
     private native static void enableSDKLog(boolean isLogEnable);
     public static void _enableSDKLog(boolean isLogEnable) {
         enableSDKLog(isLogEnable);
@@ -623,6 +627,11 @@ public class RecogEngine {
             if (s != null && !s.equals("")) {
                 JSONObject jsonObject = new JSONObject(s);
                 InitModel initModel = new Gson().fromJson(jsonObject.toString(), InitModel.class);
+                try {
+                    this.micrOcrUtil = new MicrOcrUtil(context);
+                } catch (Exception e) {
+                    Log.e(TAG, "Unexpected error initializing Tesseract", e);
+                }
                 return initModel;
             }
         } catch (JSONException e) {
@@ -1454,6 +1463,52 @@ public class RecogEngine {
             this.callBack.onScannedFailed(e.getMessage());
         });
     }
+    public boolean doRecognizeMICR(Bitmap bmCard, CardDetails cardDetails, RecogType recogType) {
+
+        int scaledWidth = 1200;
+        float ratio = scaledWidth/(float) bmCard.getWidth();
+        int scaledHeight = (int) (bmCard.getHeight()*ratio);
+        Bitmap docBmp = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
+
+        //<editor-fold desc="Convert bitmap to Gray scale">
+//        if (recogType == RecogType.BANKCARD) {
+//            Mat mat = new Mat();
+//            Utils.bitmapToMat(docBmp, mat);
+//            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
+//            Utils.matToBitmap(mat,docBmp);
+//            mat.release();
+//        }
+        //</editor-fold>
+
+        if (micrOcrUtil == null) {
+            micrOcrUtil = new MicrOcrUtil(activity);
+        }
+
+        try {
+            MicrOcrUtil.MicrOcrResult result = micrOcrUtil.processBitmap(docBmp);
+            docBmp.recycle();
+            micrOcrUtil.clear();
+            Log.e(TAG, "doRecognizeMICR: " + result.toString() );
+            if (!TextUtils.isEmpty(result.routingNumber)) {
+                cardDetails.setNumber(result.routingNumber);
+                cardDetails.setOwner(result.rawScan);
+            }
+            if (!TextUtils.isEmpty(result.accountNumber)) {
+                cardDetails.setCardType(result.accountNumber);
+                cardDetails.setOwner(result.rawScan);
+            }
+            if (!TextUtils.isEmpty(result.routingNumber) && !TextUtils.isEmpty(result.accountNumber)) {
+                cardDetails.setBitmap(bmCard);
+                return true;
+            } else {
+                bmCard.recycle();
+                return false;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
     /**
      * Call this method if document is valid after {@see checkCard(Bitmap bmp)}
@@ -1805,6 +1860,10 @@ public class RecogEngine {
                 detector = null;
             }
         } catch (Exception e) {
+        }
+        if (micrOcrUtil != null) {
+            micrOcrUtil.destroy();
+            micrOcrUtil = null;
         }
         closeOCR(destroy);
     }

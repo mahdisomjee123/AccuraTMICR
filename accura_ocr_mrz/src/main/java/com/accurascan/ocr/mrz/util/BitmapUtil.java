@@ -380,6 +380,106 @@ public class BitmapUtil {
         }
     }
 
+    public static Bitmap getBitmapFromData(byte[] data, boolean isPicture, int width, int height, int format, int mDisplayOrientation, int croppedHeight, int croppedWidth, Point centerPoint, RecogType recogType, float scaleX, float scaleY, int childWidth, int childHeight) {
+
+//        int width;
+//        int height;
+//        if (size != null) {
+//            try {
+//                width = size.width;
+//                height = size.height;
+//            } catch (Exception e) {
+//                return null;
+//            }
+//        } else {
+//            return null;
+//        }
+        try {
+            Bitmap bmCard = null;
+            Bitmap bmp_org = null;
+            if (!isPicture) {
+                YuvImage temp = new YuvImage(data, format, width, height, null);
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                temp.compressToJpeg(new Rect(0, 0, temp.getWidth(), temp.getHeight()), 100, os);
+                bmp_org = BitmapFactory.decodeByteArray(os.toByteArray(), 0, os.toByteArray().length);
+                os.close();
+            } else {
+                bmp_org = BitmapFactory.decodeByteArray(data , 0, data.length);
+            }
+            Matrix matrix = new Matrix();
+            int rotationDegree = 0;
+            switch (mDisplayOrientation) {
+                case 1: // ROTATION_90:
+                    rotationDegree = 90;
+                    break;
+                case 2: // ROTATION_180:
+                    rotationDegree = 180;
+                    break;
+                case 3: //ROTATION_270:
+                    rotationDegree = 270;
+                    break;
+                default:
+                    break;
+            }
+            matrix.postRotate(rotationDegree);
+            Bitmap bmp1 = Bitmap.createBitmap(bmp_org, 0, 0, bmp_org.getWidth(), bmp_org.getHeight(), matrix, true);
+
+//            if (RecogType.OCR == recogType) {
+            //get viewfinder border size and position on the screen
+            int left = centerPoint.x - (croppedWidth / 2);
+            int top = centerPoint.y - (croppedHeight / 2);
+            int right = centerPoint.x + (croppedWidth / 2);
+            int bottom = centerPoint.y + (croppedHeight / 2);
+            Rect frameRect = new Rect(left, top, right, bottom);
+
+            frameRect.left += scaleX;
+            frameRect.top += scaleY;
+            frameRect.right += scaleX;
+            frameRect.bottom += scaleY;
+
+            float widthScaleFactor;
+            float heightScaleFactor;
+            //calculate aspect ratio
+            if (rotationDegree != 0) {
+                widthScaleFactor = (float) height / (float) childWidth;
+                heightScaleFactor = (float) (width) / (float) childHeight;
+            } else {
+                widthScaleFactor = (float) width / (float) childWidth;
+                heightScaleFactor = (float) height / (float) childHeight;
+            }
+            //calculate position and size for cropping
+//            frameRect.left = (int) (frameRect.left * widthScaleFactor);
+//            frameRect.top = (int) (frameRect.top * heightScaleFactor);
+//            frameRect.right = (int) (frameRect.right * widthScaleFactor);
+//            frameRect.bottom = (int) (frameRect.bottom * heightScaleFactor);
+//            Rect finalrect = new Rect((int) (frameRect.left), (int) (frameRect.top), (int) (frameRect.right), (int) (frameRect.bottom));
+
+            int cropStartX = (int) (frameRect.left * widthScaleFactor);
+            int cropStartY = (int) (frameRect.top * heightScaleFactor);
+
+            int cropWidthX = (int) (frameRect.width() * widthScaleFactor);
+            int cropHeightY = (int) (frameRect.height() * heightScaleFactor);
+
+            if (cropStartX + cropWidthX > bmp1.getWidth()) {
+                cropWidthX = bmp1.getWidth() - cropStartX;
+            }
+            if (cropStartY + cropHeightY > bmp1.getHeight()){
+                cropHeightY = bmp1.getHeight() - cropStartY;
+            }
+
+
+            bmCard = Bitmap.createBitmap(bmp1, cropStartX, cropStartY, cropWidthX, cropHeightY);
+//            } else if (RecogType.MRZ == recogType) {
+//                bmCard = BitmapUtil.centerCrop(bmp1, bmp1.getWidth(), bmp1.getHeight() / 3);
+//            }
+            bmp_org.recycle();
+            bmp1.recycle();
+            return bmCard;
+        } catch (Exception e) {
+//            e.printStackTrace();
+            return null;
+        }
+    }
 
 //    @Nullable
 //    public static Bitmap getBitmap(byte[] imageInBuffer, FrameMetadata metadata) {

@@ -453,4 +453,10 @@ public class CameraView {
             ocrView.closeEngine(b);
         }
     }
+
+    public void capturePicture() {
+        if (ocrView != null) {
+            ocrView.tapCapture();
+        }
+    }
 }

@@ -44,4 +44,15 @@
         android:textSize="@dimen/fifteen"
         android:visibility="gone"/>
 
+
+    <ImageView
+        android:id="@+id/shutter"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_capture"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:visibility="gone"/>
+
 </RelativeLayout>

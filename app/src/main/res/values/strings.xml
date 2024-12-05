@@ -4,7 +4,7 @@
     <string name="id_mrz"><![CDATA[ID Card MRZ]]></string>
     <string name="visa_mrz"><![CDATA[VISA MRZ]]></string>
     <string name="other_mrz"><![CDATA[Other MRZ]]></string>
-    <string name="bank_card">Bank Card</string>
+    <string name="bank_card">MICR Reader</string>
 
 
     <string name="usa_dl_result">USA DL Result</string>

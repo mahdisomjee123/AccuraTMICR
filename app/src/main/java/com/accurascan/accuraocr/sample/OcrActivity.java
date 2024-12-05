@@ -223,8 +223,17 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         //</editor-fold>
 
         //<editor-fold desc="Barcode Selection only add for RecogType.BARCODE">
-        if (recogType == RecogType.BARCODE) btn_barcode_selection.setVisibility(View.VISIBLE);
-        else btn_barcode_selection.setVisibility(View.GONE);
+        if (recogType == RecogType.BANKCARD) {
+            View captureButton = findViewById(R.id.shutter);
+            captureButton.setVisibility(View.VISIBLE);
+            captureButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    cameraView.capturePicture();
+                }
+            });
+//            btn_barcode_selection.setVisibility(View.VISIBLE);
+        } else btn_barcode_selection.setVisibility(View.GONE);
         //</editor-fold>
 
         if (cameraView != null) {
@@ -355,7 +364,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 return String.format("Scan %s", cardName);
             case RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT:// for front side MRZ and PDF417
                 if (recogType == RecogType.BANKCARD) {
-                    return "Scan Bank Card";
+                    return "Scan MICR number from cheque";
                 } else if (recogType == RecogType.BARCODE) {
                     return "Scan Barcode";
                 } else

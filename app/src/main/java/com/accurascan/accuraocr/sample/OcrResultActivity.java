@@ -342,9 +342,9 @@ public class OcrResultActivity extends AppCompatActivity {
     private void setBankData(CardDetails bankData){
         if (bankData == null) return;
         ly_bank_container.setVisibility(View.VISIBLE);
-//        addBankLayout("Owner", bankData.getOwner());
-        addBankLayout("Card Type", bankData.getCardType());
-        addBankLayout("Number", bankData.getNumber());
+        addBankLayout("Details", bankData.getOwner());
+        addBankLayout("MICR Code", bankData.getCardType());
+        addBankLayout("Cheque Number", bankData.getNumber());
         addBankLayout("Expiry Month", bankData.getExpirationMonth());
         addBankLayout("Expiry Year", bankData.getExpirationYear());
     }
