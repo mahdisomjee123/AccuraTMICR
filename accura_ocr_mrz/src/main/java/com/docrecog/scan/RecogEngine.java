@@ -27,7 +27,7 @@ import com.accurascan.ocr.mrz.model.RecogResult;
 import com.accurascan.ocr.mrz.util.AccuraLog;
 import com.accurascan.ocr.mrz.util.BitmapUtil;
 import com.accurascan.ocr.mrz.util.Util;
-import com.checkem.MicrOcrUtil;
+import com.docrecog.scan.cheque.MicrUtils;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.vision.common.InputImage;
@@ -72,7 +72,7 @@ public class RecogEngine {
         }
     }
 
-    private MicrOcrUtil micrOcrUtil;
+    private MicrUtils micrOcrUtil;
 
     private native static void enableSDKLog(boolean isLogEnable);
     public static void _enableSDKLog(boolean isLogEnable) {
@@ -118,7 +118,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "6.1.3";
+    public static final String VERSION = "7.0.0";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -145,6 +145,9 @@ public class RecogEngine {
     public static final String ACCURA_ERROR_CODE_VISA_MRZ = "14";
     public static final String ACCURA_ERROR_CODE_UPSIDE_DOWN_SIDE = "15";
     public static final String ACCURA_ERROR_CODE_WRONG_SIDE = "16";
+    public static final String ACCURA_ERROR_CODE_CLOSER = "17";
+    public static final String ACCURA_ERROR_CODE_AWAY = "18";
+    public static final String ACCURA_ERROR_CODE_MICR_IN_FRAME = "19";
 
     private static final String TAG = "PassportRecog";
     private byte[] pDic = null;
@@ -628,7 +631,7 @@ public class RecogEngine {
                 JSONObject jsonObject = new JSONObject(s);
                 InitModel initModel = new Gson().fromJson(jsonObject.toString(), InitModel.class);
                 try {
-                    this.micrOcrUtil = new MicrOcrUtil(context);
+                    this.micrOcrUtil = new MicrUtils(context);
                 } catch (Exception e) {
                     Log.e(TAG, "Unexpected error initializing Tesseract", e);
                 }
@@ -1438,7 +1441,7 @@ public class RecogEngine {
         Bitmap docBmp = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
 
         //<editor-fold desc="Convert bitmap to Gray scale">
-        if (recogType == RecogType.BANKCARD) {
+        if (recogType == RecogType.MICR) {
             Mat mat = new Mat();
             Utils.bitmapToMat(docBmp, mat);
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
@@ -1465,47 +1468,38 @@ public class RecogEngine {
     }
     public boolean doRecognizeMICR(Bitmap bmCard, CardDetails cardDetails, RecogType recogType) {
 
+        this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
         int scaledWidth = 1200;
         float ratio = scaledWidth/(float) bmCard.getWidth();
         int scaledHeight = (int) (bmCard.getHeight()*ratio);
         Bitmap docBmp = Bitmap.createScaledBitmap(bmCard, scaledWidth, scaledHeight, true);
 
-        //<editor-fold desc="Convert bitmap to Gray scale">
-//        if (recogType == RecogType.BANKCARD) {
-//            Mat mat = new Mat();
-//            Utils.bitmapToMat(docBmp, mat);
-//            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
-//            Utils.matToBitmap(mat,docBmp);
-//            mat.release();
-//        }
-        //</editor-fold>
-
         if (micrOcrUtil == null) {
-            micrOcrUtil = new MicrOcrUtil(activity);
+            micrOcrUtil = new MicrUtils(activity);
         }
 
         try {
-            MicrOcrUtil.MicrOcrResult result = micrOcrUtil.processBitmap(docBmp);
+            MicrUtils.MicrOcrResult result = micrOcrUtil.processBitmap(docBmp);
+            Log.e(TAG, "doRecognizeMICR: " + result.toString());
             docBmp.recycle();
             micrOcrUtil.clear();
-            Log.e(TAG, "doRecognizeMICR: " + result.toString() );
-            if (!TextUtils.isEmpty(result.routingNumber)) {
-                cardDetails.setNumber(result.routingNumber);
-                cardDetails.setOwner(result.rawScan);
-            }
-            if (!TextUtils.isEmpty(result.accountNumber)) {
-                cardDetails.setCardType(result.accountNumber);
-                cardDetails.setOwner(result.rawScan);
-            }
-            if (!TextUtils.isEmpty(result.routingNumber) && !TextUtils.isEmpty(result.accountNumber)) {
-                cardDetails.setBitmap(bmCard);
-                return true;
+            if (!result.rawScan.equals("1")) {
+                this.callBack.onUpdateProcess(result.rawScan);
             } else {
-                bmCard.recycle();
-                return false;
+                if (!TextUtils.isEmpty(result.MICRNumber)) {
+                    cardDetails.setNumber(result.MICRNumber);
+                    cardDetails.setBitmap(bmCard);
+                    this.callBack.onScannedSuccess(true,false);
+                    return true;
+                } else {
+                    this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME);
+                }
             }
+            bmCard.recycle();
+            this.callBack.onScannedSuccess(false,false);
+            return false;
+
         } catch (Exception e) {
-            e.printStackTrace();
         }
         return false;
     }

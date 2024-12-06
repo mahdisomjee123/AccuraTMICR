@@ -4,7 +4,7 @@ import android.content.Intent;
 
 @androidx.annotation.Keep
 public enum RecogType {
-        OCR, MRZ, BARCODE, PDF417, DL_PLATE, BANKCARD;
+        OCR, MRZ, BARCODE, PDF417, DL_PLATE, MICR;
 
         private static final String recogType = RecogType.class.getName();
 

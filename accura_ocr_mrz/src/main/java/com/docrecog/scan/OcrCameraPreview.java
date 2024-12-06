@@ -179,7 +179,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     };
 
     public void tapCapture() {
-        if (mCameraDevice != null && recogType == RecogType.BANKCARD) {
+        if (mCameraDevice != null && recogType == RecogType.MICR) {
             mCameraDevice.cancelAutoFocus();
             mCameraDevice.autoFocus(new Camera.AutoFocusCallback() {
                 @Override
@@ -218,7 +218,12 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     if (cardDetails == null) {
                         cardDetails = new CardDetails();
                     }
-                    onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
+                    mActivity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
+                        }
+                    });
                     boolean b = recogEngine.doRecognizeMICR(bmCard, cardDetails, recogType);
 
                     mActivity.runOnUiThread(new Runnable() {
@@ -297,10 +302,13 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     mReference.rectH = (mReference.dm.heightPixels - mReference.titleBarHeight) - (int) (100 * mReference.dm.density);
                     mReference.rectW = (int) (mReference.rectH / 0.69);
                 }
-                if (mReference.recogType == RecogType.MRZ || mReference.recogType == RecogType.BANKCARD) {
+                if (mReference.recogType == RecogType.MRZ || mReference.recogType == RecogType.MICR) {
                     AccuraLog.loge(TAG, "InitializeM");
                     InitModel initModel = mReference.recogEngine.initCard(mReference.mActivity, mReference.recogType == RecogType.MRZ ? 0 : 1);
                     if (initModel != null && initModel.getResponseCode() == 1) {
+                        if (mReference.recogType == RecogType.MICR) {
+                            mReference.rectH = (int) (mReference.rectH*0.75);
+                        }
                         mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
                         mReference.handler.sendEmptyMessage(1);
                     } else {
@@ -376,7 +384,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
 
                         mReference._mutex.lock();
 
-                        if (bmCard != null && mReference.recogType != RecogType.BANKCARD && mReference.recogEngine.checkLight(bmCard)) {
+                        if (bmCard != null && mReference.recogEngine.checkLight(bmCard)) {
                             mReference.refreshPreview();
                             bmCard.recycle();
                             mReference._mutex.unlock(); // to restart thread
@@ -765,12 +773,11 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                     }
                                 } else if (mReference.recogType == RecogType.DL_PLATE) {
                                     mReference.recogEngine.doRecognition(bmCard, mReference.countryId, mReference.cardId, mReference.g_recogResult);
-                                } else if (mReference.recogType == RecogType.BANKCARD) {
+                                } else if (mReference.recogType == RecogType.MICR) {
                                     if (mReference.cardDetails == null) {
                                         mReference.cardDetails = new CardDetails();
                                     }
                                     boolean b = mReference.recogEngine.doRecognizeMICR(bmCard.copy(Bitmap.Config.ARGB_8888, false), mReference.cardDetails, mReference.recogType);
-                                    mReference.onScannedSuccess(b, false);
                                 }
                             } else {
                                 if (mReference.recogType == RecogType.MRZ && mReference.g_recogResult.recType == RecogEngine.RecType.FACE && mReference.bRet > -1) {
@@ -1146,7 +1153,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     onProcessUpdate(RecogEngine.SCAN_TITLE_OCR, null, false);
                 }
             }
-        } else if (recogType == RecogType.MRZ || recogType == RecogType.BANKCARD) {
+        } else if (recogType == RecogType.MRZ || recogType == RecogType.MICR) {
             onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
         } else if (recogType == RecogType.DL_PLATE) {
             onProcessUpdate(RecogEngine.SCAN_TITLE_DLPLATE, null, false);
@@ -1987,9 +1994,9 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             setPreviewDisplay(cameraSourcePreview.getHolder());
             setDisplayOrientation();
 
-            if (recogType != RecogType.BANKCARD) {
+//            if (recogType != RecogType.BANKCARD) {
             mCameraDevice.setOneShotPreviewCallback(OcrCameraPreview.this);
-            }
+//            }
             setCameraParameters(UPDATE_PARAM_ALL);
 
             // Inform the mainthread to go on the UI initialization.
@@ -2322,7 +2329,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     g_recogResult.recType = RecogEngine.RecType.FACE;
                     refreshPreview();
                 }
-            } else if (recogType == RecogType.BANKCARD) {
+            } else if (recogType == RecogType.MICR) {
                 if (cardDetails.getNumber() != null) {
                     sendInformation();
                 } else {
@@ -2423,7 +2430,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
             g_recogResult.recType = RecogEngine.RecType.INIT;
             g_recogResult.bRecDone = false;
             onScannedComplete(ocrData);
-        } else if (recogType == RecogType.BANKCARD){
+        } else if (recogType == RecogType.MICR){
             onScannedComplete(cardDetails);
             try {
                 onProcessUpdate(-1, "", false);

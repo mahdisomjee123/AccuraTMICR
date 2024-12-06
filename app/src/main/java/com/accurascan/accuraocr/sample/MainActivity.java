@@ -447,7 +447,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, OcrActivity.class);
-                RecogType.BANKCARD.attachTo(intent);
+                RecogType.MICR.attachTo(intent);
                 intent.putExtra("card_name", getResources().getString(R.string.bank_card));
                 intent.putExtra("app_orientation", getRequestedOrientation());
                 startActivity(intent);

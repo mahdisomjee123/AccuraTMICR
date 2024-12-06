@@ -223,17 +223,16 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
         //</editor-fold>
 
         //<editor-fold desc="Barcode Selection only add for RecogType.BARCODE">
-        if (recogType == RecogType.BANKCARD) {
-            View captureButton = findViewById(R.id.shutter);
-            captureButton.setVisibility(View.VISIBLE);
-            captureButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    cameraView.capturePicture();
-                }
-            });
-//            btn_barcode_selection.setVisibility(View.VISIBLE);
-        } else btn_barcode_selection.setVisibility(View.GONE);
+        if (recogType == RecogType.MICR) {
+//            View captureButton = findViewById(R.id.shutter);
+//            captureButton.setVisibility(View.VISIBLE);
+//            captureButton.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View view) {
+//                    cameraView.capturePicture();
+//                }
+//            });
+        }
         //</editor-fold>
 
         if (cameraView != null) {
@@ -284,9 +283,9 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 sendDataToResultActivity(RecogType.MRZ);
             } else if (result instanceof CardDetails) {
                 /**
-                 *  @recogType is {@link RecogType#BANKCARD}*/
+                 *  @recogType is {@link RecogType#MICR}*/
                 CardDetails.setCardDetails((CardDetails) result);
-                sendDataToResultActivity(RecogType.BANKCARD);
+                sendDataToResultActivity(RecogType.MICR);
             } else if (result instanceof PDF417Data) {
                 /**
                  *  @recogType is {@link RecogType#PDF417}*/
@@ -363,8 +362,8 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             case RecogEngine.SCAN_TITLE_OCR: // only for single side ocr
                 return String.format("Scan %s", cardName);
             case RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT:// for front side MRZ and PDF417
-                if (recogType == RecogType.BANKCARD) {
-                    return "Scan MICR number from cheque";
+                if (recogType == RecogType.MICR) {
+                    return "Scan cheque";
                 } else if (recogType == RecogType.BARCODE) {
                     return "Scan Barcode";
                 } else
@@ -413,6 +412,12 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
                 return "Scanning wrong side of document";
             case RecogEngine.ACCURA_ERROR_CODE_UPSIDE_DOWN_SIDE:
                 return "Document is upside down. Place it properly";
+            case RecogEngine.ACCURA_ERROR_CODE_CLOSER://(result.rawScan.equals("-1")) {
+                return "Move phone Closer";
+            case RecogEngine.ACCURA_ERROR_CODE_AWAY://(result.rawScan.equals("-2")) {
+                return "Move phone Away";
+            case RecogEngine.ACCURA_ERROR_CODE_MICR_IN_FRAME://(result.rawScan.equals("-3")) {
+                return "Place MICR Properly in Frame";
             default:
                 return s;
         }

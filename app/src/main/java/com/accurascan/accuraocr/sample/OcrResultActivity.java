@@ -51,7 +51,7 @@ public class OcrResultActivity extends AppCompatActivity {
             if (ocrData != null) {
                 setOcrData(ocrData);
             }
-        } else if (recogType == RecogType.BANKCARD) {
+        } else if (recogType == RecogType.MICR) {
             ly_back.setVisibility(View.GONE);
             faceImageContainer.setVisibility(View.GONE);
 
@@ -342,9 +342,9 @@ public class OcrResultActivity extends AppCompatActivity {
     private void setBankData(CardDetails bankData){
         if (bankData == null) return;
         ly_bank_container.setVisibility(View.VISIBLE);
-        addBankLayout("Details", bankData.getOwner());
-        addBankLayout("MICR Code", bankData.getCardType());
         addBankLayout("Cheque Number", bankData.getNumber());
+        addBankLayout("MICR Code", bankData.getCardType());
+        addBankLayout("Completed Data", bankData.getOwner());
         addBankLayout("Expiry Month", bankData.getExpirationMonth());
         addBankLayout("Expiry Year", bankData.getExpirationYear());
     }
