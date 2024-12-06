@@ -236,7 +236,7 @@ public class CameraView {
             this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         }
 
-        if (type == RecogType.OCR || type == RecogType.MRZ || type == RecogType.DL_PLATE || type == RecogType.BANKCARD) {
+        if (type == RecogType.OCR || type == RecogType.MRZ || type == RecogType.DL_PLATE || type == RecogType.MICR) {
             ocrView = new OcrView(context) {
                 @Override
                 public void onPlaySound() {
@@ -451,12 +451,6 @@ public class CameraView {
     public void release(boolean b) {
         if (ocrView != null) {
             ocrView.closeEngine(b);
-        }
-    }
-
-    public void capturePicture() {
-        if (ocrView != null) {
-            ocrView.tapCapture();
         }
     }
 }
