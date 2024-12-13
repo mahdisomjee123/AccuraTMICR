@@ -31,6 +31,14 @@ import com.docrecog.scan.cheque.MicrUtils;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.label.ImageLabel;
+import com.google.mlkit.vision.label.ImageLabeler;
+import com.google.mlkit.vision.label.ImageLabeling;
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
+import com.google.mlkit.vision.objects.DetectedObject;
+import com.google.mlkit.vision.objects.ObjectDetection;
+import com.google.mlkit.vision.objects.ObjectDetector;
+import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
@@ -72,6 +80,7 @@ public class RecogEngine {
         }
     }
 
+    private ImageLabeler labeler;
     private MicrUtils micrOcrUtil;
 
     private native static void enableSDKLog(boolean isLogEnable);
@@ -118,7 +127,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "7.0.0";
+    public static final String VERSION = "7.0.1";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -157,6 +166,7 @@ public class RecogEngine {
     private int pLicLen1 = 0;
     private static String[] assetNames = {"mMQDF_f_Passport_bottom_Gray.dic", "mMQDF_f_Passport_bottom.dic"};
     private static TextRecognizer detector;
+    private static ObjectDetector objectDetector;
     private boolean findFace = false;
     private boolean isComplete = false;
     private ScanListener callBack;
@@ -312,6 +322,13 @@ public class RecogEngine {
     private native int closeOCR(int i);
 
     private native int doDetectNumberPlate(String s, int[] intData, int id, int card_id);
+
+    /**
+     * @param srcMat
+     * @param dstMat
+     * @return
+     */
+    private native int detectMICCard(long srcMat, long dstMat, double area);
 
     private native int extractData(String s, CardDetails cardDetails);
 
@@ -615,6 +632,33 @@ public class RecogEngine {
         } else if (detector == null) {
             detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         }
+        if (objectDetector == null) {
+//            CustomRemoteModel customODTRemoteModel =
+//                    new CustomRemoteModel.Builder(
+//                            new FirebaseModelSource.Builder(autoMLRemoteModelName).build())
+//                            .build();
+//            CustomObjectDetectorOptions customAutoMLODTOptions =
+//                    new CustomObjectDetectorOptions.Builder(customODTRemoteModel)
+//                            .setDetectorMode(CustomObjectDetectorOptions.STREAM_MODE)
+//                            .enableClassification()
+//                            .setClassificationConfidenceThreshold(0)
+//                            .setMaxPerObjectLabelCount(1)
+//                            .build();
+            ObjectDetectorOptions.Builder builder = new ObjectDetectorOptions.Builder().setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE);
+//            if (isMultipleEnable) {
+//            Log.e(TAG, "init: Enable multiple object Detection");
+            builder.enableMultipleObjects();
+//            } else {
+//                Log.e(TAG, "init: Disable multiple object Detection");
+//            }
+            ObjectDetectorOptions objectDetectorOptions = builder.enableClassification()
+                    .build();
+            objectDetector = ObjectDetection.getClient(objectDetectorOptions );
+        }
+//        if (labeler == null) {
+//            labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS);
+//        }
+
     }
 
     /**
@@ -625,6 +669,7 @@ public class RecogEngine {
      * @return {@link InitModel}
      */
     protected InitModel initCard(Context context, int recogType){
+        init();
         String s = loadCard(context, recogType);
         try {
             if (s != null && !s.equals("")) {
@@ -633,7 +678,7 @@ public class RecogEngine {
                 try {
                     this.micrOcrUtil = new MicrUtils(context);
                 } catch (Exception e) {
-                    Log.e(TAG, "Unexpected error initializing Tesseract", e);
+//                    Log.e(TAG, "Unexpected error initializing Tesseract", e);
                 }
                 return initModel;
             }
@@ -1348,6 +1393,124 @@ public class RecogEngine {
                     }
                 });
     }
+    /**
+     * To detect qatar card is upside down or wrong documnent
+     * @param bmCard       camera frame
+     * @param scanListener
+     */
+    public void detectObject(Bitmap bmCard, ScanListener scanListener) {
+        if (objectDetector == null) {
+            init();
+        }
+        objectDetector.process(InputImage.fromBitmap(bmCard, 0))
+                .addOnSuccessListener(new OnSuccessListener<List<DetectedObject>>() {
+                    @Override
+                    public void onSuccess(List<DetectedObject> list) {
+                        int width = 400;
+                        int lastAccepted = -1;
+                        for (int i = 0; i < list.size(); i++) {
+                            DetectedObject object = list.get(i);
+                            int objectWidth = object.getBoundingBox().width();
+                            int objectHeight = object.getBoundingBox().height();
+                            if (objectWidth > width && objectWidth > objectHeight) {
+                                lastAccepted = i;
+                                width = object.getBoundingBox().width();
+                            }
+//                            Log.e(TAG, "onSuccess: " + object.getTrackingId() + ","  + objectWidth + "x"  + objectHeight + ", " + lastAccepted);
+                        }
+
+
+
+//                        if (scanListener!=null) {
+//                            imageLabeler(i, bitmap, scanListener, list, labelConf);
+////                            scanListener.onScannedSuccess(list.size() > 0, true);
+//                        }
+                        if (list.size() == 0 || lastAccepted == -1) {
+                            if (scanListener != null) {
+                                scanListener.onFaceScanned(null);
+                            }
+                        } else {
+                            DetectedObject object = list.get(lastAccepted);
+                            Bitmap bitmap = Bitmap.createBitmap(bmCard, object.getBoundingBox().left, object.getBoundingBox().top, object.getBoundingBox().width(), object.getBoundingBox().height());
+                            scanListener.onFaceScanned(bitmap);
+                        }
+
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    e.printStackTrace();
+                    if (!bmCard.isRecycled()) bmCard.recycle();
+                    if (e.getMessage() != null) {
+                        AccuraLog.loge(TAG, e.toString());
+                    }
+                });
+    }
+    /**
+     * To detect qatar card is upside down or wrong documnent
+     *
+     * @param i
+     * @param bmCard       camera frame
+     * @param scanListener
+     * @param list
+     * @param labelConf
+     */
+    public void imageLabeler(int i, Bitmap bmCard, ScanListener scanListener, List<DetectedObject> list, StringBuilder labelConf) {
+        if (labeler == null) {
+            init();
+        }
+        labeler.process(InputImage.fromBitmap(bmCard, 0))
+                .addOnSuccessListener(new OnSuccessListener<List<ImageLabel>>() {
+                    @Override
+                    public void onSuccess(List<ImageLabel> imageLabels) {
+                        try {
+                            scanListener.onFaceScanned(bmCard);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        Log.e(TAG, "onSuccess: " + imageLabels.size() + imageLabels);
+                        JSONArray jsonArray = new JSONArray();
+                        for (ImageLabel label : imageLabels) {
+                            StringBuilder labelConf = new StringBuilder();
+                            if (!TextUtils.isEmpty(label.getText())) {
+                                labelConf.append(label.getText()).append(":").append(label.getConfidence());
+                            }
+
+
+                            try {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("type",1);
+                                jsonObject.put("key",  label.getIndex());
+                                jsonObject.put("key_data", labelConf);
+                                jsonArray.put(jsonObject);
+                            } catch (JSONException e) {
+                                throw new RuntimeException(e);
+                            }
+                            Log.e(TAG, "onSuccess: " + label.getIndex() + ","  + label + "}");
+
+
+                        }
+//                        bmCard.recycle();
+                        try {
+                            if (jsonArray.length() > 0) {
+                                scanListener.onUpdateProcess(jsonArray.toString());
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        if ((i + 1) >= list.size() && scanListener!=null) {
+                            scanListener.onScannedSuccess(list.size()>0 || imageLabels.size() >0, true);
+                        }
+
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    e.printStackTrace();
+                    if (!bmCard.isRecycled()) bmCard.recycle();
+                    if (e.getMessage() != null) {
+                        AccuraLog.loge(TAG, e.toString());
+                    }
+                });
+    }
 
     /**
      * To detect and recognize Driving License Plate
@@ -1466,7 +1629,7 @@ public class RecogEngine {
             this.callBack.onScannedFailed(e.getMessage());
         });
     }
-    public boolean doRecognizeMICR(Bitmap bmCard, CardDetails cardDetails, RecogType recogType) {
+    public boolean doRecognizeMICR(Bitmap bmCard, Bitmap verticalImage, CardDetails cardDetails, OcrData ocrData, RecogType recogType) {
 
         this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
         int scaledWidth = 1200;
@@ -1480,7 +1643,6 @@ public class RecogEngine {
 
         try {
             MicrUtils.MicrOcrResult result = micrOcrUtil.processBitmap(docBmp);
-            Log.e(TAG, "doRecognizeMICR: " + result.toString());
             docBmp.recycle();
             micrOcrUtil.clear();
             if (!result.rawScan.equals("1")) {
@@ -1489,12 +1651,52 @@ public class RecogEngine {
                 if (!TextUtils.isEmpty(result.MICRNumber)) {
                     cardDetails.setNumber(result.MICRNumber);
                     cardDetails.setBitmap(bmCard);
-                    this.callBack.onScannedSuccess(true,false);
+                    Mat mat = new Mat();
+                    Mat dstMat = new Mat();
+                    Utils.bitmapToMat(bmCard, mat);
+                    int ret = detectMICCard(mat.getNativeObjAddr(), dstMat.getNativeObjAddr(), 5000);
+                    if (ret == 1 && dstMat.rows() > dstMat.cols()) {
+                        dstMat.release();
+                        ret = 0;
+                    }
+                    mat.release();
+                    int finalRet = ret;
+                    detectObject(verticalImage, new RecogEngine.ScanListener() {
+                        @Override
+                        void onScannedSuccess(boolean isDone, boolean isMRZRequired) {
+                        }
+
+                        @Override
+                        void onFaceScanned(Bitmap bitmap) {
+                            verticalImage.recycle();
+                            bmCard.recycle();
+                            if (bitmap != null) {
+                                dstMat.release();
+//                                cardDetails.setCardType("Object Detection");
+                                cardDetails.setBitmap(bitmap);
+                                callBack.onScannedSuccess(true,false);
+                            } else {
+                                Bitmap croppedBitmap = null;
+                                if (finalRet == 1) {
+                                    croppedBitmap = bitmapFromMat(dstMat);
+                                    if (croppedBitmap != null) {
+//                                        cardDetails.setCardType("Contour Detection");
+                                        cardDetails.setBitmap(croppedBitmap);
+                                    }
+                                }
+                                dstMat.release();
+//                                callBack.onUpdateProcess("Object not Detected\nCapture Image Again");
+                                callBack.onScannedSuccess(croppedBitmap != null,false);
+                            }
+                        }
+
+                    });
                     return true;
                 } else {
                     this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_DOCUMENT_IN_FRAME);
                 }
             }
+            verticalImage.recycle();
             bmCard.recycle();
             this.callBack.onScannedSuccess(false,false);
             return false;
@@ -1852,6 +2054,13 @@ public class RecogEngine {
             if (detector != null) {
                 detector.close();
                 detector = null;
+            }
+        } catch (Exception e) {
+        }
+        try {
+            if (objectDetector != null) {
+                objectDetector.close();
+                objectDetector = null;
             }
         } catch (Exception e) {
         }

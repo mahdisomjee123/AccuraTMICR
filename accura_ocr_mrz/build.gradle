@@ -56,4 +56,22 @@ dependencies {
     api 'com.google.code.gson:gson:2.8.6'
 
     implementation 'cz.adaptech.tesseract4android:tesseract4android:4.7.0'
+    // Object detection feature with bundled default classifier
+    implementation 'com.google.mlkit:object-detection:17.0.1'
+
+    // Object detection feature with custom classifier support
+//    implementation 'com.google.mlkit:object-detection-custom:17.0.1'
+
+    // Image labeling
+    implementation 'com.google.mlkit:image-labeling:17.0.8'
+    // Or comment the dependency above and uncomment the dependency below to
+    // use unbundled model that depends on Google Play Services
+    // implementation 'com.google.android.gms:play-services-mlkit-image-labeling:16.0.8'
+
+    // Image labeling custom
+//    implementation 'com.google.mlkit:image-labeling-custom:17.0.2'
+    // Or comment the dependency above and uncomment the dependency below to
+    // use unbundled model that depends on Google Play Services
+    // implementation 'com.google.android.gms:play-services-mlkit-image-labeling-custom:16.0.0-beta5'
+
 }

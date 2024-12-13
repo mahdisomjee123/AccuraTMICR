@@ -237,7 +237,7 @@ public class OcrResultActivity extends AppCompatActivity {
                                     }
                                 }
                             } catch (Exception e) {
-                                //   e.printStackTrace();
+                                e.printStackTrace();
                             }
                         } else {
                             tv_value.setText(value);
@@ -297,7 +297,7 @@ public class OcrResultActivity extends AppCompatActivity {
                                     back_table_layout.addView(layout);
                                 }
                             } catch (Exception e) {
-                                // e.printStackTrace();
+                                e.printStackTrace();
                             }
                         } else {
                             tv_value.setText(value);
@@ -565,7 +565,7 @@ public class OcrResultActivity extends AppCompatActivity {
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
-            //  e.printStackTrace();
+            e.printStackTrace();
         }
         setResult(RESULT_OK);
         finish();
