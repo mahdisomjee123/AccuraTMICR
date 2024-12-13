@@ -20,7 +20,7 @@ public class MicrUtils {
     private static final Pattern ROUTING_NUMBER_PATTERN = Pattern.compile("[A-D]{1}[0-9]{6}[A-D]{1}");
     private static final Pattern MICR_NUMBER_PATTERN = Pattern.compile("[0-9A-D]{10}");
     private final float closerPercentage = 0.35f;
-    private final float awayParcentage = 0.47f;
+    private final float awayParcentage = 0.75f;
     TessBaseAPI tessBaseAPI = new TessBaseAPI();
     String currentRoutingNumber;
     String currentAccountNumber;
@@ -85,6 +85,7 @@ public class MicrUtils {
                     lastAcceptedConfidence = confidence;
                     String strippedScan = (lineText.replaceAll(" ", "")).trim();
                     String alphabetLetters = lineText.replaceAll("[0-9]", "").trim();
+//                    Log.e("TAG", "extractMICRDetails: " + height + ", " + lastRectBox.width() + ", " + lastRectBox.height() + ", " + lineText);
                     if (lastRectBox.width() < width*closerPercentage) {
                         message = RecogEngine.ACCURA_ERROR_CODE_CLOSER;// "-1";//"Move phone Closer";
                     } else if (lastRectBox.width() > width*awayParcentage) {

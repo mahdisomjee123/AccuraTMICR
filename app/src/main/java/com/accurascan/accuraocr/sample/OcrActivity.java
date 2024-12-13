@@ -469,7 +469,7 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             try {
                 dialog.show();
             } catch (Exception e) {
-                //  e.printStackTrace();
+                e.printStackTrace();
             }
         };
         runOnUiThread(runnable);

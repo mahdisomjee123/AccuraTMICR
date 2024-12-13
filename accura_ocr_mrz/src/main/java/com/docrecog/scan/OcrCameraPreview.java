@@ -12,8 +12,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Base64;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.MotionEvent;
+import android.util.Pair;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -224,7 +224,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                             onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
                         }
                     });
-                    boolean b = recogEngine.doRecognizeMICR(bmCard, cardDetails, recogType);
+                    boolean b = false;//recogEngine.doRecognizeMICR(bmCard, cardDetails, recogType);
 
                     mActivity.runOnUiThread(new Runnable() {
                         @Override
@@ -307,7 +307,8 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                     InitModel initModel = mReference.recogEngine.initCard(mReference.mActivity, mReference.recogType == RecogType.MRZ ? 0 : 1);
                     if (initModel != null && initModel.getResponseCode() == 1) {
                         if (mReference.recogType == RecogType.MICR) {
-                            mReference.rectH = (int) (mReference.rectH*0.75);
+                            mReference.rectW = (int) (mReference.rectW*0.85);
+                            mReference.rectH = (int) (mReference.rectW*0.55);
                         }
                         mReference.onProcessUpdate(RecogEngine.SCAN_TITLE_MRZ_PDF417_FRONT, null, false);
                         mReference.handler.sendEmptyMessage(1);
@@ -380,13 +381,18 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                         if (centerPoint == null) {
                             centerPoint = new Point(mReference.dm.widthPixels / 2, mReference.dm.heightPixels / 2);
                         }
-                        bmCard = BitmapUtil.getBitmapFromData(data, size.width, size.height, format, mReference.rotation, mReference.rectH, mReference.rectW, centerPoint, mReference.cameraSourcePreview.getChildXOffset(), mReference.cameraSourcePreview.getChildYOffset(), mReference.cameraSourcePreview.getChildWidth(), mReference.cameraSourcePreview.getChildHeight());
+                        Pair<Bitmap, Bitmap> bmCard2 = BitmapUtil.get2BitmapFromData(data, size.width, size.height, format, mReference.rotation, mReference.rectH, mReference.rectW, centerPoint, mReference.cameraSourcePreview.getChildXOffset(), mReference.cameraSourcePreview.getChildYOffset(), mReference.cameraSourcePreview.getChildWidth(), mReference.cameraSourcePreview.getChildHeight());
 
+                        bmCard = bmCard2.first;
+                        if (mReference.recogType != RecogType.MICR) {
+                            bmCard2.second.recycle();
+                        }
                         mReference._mutex.lock();
 
                         if (bmCard != null && mReference.recogEngine.checkLight(bmCard)) {
                             mReference.refreshPreview();
                             bmCard.recycle();
+                            bmCard2.second.recycle();
                             mReference._mutex.unlock(); // to restart thread
                             return;
                         }
@@ -777,9 +783,10 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                     if (mReference.cardDetails == null) {
                                         mReference.cardDetails = new CardDetails();
                                     }
-                                    boolean b = mReference.recogEngine.doRecognizeMICR(bmCard.copy(Bitmap.Config.ARGB_8888, false), mReference.cardDetails, mReference.recogType);
+                                    boolean b = mReference.recogEngine.doRecognizeMICR(bmCard/*.copy(Bitmap.Config.ARGB_8888, false)*/, bmCard2.second, mReference.cardDetails, mReference.ocrData, mReference.recogType);
                                 }
                             } else {
+                                bmCard2.second.recycle();
                                 if (mReference.recogType == RecogType.MRZ && mReference.g_recogResult.recType == RecogEngine.RecType.FACE && mReference.bRet > -1) {
                                     mReference.bRet++;
                                     if (mReference.bRet == 3) {
@@ -927,7 +934,6 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     public void setMrzCountries(String countries) {
         this.countries = countries;
     }
-
 
 //    /**
 //     * set false to disable sound after scanned success
