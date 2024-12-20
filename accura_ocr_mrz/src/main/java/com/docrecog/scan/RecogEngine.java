@@ -127,7 +127,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "7.0.1";
+    public static final String VERSION = "7.0.2";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -1431,7 +1431,16 @@ public class RecogEngine {
                             }
                         } else {
                             DetectedObject object = list.get(lastAccepted);
-                            Bitmap bitmap = Bitmap.createBitmap(bmCard, object.getBoundingBox().left, object.getBoundingBox().top, object.getBoundingBox().width(), object.getBoundingBox().height());
+                            Rect rect = object.getBoundingBox();
+                            double widthRatio = rect.width()*0.10;
+                            double heightRatio = rect.height()*0.10;
+                            int left = (int) Math.max(0.0, rect.left - widthRatio);
+                            int top = (int) Math.max(0.0, rect.top - heightRatio);
+                            int right = (int) Math.min(bmCard.getWidth()*1.0, rect.right + widthRatio);
+                            int bottom  = (int) Math.min(bmCard.getHeight()*1.0, rect.bottom + heightRatio);
+                            rect = new Rect(left, top, right, bottom);
+
+                            Bitmap bitmap = Bitmap.createBitmap(bmCard, rect.left, rect.top, rect.width(), rect.height());
                             scanListener.onFaceScanned(bitmap);
                         }
 
