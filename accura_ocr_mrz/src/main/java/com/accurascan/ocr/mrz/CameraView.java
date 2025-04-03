@@ -43,6 +43,7 @@ public class CameraView {
     private MRZDocumentType documentType = null;
     private int minFrame = 3;
     private String countryList = "all";
+    private boolean enableCropping = false;
 
     public CameraView(Activity context) {
         this.context = context;
@@ -203,6 +204,12 @@ public class CameraView {
         return this;
     }
 
+
+    public CameraView enableCropping(boolean b) {
+        this.enableCropping = b;
+        if (ocrView != null) ocrView.setEnableCropping(this.enableCropping);
+        return this;
+    }
     /**
      * call this method to initialized camera and ocr
      */
@@ -244,6 +251,7 @@ public class CameraView {
                 }
             };
             ocrView.setRecogType(this.type)
+                    .setEnableCropping(this.enableCropping)
                     .setView(this.cameraContainer)
                     .setBoxView(this.frameBox)
                     .setCameraFacing(this.cameraFacing)

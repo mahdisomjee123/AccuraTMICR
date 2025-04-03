@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.DisplayMetrics;
@@ -18,6 +19,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 
 import com.accurascan.ocr.mrz.R;
+import com.accurascan.ocr.mrz.detector.tf.ObjectDetectorHelperJava;
 import com.accurascan.ocr.mrz.interfaces.OcrCallback;
 import com.accurascan.ocr.mrz.model.CardDetails;
 import com.accurascan.ocr.mrz.model.ContryModel;
@@ -31,10 +33,6 @@ import com.docrecog.scan.cheque.MicrUtils;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.label.ImageLabel;
-import com.google.mlkit.vision.label.ImageLabeler;
-import com.google.mlkit.vision.label.ImageLabeling;
-import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
 import com.google.mlkit.vision.objects.DetectedObject;
 import com.google.mlkit.vision.objects.ObjectDetection;
 import com.google.mlkit.vision.objects.ObjectDetector;
@@ -57,6 +55,7 @@ import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
+import org.tensorflow.lite.task.vision.detector.Detection;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -80,8 +79,9 @@ public class RecogEngine {
         }
     }
 
-    private ImageLabeler labeler;
+//    private ImageLabeler labeler;
     private MicrUtils micrOcrUtil;
+    private ObjectDetectorHelperJava objectDetectorHelperJava;
 
     private native static void enableSDKLog(boolean isLogEnable);
     public static void _enableSDKLog(boolean isLogEnable) {
@@ -127,7 +127,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "7.0.2";
+    public static final String VERSION = "7.0.3";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -676,7 +676,10 @@ public class RecogEngine {
                 JSONObject jsonObject = new JSONObject(s);
                 InitModel initModel = new Gson().fromJson(jsonObject.toString(), InitModel.class);
                 try {
-                    this.micrOcrUtil = new MicrUtils(context);
+                    if (initModel.getResponseCode() == 1 && recogType == 1) {
+                        this.micrOcrUtil = new MicrUtils(context);
+                        objectDetectorHelperJava = new ObjectDetectorHelperJava(0.5f, 2, 3, 0, 0, context);
+                    }
                 } catch (Exception e) {
 //                    Log.e(TAG, "Unexpected error initializing Tesseract", e);
                 }
@@ -1463,63 +1466,63 @@ public class RecogEngine {
      * @param list
      * @param labelConf
      */
-    public void imageLabeler(int i, Bitmap bmCard, ScanListener scanListener, List<DetectedObject> list, StringBuilder labelConf) {
-        if (labeler == null) {
-            init();
-        }
-        labeler.process(InputImage.fromBitmap(bmCard, 0))
-                .addOnSuccessListener(new OnSuccessListener<List<ImageLabel>>() {
-                    @Override
-                    public void onSuccess(List<ImageLabel> imageLabels) {
-                        try {
-                            scanListener.onFaceScanned(bmCard);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        Log.e(TAG, "onSuccess: " + imageLabels.size() + imageLabels);
-                        JSONArray jsonArray = new JSONArray();
-                        for (ImageLabel label : imageLabels) {
-                            StringBuilder labelConf = new StringBuilder();
-                            if (!TextUtils.isEmpty(label.getText())) {
-                                labelConf.append(label.getText()).append(":").append(label.getConfidence());
-                            }
-
-
-                            try {
-                                JSONObject jsonObject = new JSONObject();
-                                jsonObject.put("type",1);
-                                jsonObject.put("key",  label.getIndex());
-                                jsonObject.put("key_data", labelConf);
-                                jsonArray.put(jsonObject);
-                            } catch (JSONException e) {
-                                throw new RuntimeException(e);
-                            }
-                            Log.e(TAG, "onSuccess: " + label.getIndex() + ","  + label + "}");
-
-
-                        }
-//                        bmCard.recycle();
-                        try {
-                            if (jsonArray.length() > 0) {
-                                scanListener.onUpdateProcess(jsonArray.toString());
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        if ((i + 1) >= list.size() && scanListener!=null) {
-                            scanListener.onScannedSuccess(list.size()>0 || imageLabels.size() >0, true);
-                        }
-
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    e.printStackTrace();
-                    if (!bmCard.isRecycled()) bmCard.recycle();
-                    if (e.getMessage() != null) {
-                        AccuraLog.loge(TAG, e.toString());
-                    }
-                });
-    }
+//    public void imageLabeler(int i, Bitmap bmCard, ScanListener scanListener, List<DetectedObject> list, StringBuilder labelConf) {
+//        if (labeler == null) {
+//            init();
+//        }
+//        labeler.process(InputImage.fromBitmap(bmCard, 0))
+//                .addOnSuccessListener(new OnSuccessListener<List<ImageLabel>>() {
+//                    @Override
+//                    public void onSuccess(List<ImageLabel> imageLabels) {
+//                        try {
+//                            scanListener.onFaceScanned(bmCard);
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+//                        Log.e(TAG, "onSuccess: " + imageLabels.size() + imageLabels);
+//                        JSONArray jsonArray = new JSONArray();
+//                        for (ImageLabel label : imageLabels) {
+//                            StringBuilder labelConf = new StringBuilder();
+//                            if (!TextUtils.isEmpty(label.getText())) {
+//                                labelConf.append(label.getText()).append(":").append(label.getConfidence());
+//                            }
+//
+//
+//                            try {
+//                                JSONObject jsonObject = new JSONObject();
+//                                jsonObject.put("type",1);
+//                                jsonObject.put("key",  label.getIndex());
+//                                jsonObject.put("key_data", labelConf);
+//                                jsonArray.put(jsonObject);
+//                            } catch (JSONException e) {
+//                                throw new RuntimeException(e);
+//                            }
+//                            Log.e(TAG, "onSuccess: " + label.getIndex() + ","  + label + "}");
+//
+//
+//                        }
+////                        bmCard.recycle();
+//                        try {
+//                            if (jsonArray.length() > 0) {
+//                                scanListener.onUpdateProcess(jsonArray.toString());
+//                            }
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+//                        if ((i + 1) >= list.size() && scanListener!=null) {
+//                            scanListener.onScannedSuccess(list.size()>0 || imageLabels.size() >0, true);
+//                        }
+//
+//                    }
+//                })
+//                .addOnFailureListener(e -> {
+//                    e.printStackTrace();
+//                    if (!bmCard.isRecycled()) bmCard.recycle();
+//                    if (e.getMessage() != null) {
+//                        AccuraLog.loge(TAG, e.toString());
+//                    }
+//                });
+//    }
 
     /**
      * To detect and recognize Driving License Plate
@@ -1638,7 +1641,7 @@ public class RecogEngine {
             this.callBack.onScannedFailed(e.getMessage());
         });
     }
-    public boolean doRecognizeMICR(Bitmap bmCard, Bitmap verticalImage, CardDetails cardDetails, OcrData ocrData, RecogType recogType) {
+    public boolean doRecognizeMICR(Bitmap bmCard, Bitmap verticalImage, CardDetails cardDetails, boolean isCroppingEnable) {
 
         this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
         int scaledWidth = 1200;
@@ -1660,6 +1663,30 @@ public class RecogEngine {
                 if (!TextUtils.isEmpty(result.MICRNumber)) {
                     cardDetails.setNumber(result.MICRNumber);
                     cardDetails.setBitmap(bmCard);
+                    if (isCroppingEnable) {
+                        float lastConfidence = 69f;
+                        Rect rect = null;
+                        List<Detection> results = objectDetectorHelperJava.detect(bmCard, 0, false);
+                        for (Detection value: results) {
+                            float confidence = value.getCategories().get(0).getScore()*100;
+                            if (confidence > lastConfidence) {
+                                lastConfidence = confidence;
+                                RectF rectF = value.getBoundingBox();
+                                rect = new Rect((int)rectF.left, (int)rectF.top, (int)rectF.right, (int)rectF.bottom);
+                            }
+                        }
+                        if (rect != null) {
+                            try {
+                                Bitmap bmCard10per = Bitmap.createBitmap(bmCard, rect.left, rect.top, rect.width(), rect.height());
+                                cardDetails.setBitmap(bmCard10per);
+                                verticalImage.recycle();
+                                bmCard.recycle();
+                                callBack.onScannedSuccess(true,false);
+                                return true;
+                            } catch (Exception e) {
+                            }
+                        }
+                    }
                     Mat mat = new Mat();
                     Mat dstMat = new Mat();
                     Utils.bitmapToMat(bmCard, mat);

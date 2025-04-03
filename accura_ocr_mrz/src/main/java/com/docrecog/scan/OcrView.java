@@ -297,4 +297,9 @@ public abstract class OcrView extends OcrCameraPreview {
 //            });
         }
     }
+
+    public OcrView setEnableCropping(boolean enableCropping) {
+        this.isCroppingEnable = enableCropping;
+        return this;
+    }
 }
