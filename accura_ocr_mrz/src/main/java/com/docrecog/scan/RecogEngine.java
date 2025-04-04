@@ -1677,10 +1677,19 @@ public class RecogEngine {
                         }
                         if (rect != null) {
                             try {
+                                int left = rect.left;
+                                int top = rect.top;
+                                int right = rect.right;
+                                int bottom = rect.bottom;
+                                if (rect.left < 0) left = 0;
+                                if (rect.top < 0) top = 0;
+                                if (rect.right > bmCard.getWidth()) right = bmCard.getWidth() - left;
+                                if (rect.bottom > bmCard.getHeight()) bottom = bmCard.getHeight() - top;
+                                rect = new Rect(left, top, right, bottom);
                                 Bitmap bmCard10per = Bitmap.createBitmap(bmCard, rect.left, rect.top, rect.width(), rect.height());
+                                bmCard.recycle();
                                 cardDetails.setBitmap(bmCard10per);
                                 verticalImage.recycle();
-                                bmCard.recycle();
                                 callBack.onScannedSuccess(true,false);
                                 return true;
                             } catch (Exception e) {
