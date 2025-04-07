@@ -137,6 +137,8 @@ public class OcrActivity extends SensorsActivity implements OcrCallback {
             cameraView.setMRZDocumentType(mrzType);
             cameraView.setMRZCountryCodeList("all");
 
+        } else if (recogType == RecogType.MICR) {
+            cameraView.enableCropping(true);
         }
         cameraView.setRecogType(recogType)
                 .setView(linearLayout) // To add camera view
