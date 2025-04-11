@@ -60,6 +60,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
     private final RgbMotionDetection detection;
     protected View frameBox = null;
     protected boolean isCroppingEnable = false;
+    protected int buffer = 10;
     private boolean isPreviewStarted = false;
     private InitModel i1 = null;
 //    private boolean checkBarcode = false; // Added By Ankita20220616 for Tunisia Id card
@@ -784,7 +785,7 @@ abstract class OcrCameraPreview extends RecogEngine.ScanListener implements Came
                                     if (mReference.cardDetails == null) {
                                         mReference.cardDetails = new CardDetails();
                                     }
-                                    boolean b = mReference.recogEngine.doRecognizeMICR(bmCard/*.copy(Bitmap.Config.ARGB_8888, false)*/, bmCard2.second, mReference.cardDetails, mReference.isCroppingEnable);
+                                    boolean b = mReference.recogEngine.doRecognizeMICR(bmCard/*.copy(Bitmap.Config.ARGB_8888, false)*/, bmCard2.second, mReference.cardDetails, mReference.isCroppingEnable, mReference.buffer);
                                 }
                             } else {
                                 bmCard2.second.recycle();

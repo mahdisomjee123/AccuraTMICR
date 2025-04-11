@@ -44,6 +44,7 @@ public class CameraView {
     private int minFrame = 3;
     private String countryList = "all";
     private boolean enableCropping = false;
+    private int buffer = 10;
 
     public CameraView(Activity context) {
         this.context = context;
@@ -205,9 +206,10 @@ public class CameraView {
     }
 
 
-    public CameraView enableCropping(boolean b) {
+    public CameraView enableCropping(boolean b, int buffer) {
         this.enableCropping = b;
-        if (ocrView != null) ocrView.setEnableCropping(this.enableCropping);
+        this.buffer = buffer;
+        if (ocrView != null) ocrView.setEnableCropping(this.enableCropping, this.buffer);
         return this;
     }
     /**
@@ -251,7 +253,7 @@ public class CameraView {
                 }
             };
             ocrView.setRecogType(this.type)
-                    .setEnableCropping(this.enableCropping)
+                    .setEnableCropping(this.enableCropping, this.buffer)
                     .setView(this.cameraContainer)
                     .setBoxView(this.frameBox)
                     .setCameraFacing(this.cameraFacing)

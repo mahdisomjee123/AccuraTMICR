@@ -298,8 +298,9 @@ public abstract class OcrView extends OcrCameraPreview {
         }
     }
 
-    public OcrView setEnableCropping(boolean enableCropping) {
+    public OcrView setEnableCropping(boolean enableCropping, int buffer) {
         this.isCroppingEnable = enableCropping;
+        this.buffer = buffer;
         return this;
     }
 }

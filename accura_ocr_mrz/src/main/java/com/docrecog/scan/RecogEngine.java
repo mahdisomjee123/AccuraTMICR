@@ -127,7 +127,7 @@ public class RecogEngine {
         public String message = "Success";
     }
 
-    public static final String VERSION = "7.0.3";
+    public static final String VERSION = "7.0.4";
 
     public static final int SCAN_TITLE_OCR_FRONT = 1;
     public static final int SCAN_TITLE_OCR_BACK = 2;
@@ -1641,7 +1641,7 @@ public class RecogEngine {
             this.callBack.onScannedFailed(e.getMessage());
         });
     }
-    public boolean doRecognizeMICR(Bitmap bmCard, Bitmap verticalImage, CardDetails cardDetails, boolean isCroppingEnable) {
+    public boolean doRecognizeMICR(Bitmap bmCard, Bitmap verticalImage, CardDetails cardDetails, boolean isCroppingEnable, int buffer) {
 
         this.callBack.onUpdateProcess(RecogEngine.ACCURA_ERROR_CODE_PROCESSING);
         int scaledWidth = 1200;
@@ -1677,14 +1677,13 @@ public class RecogEngine {
                         }
                         if (rect != null) {
                             try {
-                                int left = rect.left;
-                                int top = rect.top;
-                                int right = rect.right;
-                                int bottom = rect.bottom;
-                                if (rect.left < 0) left = 0;
-                                if (rect.top < 0) top = 0;
-                                if (rect.right > bmCard.getWidth()) right = bmCard.getWidth() - left;
-                                if (rect.bottom > bmCard.getHeight()) bottom = bmCard.getHeight() - top;
+                                double cropBuff = buffer/100.0;
+                                double widthBuff = rect.width()*cropBuff;
+                                double heightBuff = rect.height()*cropBuff;
+                                int left = (int) Math.max(0.0, rect.left - widthBuff);
+                                int top = (int) Math.max(0.0, rect.top - heightBuff);
+                                int right = (int) Math.min(bmCard.getWidth()*1.0, rect.right + widthBuff);
+                                int bottom  = (int) Math.min(bmCard.getHeight()*1.0, rect.bottom + heightBuff);
                                 rect = new Rect(left, top, right, bottom);
                                 Bitmap bmCard10per = Bitmap.createBitmap(bmCard, rect.left, rect.top, rect.width(), rect.height());
                                 bmCard.recycle();
